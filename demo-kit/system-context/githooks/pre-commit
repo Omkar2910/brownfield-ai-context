@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Git pre-commit hook: catches broken context anchors for EVERY commit, including
+# commits written by humans without an agent. Install once per clone:
+#   git config core.hooksPath ../system-context/githooks     (from the service repo)
+# Skip in an emergency with: git commit --no-verify
+here="$(git rev-parse --show-toplevel)"
+check="$here/../system-context/scripts/check-context.sh"
+[ -f "$check" ] || exit 0          # system-context not cloned next to this repo: do nothing
+out="$(bash "$check" "$here" 2>&1)"; rc=$?
+if [ $rc -ne 0 ]; then
+  echo "$out"
+  echo
+  echo "Context check failed: fix the anchors above (or update the context line) before committing."
+  exit 1
+fi
+exit 0

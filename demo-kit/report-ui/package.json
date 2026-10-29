@@ -1,0 +1,10 @@
+{
+  "name": "report-ui",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Demo stub so the AGENTS.md anchor resolves. Replace with the real package.json.",
+  "scripts": {
+    "test": "ng test",
+    "lint": "ng lint"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      { "type": "command", "command": "node ../system-context/hooks/context-hooks.cjs session-start", "timeoutSec": 10 }
+    ],
+    "postToolUse": [
+      { "type": "command", "command": "node ../system-context/hooks/context-hooks.cjs post-edit", "timeoutSec": 10 }
+    ],
+    "agentStop": [
+      { "type": "command", "command": "node ../system-context/hooks/context-hooks.cjs stop", "timeoutSec": 20 }
+    ]
+  }
+}

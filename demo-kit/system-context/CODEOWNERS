@@ -1,0 +1,14 @@
+# Example ownership for context files (Azure Repos: use required reviewers / branch policies
+# with the same paths; GitHub: this file works as-is in .github/ or the repo root).
+
+/context/platform/          @architecture-team
+/contracts/                 @report-service-team
+/openspec/                  @report-platform-leads
+/.github/skills/            @ai-enablement
+/scripts/                   @ai-enablement
+/workspaces/                @report-platform-leads
+
+# In each service repo, add:
+#   /AGENTS.md              @<service>-tech-lead
+#   /.github/instructions/  @<service>-tech-lead
+#   /docs/context/          @<service>-team

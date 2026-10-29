@@ -1,0 +1,40 @@
+# Azure Pipelines template: run the AI-context check on every PR.
+# Add to each service repo's pipeline. Starts in warn mode; set strict: true once noise is low.
+#
+# Usage in a service repo's azure-pipelines.yml:
+#   resources:
+#     repositories:
+#       - repository: systemContext
+#         type: git
+#         name: <ProjectName>/system-context
+#   stages:
+#     - template: pipelines/context-check.azure-pipelines.yml@systemContext
+#       parameters:
+#         strict: false
+
+parameters:
+  - name: strict
+    type: boolean
+    default: false
+
+stages:
+  - stage: ContextCheck
+    displayName: AI context check
+    jobs:
+      - job: check
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            fetchDepth: 0
+            path: s/service
+          - checkout: systemContext
+            path: s/system-context
+          - bash: |
+              set -euo pipefail
+              BASE="origin/${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}"
+              FLAGS="--base $BASE"
+              if [ "${{ parameters.strict }}" = "True" ]; then FLAGS="$FLAGS --strict"; fi
+              bash "$(Pipeline.Workspace)/s/system-context/scripts/check-context.sh" $FLAGS "$(Pipeline.Workspace)/s/service"
+            displayName: Check anchors, size budget and drift
+            condition: eq(variables['Build.Reason'], 'PullRequest')

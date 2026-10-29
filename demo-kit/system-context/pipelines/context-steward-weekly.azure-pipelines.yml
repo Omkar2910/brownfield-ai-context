@@ -1,0 +1,58 @@
+# Weekly context steward (optional, run after the pilot proves the manual loop).
+#
+# 1. Runs the deterministic check on main.
+# 2. Only if there are findings, runs the context-steward agent headless to fix them
+#    on a branch, and opens a PR for the owners to review. Nothing merges automatically.
+#
+# Needs: an Anthropic API key (or your approved gateway) as secret ANTHROPIC_API_KEY,
+# and a PAT / build service permission to push a branch and create a PR.
+# Copilot alternative: replace the claude step with a Copilot CLI run of the same agent.
+
+schedules:
+  - cron: "30 4 * * 1"          # Mondays 10:00 IST
+    displayName: Weekly context steward
+    branches: { include: [main] }
+    always: false
+
+trigger: none
+pr: none
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+    path: s/service
+    persistCredentials: true
+  - checkout: git://$(System.TeamProject)/system-context
+    path: s/system-context
+
+  - bash: |
+      set -uo pipefail
+      cd "$(Pipeline.Workspace)/s"
+      bash system-context/scripts/check-context.sh --strict service > findings.txt; rc=$?
+      cat findings.txt
+      echo "##vso[task.setvariable variable=hasFindings]$([ $rc -ne 0 ] && echo true || echo false)"
+    displayName: Deterministic context check
+
+  - bash: |
+      set -euo pipefail
+      npm install -g @anthropic-ai/claude-code
+      cd "$(Pipeline.Workspace)/s/service"
+      git checkout -b context/weekly-$(Build.BuildId)
+      claude -p "Mode: refresh . Findings from check-context.sh are in ../findings.txt. Fix only what they list." \
+        --agent context-steward \
+        --add-dir ../system-context \
+        --settings ../system-context/agents/steward-settings.json \
+        --permission-mode acceptEdits
+      git add -A && git -c user.name="context-steward" -c user.email="noreply@example.com" \
+        commit -m "context: weekly refresh" || exit 0
+      git push origin HEAD
+      az repos pr create --source-branch context/weekly-$(Build.BuildId) --target-branch main \
+        --title "Context refresh (weekly steward)" \
+        --description "Automated proposal from check-context findings. Review each line before merging."
+    displayName: Steward proposes fixes as a PR
+    condition: eq(variables.hasFindings, 'true')
+    env:
+      ANTHROPIC_API_KEY: $(ANTHROPIC_API_KEY)
+      AZURE_DEVOPS_EXT_PAT: $(System.AccessToken)

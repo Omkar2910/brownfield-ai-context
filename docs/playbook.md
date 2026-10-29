@@ -1,0 +1,287 @@
+# Brownfield AI Context Playbook
+
+How to create, use and manage AI-agent context for existing (brownfield) services, with OpenSpec for behaviour and change, and alternatives compared. Research as of October 2026.
+
+## TL;DR
+
+Keep context per service, in the service's own repo, and join services only at the workspace level when a story crosses them. Do not build one merged context for UI + backend.
+
+- **Where context lives:** each repo owns a small `AGENTS.md`, scoped `.instructions.md` rules, and on-demand pages under `docs/context/`. A thin `system-context` repo holds what no single service owns: the service map, API/event contracts, platform rules (Keycloak, CIAM), shared skills and, for a tightly coupled UI + backend pair, all OpenSpec specs and changes.
+- **Workspace:** one repo per window for single-service stories. For a UI + backend story, open a multi-root `.code-workspace` with both repos plus `system-context`. Each folder keeps its own context; the agent sees all three.
+- **Always-on context stays tiny:** under ~100 lines per `AGENTS.md`, only what the agent cannot infer from code. Research shows bloated, auto-generated context files cost 20%+ more and can lower success.
+- **OpenSpec's role:** it is the *behaviour* layer, not the whole context. Specs grow one change at a time from real stories; never back-fill specs for code you are not touching.
+- **Skills vs instructions:** instructions = rules that must always or file-wise apply. Skills = repeatable procedures (bootstrap context, refresh context, story → change). A context-creation skill belongs as a versioned team skill; a one-off prompt does not.
+- **Team management:** context changes ride in the same PR as code, have CODEOWNERS, and a CI check flags stale anchors. OpenSpec archive is the trigger to refresh context.
+- **Decide with data:** run competing context generators against 3–5 golden stories and compare success, steps and tokens before standardising.
+
+## The problem
+
+Brownfield context fails in three predictable ways: it bloats, it drifts, and it stops at the repo boundary.
+
+- **Bloat.** The ETH Zurich / LogicStar study (ICLR 2026) tested Claude Code, Codex and Qwen Code with no context file, an LLM-generated one, and a developer-written one. [LLM-generated files lowered success in 5 of 8 settings and raised cost 20–23%](https://www.engineerscodex.com/agents-md-making-ai-worse); human-written files helped about 4% on average. The cause: directory dumps and overviews that repeat what the repo already says, which agents then dutifully follow.
+- **Drift.** A context file is not in the diff when code changes, so nobody reviews the mismatch. Agents follow stale instructions faithfully and fail.
+- **Repo boundary.** An agent started in one repo can only read that repo. When the UI calls the backend, it guesses the contract.
+
+Two findings from the same study shape everything below. First, keep always-on files minimal and non-obvious. Second, generated context helps most where the repo has little documentation of its own, which is common in brownfield services, so generation is fine if you prune hard and review.
+
+## Context layers
+
+"Internal context" is really seven layers with different owners, lifetimes and loading rules. Most confusion between a context-generation skill and ad-hoc prompts comes from mixing these layers into one pile of files.
+
+| Layer | What goes in it | Where (Copilot / Claude Code) | Loaded | Owner | Changes |
+| --- | --- | --- | --- | --- | --- |
+| L0 Platform | Keycloak auth flow, CIAM permission model, logging, cloud conventions, security rules | GitHub org instructions or a shared skills/plugin pack; `system-context/context/platform/` | Always (org) or on demand | Platform/architecture team | Quarterly |
+| L1 Repo core | Build/test commands, non-obvious rules, "never do X", map pointers | `AGENTS.md` at repo root; `CLAUDE.md` that imports it | Every request | Service tech lead | When commands or conventions change |
+| L2 Scoped rules | Angular component rules, Spring controller rules, Flyway migration rules | `.github/instructions/*.instructions.md` with `applyTo`; `.claude/rules/*.md` with `paths` | When matching files are touched | Service team | With the code they govern |
+| L3 Service knowledge | Architecture, domain glossary, data model, integration points, known traps | `docs/context/*.md`, linked from `AGENTS.md` | On demand, by link or skill | Service team | Per release |
+| L4 Behaviour | What the service does today, as requirements + scenarios | `openspec/specs/<domain>/spec.md` | When a change touches that domain | Grows via archived changes | Every archived change |
+| L5 Task | The story's proposal, design, tasks, delta specs | `openspec/changes/<change-id>/` | During that story only | Story owner | Per story, then archived |
+| L6 Live retrieval | Call graphs, symbol paths, contracts | Graphify graph / MCP, OpenAPI files, code search | Queried, never pasted | Generated by pipeline | On every commit |
+
+Rule of thumb: if a fact can be found by grep in under a minute, it does not belong in L1–L3. Put it in L6 and let the agent query.
+
+## One workspace or one per service?
+
+Answer: separate context per service, combined workspace per story. The unit of context ownership is the repo; the unit of agent visibility is the story.
+
+```
+┌─ report-platform.code-workspace (multi-root, opened per story) ─────────────┐
+│  report-ui (Angular, consumer)          report-service (Spring Boot, producer)│
+│   AGENTS.md · L1                          AGENTS.md · L1                      │
+│   .github/instructions/angular · L2       .github/instructions/spring · L2    │
+│   docs/context/ · L3                      docs/context/ · L3                  │
+│   openspec/config.yaml → store            graphify-out/ · L6                  │
+│        ▲ reads contract (read-only)            │ publishes consumer brief     │
+│        │                                       ▼                              │
+│  system-context (store repo, owned by architecture)                          │
+│   context/platform/ · L0     contracts/ · consumer brief                      │
+│   openspec/specs + changes · L4–L5     skills/ · workspaces/ · scripts/       │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+The producer publishes its contract into `system-context`; the consumer reads it there instead of guessing from code it cannot see.
+
+| Option | Context ownership | Cross-service visibility | Drift risk | Verdict |
+| --- | --- | --- | --- | --- |
+| A. One window per service, separate context | Clear: each team owns its repo's files | None: UI agent guesses the API | Low | Good for single-service stories only |
+| B. Both services in one window, one merged context | Blurred: who updates the shared file? | Full | High: merged file goes stale fastest | Avoid |
+| C. Multi-root workspace: each repo keeps its context + `system-context` repo | Clear per repo; contracts owned by producer | Full, through contracts and both codebases | Low, if contracts are generated | **Recommended** |
+| D. Monorepo with nested `AGENTS.md` | Clear per folder | Full | Low | Only if you are already a monorepo |
+
+How option C behaves in common tools:
+
+- **VS Code + Copilot.** A `.code-workspace` with three folders discovers `AGENTS.md`, `.github/instructions` and `.github/skills` from each folder. `applyTo` globs are workspace-relative, so write them tightly (for example `**/src/app/**/*.ts`) so Angular rules never fire on Java files; check the response's References list to confirm. If you open a sub-folder of a repo, enable `chat.useCustomizationsInParentRepositories` so root-level files are still found.
+- **Claude Code.** Start in the repo you will change most, then `--add-dir ../report-ui --add-dir ../system-context`. Skills in added directories load automatically; their `CLAUDE.md` files load only with `CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1`.
+- **OpenSpec.** Its beta *stores* feature is built for exactly this: a separate git repo holds specs and changes shared by several code repos, and *worksets* generate the `.code-workspace` that opens the store plus the repos in one window. Without a workset, the agent only sees the folder it was started in.
+
+Keep the multi-root workspace file in `system-context/workspaces/` and commit it. A new joiner then opens one file and gets the right three folders.
+
+## Creating context: skill, prompt, or tool
+
+Use a versioned skill to generate context, but make it produce only L1–L3 drafts that a human prunes. A skill and an ad-hoc prompt differ mainly in *repeatability* and *which layers they fill*; judge them on output quality, not on approach.
+
+| Approach | How it works | Strength | Weakness | Use it for |
+| --- | --- | --- | --- | --- |
+| Team context skill | `SKILL.md` + templates, invoked by name, versioned in git | Same output shape every run; reviewable; improves over time | Can over-generate if templates ask for everything | Team standard for bootstrapping a repo |
+| Ad-hoc prompt | Pasted into chat | Fast to iterate | Not reproducible; each dev gets different files | Experiments that feed the skill |
+| OpenSpec `/opsx:explore` + `/opsx:onboard` | Agent reads the area you will change, then walks a real change | Specs grounded in a real change; no back-fill | Only covers what you touch; not a repo overview | L4–L5, story by story |
+| BMAD `document-project` / `generate-project-context` | Analyst agent documents the whole system; a lean `project-context.md` variant exists | Thorough current-state docs | Heavy; large docs go stale | One-time discovery on undocumented legacy |
+| Kiro steering (`product.md`, `tech.md`, `structure.md`) | Generated from the codebase, then edited | Clean three-file split | Kiro-specific loading | Template idea for L1/L3 |
+| Spec Kit brownfield bootstrap (community extension) | Scans code, generates constitution + `AGENTS.md` | Fits Spec Kit teams | Constitution conflicts with legacy patterns | Greenfield modules inside the brownfield app |
+| Graphify | tree-sitter graph of calls/imports; `query`, `path`, `explain`; MCP server | Structure without prose; rebuilds per commit | Not intent or rules | L6 retrieval, impact analysis |
+
+### How to compare two context generators
+
+Run both on the same repo, then score each output on these five checks. The one with more passes becomes the team skill; port the other's best sections into it.
+
+1. **Non-obvious ratio.** Strike every line an agent could find by grep in a minute. What percentage survives? Aim for over 70%.
+2. **Accuracy.** Every command runs; every path exists; every rule matches current code.
+3. **Size.** `AGENTS.md` under ~100 lines; everything else linked, not inlined.
+4. **Anchors.** Facts point to a file, command or symbol so drift can be checked automatically.
+5. **Golden-task result.** Give a fresh agent 3 real past stories with each context set. Compare: did it pass tests, how many steps, how many tokens.
+
+### Recommended generation process (per repo)
+
+1. **Inventory (L6 first).** Build the Graphify graph and list contracts (OpenAPI, events). This feeds facts, not prose.
+2. **Draft with the skill.** Generate `AGENTS.md`, 2–4 scoped instruction files, and `docs/context/` pages from the graph and code.
+3. **Prune.** Delete anything discoverable. Add the tribal knowledge only seniors know: traps, "why" behind odd code, integration gotchas.
+4. **Interview.** 30 minutes with the tech lead: "what do new joiners get wrong in their first month?" Each answer becomes a rule.
+5. **Validate.** Run the golden tasks. Keep only what improved them.
+6. **Wire freshness.** Add anchors and the CI check (see Managing context) before merging.
+
+## Using OpenSpec in brownfield
+
+Treat OpenSpec as the behaviour and change layer (L4–L5) on top of your repo context, not as a replacement for it. OpenSpec's own guidance is explicit: [write specs only for what you are about to change](https://openspec.dev/docs/existing-projects), and let `openspec/specs/` fill in one archived change at a time.
+
+### The per-story loop
+
+1. `/opsx:explore` — the agent reads the area the story touches (with Graphify or Repomix for grounding) and proposes where the change fits. No files written yet.
+2. `/opsx:propose <change-id>` — creates `openspec/changes/<change-id>/` with `proposal.md`, `design.md`, `tasks.md` and delta specs (`ADDED` / `MODIFIED` / `REMOVED` requirements).
+3. Human review of the proposal and delta spec before any code.
+4. `/opsx:apply` — implements `tasks.md`.
+5. `/opsx:archive` after merge — merges the delta into `openspec/specs/` and moves the change to `changes/archive/YYYY-MM-DD-<id>/`.
+
+### Make OpenSpec respect your context
+
+`openspec/config.yaml` is injected into every artifact, apply and archive run. Use it as the bridge to the context layers:
+
+- `context:` — 5–10 lines only: stack, the pointer "read `AGENTS.md` and `docs/context/` first", and the platform rule "authz always goes through CIAM". OpenSpec warns that verbose rules make output worse.
+- `rules:` — per artifact, e.g. `tasks: Every endpoint task includes a CIAM permission check and an integration test`.
+- `operations.archive.guidance:` — "If this change altered a convention, command or contract, update `AGENTS.md` or `docs/context/` in the same PR." This turns archive into the context-refresh trigger.
+- `references:` — read-only pointer to the `system-context` store, so the agent gets an index of shared contract specs with the exact command to fetch each.
+
+### Cross-service changes (UI + backend)
+
+A cross-service change needs one home for its delta specs, or the UI and backend halves archive into two places. Pick by team shape:
+
+- **One team owns both services:** *store-only*. Each repo's `openspec/config.yaml` holds just `store: system-context`; all behaviour specs and changes live in the store. One change, tasks grouped per repo, producer first. The demo kit uses this.
+- **Independent teams:** *store-optional*. Each repo keeps its own `openspec/` for its own work and adds `references: [system-context]` to read shared contract specs.
+
+Stores and worksets are beta: command names may change and OpenSpec never pulls or pushes for you, so a stale checkout means stale specs. To avoid beta features, keep repo-local `openspec/` in each service and give both halves the same change-id plus a shared contract file in `system-context`.
+
+### Pitfalls seen in practice
+
+- Two changes editing the same main spec can produce contradictory specs; archive related changes in sequence ([discussion #1570](https://github.com/Fission-AI/OpenSpec/discussions/1570)).
+- Over time the full picture is spread across many change folders; schedule a quarterly spec tidy per domain.
+- Use high-reasoning models for propose; a smaller model is fine for apply on well-specified tasks.
+
+## Instructions vs skills vs prompts vs MCP
+
+Instructions tell the agent *what must be true*; skills tell it *how to do a procedure*. You need both: instructions for the context itself, skills for creating, refreshing and using it.
+
+| Mechanism | Loads | Copilot location | Claude Code location | Put here |
+| --- | --- | --- | --- | --- |
+| Repo instructions | Every request | `AGENTS.md` or `.github/copilot-instructions.md` | `CLAUDE.md` (can `@AGENTS.md` import) | L1 core rules, commands, pointers |
+| Scoped instructions | When matching files are touched, or by `description` | `.github/instructions/*.instructions.md` (`applyTo`) | `.claude/rules/*.md` (`paths`) | L2 framework/layer rules |
+| Skills | Name + description at start; body only when triggered | `.github/skills/<name>/SKILL.md` (also `.agents/skills`, `.claude/skills`) | `.claude/skills/<name>/SKILL.md` | Context bootstrap, context refresh, story → OpenSpec change, onboarding |
+| Prompt files | When typed as `/name` | `.github/prompts/*.prompt.md` (VS Code Local harness) | Prefer skills | Short one-shot tasks; migrate to skills over time |
+| Custom agents | When selected | `.github/agents/*.agent.md` | `.claude/agents/` | Isolated roles: context steward, contract checker |
+| Hooks | On lifecycle events | `.github/hooks/*.json` (preview) | `.claude/settings.json` | Deterministic checks and reminders |
+| MCP servers | Tool calls on demand | `.vscode/mcp.json` | `.mcp.json` | Graphify, Jira/ADO, contract registry |
+| Org instructions | Every request, all repos | GitHub organization settings | User/managed settings | L0 platform rules |
+
+Practical guidance:
+
+- **Pick one canonical file.** Write `AGENTS.md`; make `CLAUDE.md` a one-line `@AGENTS.md` import. Copilot, Codex and Claude then read the same rules.
+- **Skills are portable.** The [Agent Skills](https://agentskills.io/skill-creation/quickstart) `SKILL.md` format works in Copilot, Claude Code and Codex. The `description` is the trigger: if a phrase is not in it, the skill will not fire.
+- **Do not use `applyTo: "**"`** for large files; it burns context on every request.
+- **Make context generation a team skill** (`context-bootstrap`) in a shared skills repo, with a sibling `context-refresh` skill that only touches files whose anchors changed.
+
+## Managing context in a team
+
+Treat context files as code: owned, reviewed in the same PR, and tested in CI. Context that lives outside the PR flow goes stale within a sprint.
+
+### Ownership and review
+
+| File or folder | Owner | Review rule |
+| --- | --- | --- |
+| `system-context/context/platform/` (L0) | Architecture / platform team | CODEOWNERS; changes announced to all teams |
+| `system-context/contracts/` | Producer service team | Generated from the producer's OpenAPI on merge; consumers never hand-edit |
+| `AGENTS.md`, `.github/instructions/` (L1–L2) | Service tech lead | CODEOWNERS; must change in the same PR as the code it describes |
+| `docs/context/` (L3) | Service team | Updated at archive time when a change alters it |
+| `openspec/specs/` (L4) | Whoever archives | Only through `/opsx:archive`, never hand-edited |
+| Shared skills repo | AI enablement group | Versioned releases; changelog |
+
+### Freshness mechanics
+
+- **Same-PR rule.** PR template checkbox: "Did this change a command, convention, contract or integration? If yes, context updated."
+- **Anchors + CI check.** Every fact in L1–L3 cites a path, command or symbol. A pipeline step checks that anchored paths exist and flags context files whose anchored code changed while the file did not. Start in warn mode; switch to blocking once noise is low. Tools such as ctxlint, ctxharness and doctyze do this off the shelf; the script in the demo kit also works.
+- **Agent hooks.** Session-start, post-edit and stop hooks remind the agent at the moment it changes anchored code (see `docs/faq.md` and the explainer).
+- **Archive hook.** OpenSpec `operations.archive.guidance` asks the agent to update context when a change altered conventions.
+- **Graph rebuild.** Graphify's post-commit hook or a pipeline job keeps L6 current, so L1–L3 never need to describe structure.
+- **Correction log.** When a reviewer fixes an agent mistake, tag the PR comment `#agent-miss`. Monthly, turn repeated misses into rules and delete rules nobody needed.
+
+### When a new member joins
+
+1. Clone `system-context` and open `workspaces/<product>.code-workspace`. All repos and their context load in one window.
+2. Run `/onboard-me` (a skill): it reads the context index, explains the service map, contracts and platform rules, and points to the last five archived OpenSpec changes as worked examples.
+3. First task: a small real story through the full explore → propose → apply → archive loop, reviewed by a buddy.
+4. Their questions in week one are a context audit: anything they had to ask a human is a missing rule.
+
+## Alternatives and complements
+
+No single framework covers all seven layers; the best brownfield setup combines OpenSpec (L4–L5), lean `AGENTS.md` + skills (L0–L3) and a code graph (L6). Using Spec Kit for greenfield and OpenSpec for brownfield matches what others recommend.
+
+| Option | Brownfield fit | Ceremony | Multi-repo | Role |
+| --- | --- | --- | --- | --- |
+| [OpenSpec](https://openspec.dev/docs/existing-projects) | Built for it: delta specs, explore | Low | Stores + worksets (beta) | Default for every brownfield story |
+| [GitHub Spec Kit](https://www.thoughtworks.com/es/radar/languages-and-frameworks/github-spec-kit) | Possible; constitution can clash with legacy patterns | Medium–high | Repo-local | New modules or services inside the product |
+| Kiro steering + specs | Generates steering from code | Medium | Per workspace | Borrow the product/tech/structure split for L1/L3 |
+| BMAD Method | `document-project` for undocumented systems | High | Single flattened doc | One-time discovery on the worst legacy repo |
+| Plain `AGENTS.md` + skills | Good if kept lean | Lowest | Per repo + shared skills | Always (L0–L3) |
+| Graphify | Strong: structure without prose | Low | Per repo; MCP server for team | L6 retrieval and impact analysis |
+| Repomix | Packs code for the explore step | Low | Per repo | Fallback when Graphify is not set up |
+| Context linters (ctxlint, ctxharness, doctyze) | Detect drift | Low | Per repo | CI freshness check |
+
+Thoughtworks' April 2026 Radar notes teams mostly use Spec Kit in brownfield settings, and that useful constitutions capture scope, domain, versions, standards and repo structure. That is the same content as a good L1 file, so whichever framework you pick, the lean-L1 discipline is what matters.
+
+## Novel ideas worth piloting
+
+1. **Consumer briefs published by the producer.** On every merge to main, the backend pipeline generates a one-page "consumer brief" (endpoints changed, CIAM permissions required, error envelope, example payloads) from its OpenAPI and archived OpenSpec deltas, and commits it to `system-context/contracts/<service>/`. Consumers reference it read-only.
+2. **Story context packs.** A `story-to-change` skill takes a Jira/ADO story, queries Graphify for the touched neighbourhood, pulls the relevant specs and consumer briefs, and writes a short `context.md` into the OpenSpec change folder. Context becomes task-scoped instead of global.
+3. **Context tests (golden tasks).** Keep 5 past stories with known-good diffs per repo. Any change to L1–L3 or to a team skill re-runs them headless and reports pass rate, steps and tokens.
+4. **Anchored facts.** Every context line carries a machine-checkable anchor, e.g. `[anchor: src/main/java/**/ExportController.java]`. The CI check validates anchors and lists lines whose anchored code changed.
+5. **Context budget.** A hard token budget for always-on context per repo (e.g. 1,500 tokens for L0 + L1); CI fails when it is exceeded.
+6. **Agent-miss loop.** Reviewers tag `#agent-miss`; a monthly job clusters them and proposes rule additions *and deletions*.
+7. **Archive-driven context refresh.** OpenSpec archive guidance plus a `context-refresh` skill update context in the same PR as the change.
+
+## Demo: one story across UI + backend
+
+See `demo-kit/DEMO-SCRIPT.md` and the explainer (`docs/index.html`).
+
+**Story REPORT-142.** As a credit analyst, I want to export the filtered ratings report to Excel so I can share it offline.
+
+- Export button shows only for users with CIAM permission `REPORT_EXPORT`.
+- Export uses the grid's current filters and sort.
+- Over 50,000 rows returns HTTP 422 with a clear message; the UI shows it as a toast.
+- File name: `ratings-report-<yyyyMMdd>.xlsx`.
+
+## Rollout plan
+
+Pilot on one producer/consumer pair for four sprints, then template it for other teams only if golden-task results improve.
+
+| Sprint | Work | Gate |
+| --- | --- | --- |
+| 1 · Foundations | `system-context` repo, lean AGENTS.md per repo, Graphify, golden tasks, hooks on | — |
+| 2 · Compare | Run competing context generators; five-check comparison; merge into one team skill | Team skill chosen |
+| 3 · Live story | Real cross-service story end to end; CI check warn-only | — |
+| 4 · Decide | Re-run golden tasks; review agent misses; go / no-go | Pass rate at or above baseline |
+
+### Decisions to take before the pilot
+
+- [ ] Canonical always-on file: `AGENTS.md` (recommended) with `CLAUDE.md` importing it
+- [ ] Where `system-context` lives and who owns it
+- [ ] OpenSpec cross-repo mode: beta stores vs repo-local changes linked by change-id
+- [ ] Team skill baseline, decided by the five-check comparison
+- [ ] Golden tasks: 5 past stories per pilot repo, with known-good diffs
+- [ ] CI drift check: warn-only for the pilot, blocking after
+- [ ] Graphify: per-repo graph committed, or served centrally over MCP
+- [ ] Always-on context budget per repo (suggest 1,500 tokens for L0 + L1)
+
+### Success measures
+
+| Measure | How to read it |
+| --- | --- |
+| Golden-task pass rate | Same or higher than no-context baseline |
+| Agent steps and tokens per task | Lower than with the unpruned draft |
+| PR review comments tagged `#agent-miss` | Falling sprint over sprint |
+| Stale-anchor findings in CI | Fixed within the same sprint |
+| New-joiner time to first merged story | Shorter than the last joiner on the team |
+
+## Sources
+
+- [Using OpenSpec in an Existing Project](https://openspec.dev/docs/existing-projects)
+- [OpenSpec Stores (beta)](https://openspec.dev/docs/stores) · [Worksets (beta)](https://openspec.dev/docs/worksets) · [Project configuration](https://openspec.dev/docs/project-config)
+- [OpenSpec discussion #1570](https://github.com/Fission-AI/OpenSpec/discussions/1570)
+- [Spec-Driven Development with Brownfield Projects (intent-driven.dev)](https://intent-driven.dev/blog/2026/03/10/spec-driven-development-brownfield/)
+- [VS Code: custom instructions](https://code.visualstudio.com/docs/agent-customization/custom-instructions) · [agent customizations](https://code.visualstudio.com/docs/agent-customization/overview.md) · [hooks](https://code.visualstudio.com/docs/agent-customization/hooks) · [custom agents](https://code.visualstudio.com/docs/agent-customization/custom-agents)
+- [Claude Code: skills](https://code.claude.com/docs/en/skills) · [hooks](https://code.claude.com/docs/en/hooks)
+- [Agent Skills quickstart](https://agentskills.io/skill-creation/quickstart)
+- [Evaluating AGENTS.md (arXiv 2602.11988)](https://arxiv.org/html/2602.11988v1) and [summary of results](https://www.engineerscodex.com/agents-md-making-ai-worse)
+- [Thoughtworks Technology Radar: GitHub Spec Kit](https://www.thoughtworks.com/es/radar/languages-and-frameworks/github-spec-kit)
+- [Spec Kit Brownfield Bootstrap extension PR](https://github.com/github/spec-kit/pull/2145)
+- [Kiro steering docs](https://kiro.dev/fr/docs/steering/)
+- [BMAD: Working in the brownfield](https://cdn.jsdelivr.net/npm/@ptnglobal/bmad-method@4.43.1/docs/working-in-the-brownfield.md)
+- [Graphify overview](https://moltchat-agent-commons.onrender.com/wiki/graphify_(codebase_knowledge_graph_for_agents))
+- [Nested AGENTS.md for monorepos](https://www.mintlify.com/agentsmd/agents.md/guides/monorepos)
+- [ctxlint](https://github.com/YawLabs/ctxlint) · [doctyze](https://pypi.org/project/doctyze/)

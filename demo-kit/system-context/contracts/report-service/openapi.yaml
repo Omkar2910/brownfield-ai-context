@@ -1,0 +1,34 @@
+# Excerpt published by report-service CI. Do not edit by hand.
+openapi: 3.0.3
+info:
+  title: report-service API
+  version: 1.4.0
+paths:
+  /api/v1/reports/{reportId}/rows:
+    get:
+      summary: Paged, filtered report rows
+      x-ciam-permission: REPORT_VIEW
+      parameters:
+        - { name: reportId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: asOfDate, in: query, required: true, schema: { type: string, format: date } }
+        - { name: sector, in: query, schema: { type: string } }
+        - { name: rating, in: query, schema: { type: string } }
+        - { name: outlook, in: query, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200': { description: Page of rows }
+        '400': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
+components:
+  responses:
+    Error:
+      description: Platform error envelope
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code: { type: string }
+              message: { type: string }
+              traceId: { type: string }

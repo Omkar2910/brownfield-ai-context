@@ -1,0 +1,29 @@
+schema: spec-driven
+
+# Store for the Report Platform. report-service and report-ui are store-only repos:
+# all behaviour specs (openspec/specs/) and changes (openspec/changes/) live here.
+
+context: |
+  Repos: report-service (Spring Boot producer of /api/v1/reports/**), report-ui (Angular consumer).
+  Before proposing, read context/platform/, context/system-map.md and the AGENTS.md of each affected repo.
+  Authorization is always a CIAM permission code; new codes need a platform ticket (task 0).
+  Cross-service changes: one change, tasks grouped per repo, producer first. Keep artifacts short.
+
+rules:
+  proposal:
+    - List affected repos and whether any contract changes
+    - Name any new CIAM permission codes
+  design:
+    - Describe contract changes as request/response examples, not prose
+  tasks:
+    - Group tasks under one heading per repo, producer first
+    - Every backend endpoint task includes @RequiresPermission and integration tests with and without it
+    - Every permission-gated UI task includes tests for both permission states
+    - Contract changes include updating report-service openapi/report-api.yaml
+    - End each repo's tasks with "update AGENTS.md/docs/context if conventions changed"
+
+operations:
+  archive:
+    guidance:
+      - Before archiving, confirm the producer's consumer brief was regenerated
+      - List any context files (AGENTS.md, docs/context, context/platform) that need updating and update them in the same PR

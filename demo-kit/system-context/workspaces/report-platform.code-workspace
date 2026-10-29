@@ -1,0 +1,18 @@
+{
+  // Open this file in VS Code for any story that touches more than one repo.
+  // Paths are relative to this file; clone the repos as siblings of system-context.
+  "folders": [
+    { "name": "report-service (producer)", "path": "../../report-service" },
+    { "name": "report-ui (consumer)", "path": "../../report-ui" },
+    { "name": "system-context (shared)", "path": ".." }
+  ],
+  "settings": {
+    // Load AGENTS.md as always-on instructions (Local harness setting; on by default).
+    "chat.useAgentsMdFile": true,
+    // Find customizations at a parent repo root if a sub-folder is opened instead of the repo.
+    "chat.useCustomizationsInParentRepositories": true
+  },
+  "extensions": {
+    "recommendations": ["github.copilot-chat"]
+  }
+}

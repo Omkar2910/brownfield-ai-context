@@ -1,0 +1,9 @@
+# Store-only setup (OpenSpec stores are beta).
+# This repo keeps no specs or changes of its own: they live in the system-context store,
+# so UI and backend share one home for behaviour specs and cross-service changes.
+# Workflow context and rules are in system-context/openspec/config.yaml.
+# Repo-specific rules for agents live in ../AGENTS.md and .github/instructions/.
+store: system-context
+
+# Fallback without the beta store feature: delete the line above, run `openspec init`,
+# and add `context:` / `rules:` here (see DEMO-SCRIPT.md, "Fallback without OpenSpec stores").

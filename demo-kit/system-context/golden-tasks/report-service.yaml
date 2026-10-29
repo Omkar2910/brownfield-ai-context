@@ -1,0 +1,37 @@
+# Replace these examples with 5 real past stories from your repo.
+tasks:
+  - id: GT-1
+    story: REPORT-118 add outlook filter to report rows
+    base_commit: <sha before the story was merged>
+    expected_commit: <merged sha>
+    prompt: |
+      Add an optional `outlook` filter (STABLE, POSITIVE, NEGATIVE, DEVELOPING) to
+      GET /api/v1/reports/{reportId}/rows. Follow existing conventions. Add tests.
+    checks:
+      - ./mvnw -q verify passes
+      - filter goes through ReportFilterSpec (no string SQL)
+      - openapi/report-api.yaml updated
+    max_minutes: 20
+
+  - id: GT-2
+    story: REPORT-121 return 400 when asOfDate is missing
+    base_commit: <sha>
+    expected_commit: <sha>
+    prompt: |
+      Requests to the rows endpoint without asOfDate currently time out.
+      Make them fail fast with the right error. Add tests.
+    checks:
+      - 400 with code AS_OF_DATE_REQUIRED in the platform error envelope
+      - no change to query performance paths
+    max_minutes: 15
+
+  - id: GT-3
+    story: REPORT-130 restrict rows endpoint to REPORT_VIEW
+    base_commit: <sha>
+    expected_commit: <sha>
+    prompt: |
+      The rows endpoint must only be available to users allowed to view reports.
+    checks:
+      - uses @RequiresPermission("REPORT_VIEW"), not Keycloak roles
+      - integration tests for 200 and 403
+    max_minutes: 15
