@@ -103,7 +103,7 @@ if (tool === 'claude') {
 const osConfig = path.join(root, 'openspec', 'config.yaml');
 const snippet = fs.readFileSync(path.join(kitDir, 'snippets', 'openspec-config.yaml'), 'utf8');
 if (!fs.existsSync(path.join(root, 'openspec'))) {
-  notes.push('OpenSpec is not set up in this repo yet. Run `openspec init --tools github-copilot` in the repo, then run this installer again to add the OpenSpec settings.');
+  notes.push('OpenSpec is not set up in this repo (optional). Everything else works without it. To add it later: run `openspec init --tools github-copilot`, then run this installer again to add the OpenSpec settings.');
 } else {
   const current = fs.existsSync(osConfig) ? fs.readFileSync(osConfig, 'utf8') : '';
   const keys = ['context', 'rules', 'operations'];

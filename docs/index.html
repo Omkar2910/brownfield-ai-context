@@ -67,6 +67,8 @@ td code { white-space: nowrap; }
 li.task { list-style: none; margin-left: -1.3em; }
 li.task input { accent-color: var(--good); margin-right: 6px; }
 h3 + p strong:first-child { color: var(--accent); }
+.other { display: inline-block; margin-top: 12px; font-weight: 600; text-decoration: none; }
+.other:hover { text-decoration: underline; }
 footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 @media (max-width: 920px) {
   .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
@@ -97,11 +99,17 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>Guide: building brownfield stories with AI agents</h1>
+      <a class="other" href="context.html">Creating, using and maintaining context →</a>
     </header>
     
 <p>For developers using <strong>VS Code + GitHub Copilot</strong> (agent mode, any Claude or GPT model) on existing services.
 Written in plain English. Read it top to bottom once (about 15 minutes), then use it as a checklist.</p>
 <p>Last checked: November 2026. Tools in this area change monthly; see <a href="#10-what-is-still-changing">What is still changing</a>.</p>
+<blockquote>
+<p><strong>Two guides.</strong> This one is the setup and the story workflow (with OpenSpec). How to create, use and
+maintain the context itself, for any task and with or without OpenSpec, is in
+<strong><a href="context.html">CONTEXT-GUIDE.md</a></strong>. Context is the foundation; OpenSpec is an optional layer on top.</p>
+</blockquote>
 <hr />
 <h2 id="1-what-you-are-setting-up">1. What you are setting up</h2>
 <p>An AI agent writes better code when it knows three things: <strong>the rules of your codebase</strong>, <strong>what the
@@ -187,7 +195,7 @@ git checkout -b ai/context-setup
 </code></pre></div>
 <p>Keep the setup in its own small pull request, separate from the story. Reviewers then see "tooling and
 context" and "feature" separately.</p>
-<h3 id="step-3-install-openspec-and-turn-on-the-verify-step">Step 3 — Install OpenSpec and turn on the verify step</h3>
+<h3 id="step-3-install-openspec-and-turn-on-the-verify-step-optional-recommended-for-stories">Step 3 — Install OpenSpec and turn on the verify step (optional, recommended for stories)</h3>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">npm install -g @fission-ai/openspec@latest
 openspec init --tools github-copilot --no-copilot-cloud
 </code></pre></div>
@@ -222,6 +230,10 @@ one line to add). Use <code>--dry-run</code> first if you want to see the list w
 <tr>
 <td><code>.github/skills/context-refresh/</code></td>
 <td>Updates only the context lines a change made out of date</td>
+</tr>
+<tr>
+<td><code>.github/skills/context-learn/</code></td>
+<td>Turns an agent mistake or review comment into a short rule in the right file</td>
 </tr>
 <tr>
 <td><code>.github/skills/story-to-change/</code></td>
@@ -262,7 +274,7 @@ one line to add). Use <code>--dry-run</code> first if you want to see the list w
 <li>Open the service repo in VS Code. Restart VS Code if it was already open (new commands load on start).</li>
 <li>Open the Chat view, switch to <strong>Agent</strong> mode, and pick your model (for example Claude Sonnet 5.5).</li>
 <li>Run <strong>Chat: Open Customizations</strong> from the Command Palette. You should see:
-   - <strong>Skills:</strong> <code>context-bootstrap</code>, <code>context-refresh</code>, <code>story-to-change</code>, <code>story-finish</code>, <code>onboard-me</code>, plus the <code>openspec-*</code> skills
+   - <strong>Skills:</strong> <code>context-bootstrap</code>, <code>context-refresh</code>, <code>context-learn</code>, <code>story-to-change</code>, <code>story-finish</code>, <code>onboard-me</code>, plus the <code>openspec-*</code> skills
    - <strong>Agents:</strong> <code>context-steward</code>
    - <strong>Hooks:</strong> <code>ai-context.json</code> (hooks are a preview feature; if they are not listed, your VS Code version or company policy may not allow them yet — everything else still works, and the git hook and context check cover the gap)</li>
 <li>Type <code>/</code> in the chat box: the skills and the <code>/opsx-*</code> commands should appear.</li>
@@ -355,7 +367,8 @@ before any code. This replaces a lot of later review comments.
 <strong>Check:</strong> each diff before accepting it. Watch for the hook messages: when the agent edits a file that a
 context line points to, it is told which line to re-check.
 <strong>Write down:</strong> every time you corrected the agent, one line each (what it did, what was right). These
-are your <code>#agent-miss</code> notes; repeated ones become new context rules.</p>
+are your <code>#agent-miss</code> notes. For anything that would trip up the agent again, run
+<code>/context-learn &lt;what happened&gt;</code> so it becomes a rule for everyone.</p>
 <h3 id="phase-4-finish-2040-minutes">Phase 4 — Finish (20–40 minutes)</h3>
 <p><strong>Type:</strong></p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>/opsx-verify &lt;change-id&gt;
@@ -596,7 +609,7 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 <li><strong>Research on context files</strong> is young and some results disagree. Measure on your own stories.</li>
 </ul>
 <p>Background research, sources and the longer explanations: <code>docs/research/</code>.</p>
-    <footer>Generated from GUIDE.md. The installable kit, templates and research live alongside it in the same repository.</footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="context.html">Creating, using and maintaining context →</a></footer>
   </main>
 </div>
 

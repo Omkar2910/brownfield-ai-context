@@ -11,13 +11,13 @@ node kit/install.mjs <path-to-your-repo> --no-git-hook    # skip the git pre-com
 ```
 
 The installer only adds files. Existing files are never overwritten; it lists them and tells you what
-to merge by hand. Run OpenSpec's `openspec init` first so it can add settings to `openspec/config.yaml`.
+to merge by hand. OpenSpec is optional. If you use it, run `openspec init` first so the installer can add settings to `openspec/config.yaml`.
 
 ## What goes where
 
 | Kit file | Installed to (Copilot) | Purpose |
 | --- | --- | --- |
-| `files/.github/skills/*` | `.github/skills/` | `context-bootstrap`, `context-refresh`, `story-to-change`, `story-finish`, `onboard-me` |
+| `files/.github/skills/*` | `.github/skills/` | `context-bootstrap`, `context-refresh`, `context-learn`, `story-to-change`, `story-finish`, `onboard-me` |
 | `files/.github/agents/context-steward.agent.md` | `.github/agents/` | Agent that edits context files only |
 | `files/.github/hooks/ai-context.json` | `.github/hooks/` | Copilot hooks: session start, after edit, before finishing |
 | `files/.github/hooks/scripts/context-tools.cjs` | `.github/hooks/scripts/` | The hooks and the `check` / `status` commands (Node 18+, no dependencies) |

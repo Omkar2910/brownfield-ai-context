@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+</head>
+<body>
+<title>AI Context Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a working manual. Sticky section rail on wide screens, one reading column, tables and code scroll in their own boxes. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --ink: #16202c; --muted: #586779; --line: #d8dfe7;
+  --accent: #2b54d6; --accent-soft: #e7edfc; --code-bg: #edf1f6; --good: #1d7a4c;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+    --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+  --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 80px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.toc .label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc ul ul { display: none; }
+nav.toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible, nav.toc a.on { color: var(--ink); border-left-color: var(--accent); }
+main { min-width: 0; }
+header.top { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-size: clamp(30px, 4.6vw, 44px); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--display); font-size: 27px; line-height: 1.2; margin: 48px 0 12px; padding-top: 8px; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { font-family: var(--display); font-size: 20px; margin: 30px 0 8px; scroll-margin-top: 16px; }
+p, li { max-width: 70ch; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 700; }
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin: 14px 0; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+td code { white-space: nowrap; }
+.code { position: relative; margin: 12px 0; }
+.code pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13.5px; line-height: 1.5; }
+.code pre code { background: none; padding: 0; font-size: inherit; }
+.copy { position: absolute; top: 8px; right: 8px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.copy:hover { color: var(--ink); border-color: var(--accent); }
+li.task { list-style: none; margin-left: -1.3em; }
+li.task input { accent-color: var(--good); margin-right: 6px; }
+h3 + p strong:first-child { color: var(--accent); }
+.other { display: inline-block; margin-top: 12px; font-weight: 600; text-decoration: none; }
+.other:hover { text-decoration: underline; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+@media (max-width: 920px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { display: none; }
+}
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Sections">
+    <p class="label">Sections</p>
+    <div class="toc">
+<ul>
+<li><a href="#1-what-context-means">1. What "context" means</a></li>
+<li><a href="#2-what-good-context-looks-like">2. What good context looks like</a></li>
+<li><a href="#3-where-each-kind-of-fact-goes">3. Where each kind of fact goes</a></li>
+<li><a href="#4-creating-context-for-an-existing-repo">4. Creating context for an existing repo</a></li>
+<li><a href="#5-using-context-day-to-day">5. Using context day to day</a></li>
+<li><a href="#6-maintaining-context">6. Maintaining context</a></li>
+<li><a href="#7-how-much-context-is-enough">7. How much context is enough?</a></li>
+<li><a href="#8-several-repos-ui-backend">8. Several repos (UI + backend)</a></li>
+<li><a href="#9-how-the-kit-supports-all-this">9. How the kit supports all this</a></li>
+<li><a href="#10-checklists">10. Checklists</a></li>
+</ul>
+</div>
+
+  </nav>
+  <main>
+    <header class="top">
+      <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
+      <h1>Context guide: creating, using and maintaining AI context</h1>
+      <a class="other" href="index.html">Setup and story workflow →</a>
+    </header>
+    
+<p>This guide is about the <strong>context</strong> itself: the knowledge an AI agent needs to work well in an existing
+codebase. It works <strong>with or without OpenSpec</strong> and for any task: a bug fix, a small change, a
+refactor, a story. OpenSpec (see <a href="index.html">GUIDE.md</a>) adds a way to agree on <em>what to build</em> for a
+story; this guide is about <em>what the agent should know</em> every time.</p>
+<p>Plain English, about 20 minutes to read. Last checked November 2026.</p>
+<hr />
+<h2 id="1-what-context-means">1. What "context" means</h2>
+<p>Everything the agent reads besides your prompt. There are two kinds:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>What it is</th>
+<th>Example</th>
+<th>Lifetime</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Lasting context</strong></td>
+<td>Knowledge about the codebase that stays true for months</td>
+<td>"Every endpoint checks a permission with <code>@RequiresPermission</code>; login roles are never used for access"</td>
+<td>Months to years</td>
+</tr>
+<tr>
+<td><strong>Task context</strong></td>
+<td>What one piece of work needs</td>
+<td>"This bug is in the export path; these 4 files matter; the row limit is 50,000"</td>
+<td>Hours to days</td>
+</tr>
+</tbody>
+</table></div>
+<p>Most problems come from mixing them: task notes pasted into permanent files (which then go stale), or
+permanent rules re-typed into every prompt (which then vary by developer).</p>
+<p>OpenSpec covers one slice of this: the record of what the system <em>does</em> (specs) and the task context
+for a story (a change folder). This guide covers the rest: rules, traps, commands, and how the agent
+finds things.</p>
+<hr />
+<h2 id="2-what-good-context-looks-like">2. What good context looks like</h2>
+<p>Six properties. If a line fails one, fix or delete it.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Test</th>
+<th>Bad</th>
+<th>Good</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Non-obvious</strong></td>
+<td>Could someone find it by searching in a minute?</td>
+<td>"The project uses Spring Boot."</td>
+<td>"Heavy report queries use <code>JdbcTemplate</code>, not JPA: JPA loaded 200k rows into memory once."</td>
+</tr>
+<tr>
+<td><strong>True</strong></td>
+<td>Does the code still do this?</td>
+<td>A command that was renamed last year</td>
+<td>A command copied from the current build file</td>
+</tr>
+<tr>
+<td><strong>Specific</strong></td>
+<td>Could an agent act on it?</td>
+<td>"Follow security best practices."</td>
+<td>"Never log request bodies: they contain client PII."</td>
+</tr>
+<tr>
+<td><strong>Has a reason</strong></td>
+<td>Does it say why?</td>
+<td>"Don't use <code>ZonedDateTime</code> for <code>as_of_date</code>."</td>
+<td>"…: it is a business date with no time zone; conversion shifts it by a day for US users."</td>
+</tr>
+<tr>
+<td><strong>Anchored</strong></td>
+<td>Does it name the code it describes?</td>
+<td>(no link to code)</td>
+<td><code>… [anchor: src/main/java/**/ReportFilterSpec.java]</code></td>
+</tr>
+<tr>
+<td><strong>In the right place</strong></td>
+<td>Is it loaded only when needed?</td>
+<td>Angular rules in the root file that every Java task also reads</td>
+<td>Angular rules in an instructions file that loads only for <code>.ts</code>/<code>.html</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Why so strict: published studies found long, generated context files made agents slower (about 20%
+more cost) and often less accurate, while short human-checked files helped a little. Agents follow what
+you write, so every unnecessary rule is work they will do.</p>
+<hr />
+<h2 id="3-where-each-kind-of-fact-goes">3. Where each kind of fact goes</h2>
+<p>Ask these questions in order. Stop at the first "yes".</p>
+<ol>
+<li><strong>Is it true for almost every task in this repo, and would a mistake be costly?</strong>
+   → <code>AGENTS.md</code> (read on every request). Keep the file around 100 lines, never above 150.</li>
+<li><strong>Does it apply only to certain files</strong> (controllers, migrations, Angular components, tests)?
+   → a scoped rules file in <code>.github/instructions/</code> with a tight <code>applyTo</code> pattern.</li>
+<li><strong>Is it background someone needs only for some tasks</strong> (architecture, data flow, traps in one area)?
+   → a page in <code>docs/context/</code>, listed in the "Where to look" section of <code>AGENTS.md</code>.</li>
+<li><strong>Is it a procedure</strong> (how to add an endpoint end to end, how to release, how to create context)?
+   → a skill in <code>.github/skills/</code>, called by name (<code>/skill-name</code>).</li>
+<li><strong>Is it structure</strong> (what calls what, where a class lives)?
+   → don't write it down; the agent searches the code, or uses a code graph (Graphify).</li>
+<li><strong>Is it about how the system behaves</strong> (requirements and scenarios)?
+   → OpenSpec specs, if you use OpenSpec; otherwise tests are the best record.</li>
+<li><strong>Is it only about the current task?</strong>
+   → task context: the chat, or a task note (a story context pack). Never a permanent file.</li>
+<li><strong>Is it shared by several repos</strong> (platform rules, API contracts)?
+   → one shared place (organization instructions or a shared <code>system-context</code> repo), linked from each repo.</li>
+</ol>
+<hr />
+<h2 id="4-creating-context-for-an-existing-repo">4. Creating context for an existing repo</h2>
+<p>Budget about two hours per repo, spread over a day. The kit's <code>/context-bootstrap</code> skill does steps
+2, 4 and 5 for you, but you own the result.</p>
+<h3 id="step-1-harvest-what-already-exists-30-min">Step 1 — Harvest what already exists (30 min)</h3>
+<p>The best rules are already written somewhere, just not for agents. Collect, don't write:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Source</th>
+<th>What it gives you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Build files and CI pipeline</td>
+<td>The real commands</td>
+</tr>
+<tr>
+<td>README, wiki, onboarding docs</td>
+<td>Architecture, setup (check it is still true)</td>
+</tr>
+<tr>
+<td><strong>Pull request review comments</strong> from the last few months</td>
+<td>Rules people keep repeating ("use the error helper", "no entities in responses")</td>
+</tr>
+<tr>
+<td>Incident and bug reports</td>
+<td>Traps, with reasons</td>
+</tr>
+<tr>
+<td>Code comments with WHY / HACK / NOTE</td>
+<td>Deliberate oddities</td>
+</tr>
+<tr>
+<td>ADRs and design docs</td>
+<td>Decisions and their reasons</td>
+</tr>
+<tr>
+<td>Team chat FAQs</td>
+<td>Questions people ask again and again</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="step-2-draft-with-the-agent-20-min">Step 2 — Draft with the agent (20 min)</h3>
+<p>In agent mode: <code>/context-bootstrap</code>. It reads the code and build files and drafts <code>AGENTS.md</code>, two to four
+scoped rule files and <code>docs/context/architecture.md</code> and <code>known-traps.md</code>. Paste the harvest notes
+into the chat so it uses them.</p>
+<h3 id="step-3-interview-the-people-who-know-30-min">Step 3 — Interview the people who know (30 min)</h3>
+<p>The skill asks these; get a senior engineer or tech lead to answer:
+1. What do new joiners get wrong in their first month?
+2. Which platform rules apply (authentication, permissions, logging, error format)?
+3. What looks wrong but is deliberate?
+4. What must never be edited by hand?</p>
+<h3 id="step-4-prune-20-min">Step 4 — Prune (20 min)</h3>
+<p>Go line by line with the six properties from Section 2. Expect to delete a third or more of the draft.
+That is normal and the most valuable part of the work.</p>
+<h3 id="step-5-anchor-10-min">Step 5 — Anchor (10 min)</h3>
+<p>Add <code>[anchor: &lt;path or glob&gt;]</code> after each line that depends on specific code. This is what lets the
+tools notice later when the code changes and the line may be wrong.</p>
+<h3 id="step-6-try-it-on-real-tasks-20-min">Step 6 — Try it on real tasks (20 min)</h3>
+<p>Pick two small tasks you did recently. Start a fresh chat for each and ask the agent to do it again.
+Watch: did it follow the rules? Did it open the right files? Did it ask fewer questions? If a rule
+didn't help, cut or reword it.</p>
+<h3 id="step-7-review-and-merge">Step 7 — Review and merge</h3>
+<p>Run <code>node .github/hooks/scripts/context-tools.cjs check</code>, then open a pull request like any code change.
+The tech lead reviews the context files; that review is the quality gate.</p>
+<hr />
+<h2 id="5-using-context-day-to-day">5. Using context day to day</h2>
+<p>The point of good context is that you <strong>stop re-typing the same instructions</strong>. The agent reads
+<code>AGENTS.md</code> and matching rule files automatically.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Task</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Small change or bug fix</strong></td>
+<td>Just describe it. Add "check docs/context/known-traps.md first" if it touches a risky area.</td>
+</tr>
+<tr>
+<td><strong>Bigger change or story</strong></td>
+<td><code>/story-to-change</code> gathers only the context the task needs (works with or without OpenSpec), then you agree a plan before coding.</td>
+</tr>
+<tr>
+<td><strong>Unfamiliar area</strong></td>
+<td>Ask the agent to explain the area first and list which rules apply, before any edits.</td>
+</tr>
+<tr>
+<td><strong>Code review</strong></td>
+<td>"Review this diff against AGENTS.md and the instructions that apply. List violations with file and line."</td>
+</tr>
+<tr>
+<td><strong>Agent got something wrong</strong></td>
+<td>Correct it, then <code>/context-learn &lt;what went wrong&gt;</code> so it is fixed for everyone (see Section 6).</td>
+</tr>
+<tr>
+<td><strong>New team member</strong></td>
+<td><code>/onboard-me</code> for a guided tour.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two habits that make a big difference:
+- <strong>Ask the agent to say which rules apply</strong> before it codes. If it can't name them, the context did not load.
+- <strong>Check what was loaded.</strong> In VS Code, expand <strong>References</strong> under a chat response to see which instruction files were used.</p>
+<hr />
+<h2 id="6-maintaining-context">6. Maintaining context</h2>
+<p>Context rots for one reason: updating it depends on someone remembering. The kit replaces remembering
+with four layers, from fully automatic to occasional.</p>
+<h3 id="layer-1-automatic-no-effort">Layer 1 — Automatic (no effort)</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>When</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Agent hook: session start</td>
+<td>Each new chat</td>
+<td>The agent gets a short note: how many context files, any broken anchors</td>
+</tr>
+<tr>
+<td>Agent hook: after an edit</td>
+<td>Each time the agent edits a file</td>
+<td>If a context line is anchored to that file, the agent is told which line to re-check</td>
+</tr>
+<tr>
+<td>Agent hook: before finishing</td>
+<td>When the agent tries to stop</td>
+<td>It checks for broken or stale anchors once and asks the agent to fix or confirm</td>
+</tr>
+<tr>
+<td>Git pre-commit hook</td>
+<td>Each commit, by anyone</td>
+<td>Refuses the commit if a context line points at a file that no longer exists</td>
+</tr>
+<tr>
+<td>PR pipeline check (optional)</td>
+<td>Each pull request</td>
+<td>Same check, against the target branch; warnings at first, blocking later</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="layer-2-when-something-happens-minutes">Layer 2 — When something happens (minutes)</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Trigger</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>You changed a command, convention, contract or integration</td>
+<td>Update the context line <strong>in the same pull request</strong> (the PR template asks)</td>
+</tr>
+<tr>
+<td>The checks report a stale or broken line</td>
+<td><code>/context-refresh</code>: it updates, moves or deletes only the affected lines</td>
+</tr>
+<tr>
+<td>The agent made a mistake a rule would have prevented</td>
+<td><code>/context-learn &lt;what happened&gt;</code>: it adds a short rule in the right place, with a reason and anchor</td>
+</tr>
+<tr>
+<td>A reviewer writes the same comment twice</td>
+<td>Same: it becomes a rule</td>
+</tr>
+<tr>
+<td>An incident or production bug</td>
+<td>Add a trap to <code>docs/context/known-traps.md</code> with the reason</td>
+</tr>
+<tr>
+<td>A framework or library upgrade</td>
+<td>Re-check the lines anchored to config and build files</td>
+</tr>
+<tr>
+<td>A new joiner had to ask a person something</td>
+<td>That answer is a missing rule</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="layer-3-on-a-schedule-minutes-per-sprint-an-hour-per-quarter">Layer 3 — On a schedule (minutes per sprint, an hour per quarter)</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>When</th>
+<th>What</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>End of each sprint (15 min)</td>
+<td>Select the <strong>context-steward</strong> agent: <code>sprint-digest</code>. Look at agent mistakes noted this sprint; turn repeats into rules.</td>
+<td>Tech lead</td>
+</tr>
+<tr>
+<td>Each quarter (1 hour)</td>
+<td><code>context-steward</code>: <code>quarterly-review</code> and <code>prune</code>. Re-run two or three past tasks. Delete rules that never mattered.</td>
+<td>Tech lead + one developer</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="layer-4-ownership">Layer 4 — Ownership</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Owner</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AGENTS.md</code>, <code>.github/instructions/</code></td>
+<td>Service tech lead</td>
+<td>Changes reviewed like code</td>
+</tr>
+<tr>
+<td><code>docs/context/</code></td>
+<td>Service team</td>
+<td>Updated in the PR that changes the behaviour</td>
+</tr>
+<tr>
+<td>Skills and the steward agent</td>
+<td>Whoever maintains the kit for your teams</td>
+<td>Versioned; changes announced</td>
+</tr>
+<tr>
+<td>Shared platform rules</td>
+<td>Architecture or platform team</td>
+<td>One copy, linked from each repo</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-update-loop">The update loop</h3>
+<p>Every update, whoever or whatever triggers it, follows the same four steps:</p>
+<ol>
+<li><strong>Detect</strong> — a hook, the check, a reviewer, or a person notices.</li>
+<li><strong>Decide</strong> — for each line: update it, move its anchor, delete it, or confirm it is still true.</li>
+<li><strong>Change in the same PR</strong> as the code that caused it.</li>
+<li><strong>Review</strong> — a person approves. Agents propose context changes; they never merge them.</li>
+</ol>
+<h3 id="what-not-to-do">What not to do</h3>
+<ul>
+<li>Don't only add. Every quarter, deleting is as important as adding.</li>
+<li>Don't keep dated documents (sprint notes, meeting notes) where agents read them. Agents can't tell
+  what is current. Keep history in git, in <code>CHANGELOG.md</code>, or in OpenSpec's archive.</li>
+<li>Don't paste task notes into permanent files.</li>
+<li>Don't let an agent rewrite context files from scratch. Refresh changes only what changed.</li>
+</ul>
+<hr />
+<h2 id="7-how-much-context-is-enough">7. How much context is enough?</h2>
+<p>As little as makes the agent do the right thing. Starting budgets:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Context</th>
+<th>Budget</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AGENTS.md</code></td>
+<td>About 100 lines; never above 150 (the check warns)</td>
+</tr>
+<tr>
+<td>Everything loaded on every request</td>
+<td>About 2,000 tokens (<code>context-tools.cjs status</code> shows it)</td>
+</tr>
+<tr>
+<td>Each scoped rules file</td>
+<td>Under about 50 lines</td>
+</tr>
+<tr>
+<td>A task context pack</td>
+<td>Under about 150 lines</td>
+</tr>
+<tr>
+<td><code>docs/context/</code> pages</td>
+<td>No hard limit, but only loaded when needed</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Too much:</strong> the agent takes more steps and reads more files for the same task; rules contradict each
+other; lines describe things a search finds quickly.
+<strong>Too little:</strong> the same mistake shows up twice; the agent asks the same question every session; new
+joiners ask people about the same trap.</p>
+<p>To know for sure, keep three to five past tasks with known-good results and re-run them in a fresh chat
+when you change the context. Keep the change only if results are the same or better.</p>
+<hr />
+<h2 id="8-several-repos-ui-backend">8. Several repos (UI + backend)</h2>
+<ul>
+<li>Each repo owns its own context. Never merge two services' rules into one file.</li>
+<li>When a task crosses repos, open both in one VS Code window (multi-root workspace); each keeps its own
+  context and the agent sees both.</li>
+<li>What crosses the boundary is the <strong>contract</strong>: the backend's API definition (OpenAPI or DTOs). Point
+  the UI's context at it rather than describing the API in prose.</li>
+<li>Platform rules (authentication, permissions, error format) live once, in organization instructions or a
+  shared repo, and each <code>AGENTS.md</code> links to them.</li>
+<li>The <code>demo-kit/</code> folder shows this layout with two made-up services.</li>
+</ul>
+<hr />
+<h2 id="9-how-the-kit-supports-all-this">9. How the kit supports all this</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Kit piece</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Create context</td>
+<td><code>/context-bootstrap</code> skill, templates, prune checklist</td>
+</tr>
+<tr>
+<td>Gather task context</td>
+<td><code>/story-to-change</code> skill (OpenSpec optional)</td>
+</tr>
+<tr>
+<td>Fix context after changes</td>
+<td><code>/context-refresh</code> skill</td>
+</tr>
+<tr>
+<td>Learn from mistakes</td>
+<td><code>/context-learn</code> skill</td>
+</tr>
+<tr>
+<td>Tour for new joiners</td>
+<td><code>/onboard-me</code> skill</td>
+</tr>
+<tr>
+<td>Sprint and quarter upkeep</td>
+<td><code>context-steward</code> agent</td>
+</tr>
+<tr>
+<td>Notice drift automatically</td>
+<td>Agent hooks, git pre-commit hook, <code>context-tools.cjs check</code></td>
+</tr>
+<tr>
+<td>Same-PR rule</td>
+<td>Pull request template</td>
+</tr>
+</tbody>
+</table></div>
+<p>Install it with <code>node kit/install.mjs &lt;your-repo&gt;</code> (see <a href="index.html">GUIDE.md</a>, Section 3). OpenSpec is
+not required; without it, skip the OpenSpec steps and everything above still works.</p>
+<hr />
+<h2 id="10-checklists">10. Checklists</h2>
+<p><strong>Creating context (once per repo)</strong>
+- [ ] Harvest: build files, CI, README, review comments, incidents, code comments
+- [ ] <code>/context-bootstrap</code>, answer the four questions
+- [ ] Prune with the six properties; <code>AGENTS.md</code> about 100 lines
+- [ ] Anchors on code-dependent lines
+- [ ] Try two past tasks in a fresh chat
+- [ ] <code>context-tools.cjs check</code> clean; PR reviewed by the tech lead</p>
+<p><strong>Every pull request</strong>
+- [ ] Did this change a command, convention, trap, contract or integration? Context updated in this PR
+- [ ] Check passes (pre-commit or pipeline)</p>
+<p><strong>Every sprint (15 min)</strong>
+- [ ] Agent mistakes noted this sprint → repeated ones become rules (<code>/context-learn</code>)
+- [ ] <code>context-steward</code>: <code>sprint-digest</code></p>
+<p><strong>Every quarter (1 hour)</strong>
+- [ ] <code>context-steward</code>: <code>quarterly-review</code>, then <code>prune</code>
+- [ ] Re-run two or three past tasks
+- [ ] Delete rules that never mattered</p>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a></footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('button.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.parentElement.querySelector('pre');
+      var reset = function (t) { btn.textContent = t; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+      var select = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); reset('Selected');
+      };
+      try { navigator.clipboard.writeText(pre.innerText).then(function () { reset('Copied'); }, select); } catch (e) { select(); }
+    });
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var heads = links.map(function (a) { return document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1))); });
+  function mark() {
+    var y = window.scrollY + 120, idx = 0;
+    heads.forEach(function (h, i) { if (h && h.offsetTop <= y) idx = i; });
+    links.forEach(function (a, i) { a.classList.toggle('on', i === idx); });
+  }
+  window.addEventListener('scroll', mark, { passive: true }); mark();
+})();
+</script>
+
+</body>
+</html>

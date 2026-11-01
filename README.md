@@ -9,7 +9,8 @@ that keep the context up to date.
 
 | I want to… | Open |
 | --- | --- |
-| Understand it and set it up, step by step, in plain English | **[GUIDE.md](GUIDE.md)** (or the same guide as a web page: [docs/index.html](docs/index.html)) |
+| Set it up and run a story, step by step, in plain English | **[GUIDE.md](GUIDE.md)** (web page: [docs/index.html](docs/index.html)) |
+| Understand how to create, use and maintain context for any task, with or without OpenSpec | **[CONTEXT-GUIDE.md](CONTEXT-GUIDE.md)** (web page: [docs/context.html](docs/context.html)) |
 | Install the kit into my repo | `node kit/install.mjs <path-to-your-repo>` — details in [kit/README.md](kit/README.md) |
 | Track my first story and present the results | [templates/story-log.md](templates/story-log.md), [templates/presentation-outline.md](templates/presentation-outline.md) |
 | Try everything in a sandbox first | [demo-kit/](demo-kit/README.md) (made-up UI + backend services) |
@@ -30,11 +31,12 @@ Then open the repo in VS Code, switch Chat to agent mode and type `/context-boot
 ## Repository layout
 
 ```
-GUIDE.md            the guide (start here)
+GUIDE.md            setup + story workflow (start here)
+CONTEXT-GUIDE.md    creating, using and maintaining context (any task, OpenSpec optional)
 kit/                installer + the files it adds to your repo
 templates/          story log and presentation outline
 demo-kit/           sandbox: two made-up services and a shared context repo
-docs/index.html     the guide as a web page
+docs/*.html         both guides as web pages
 docs/research/      playbook, FAQ, explainer, research update, sources
 ```
 

@@ -5,6 +5,10 @@ Written in plain English. Read it top to bottom once (about 15 minutes), then us
 
 Last checked: November 2026. Tools in this area change monthly; see [What is still changing](#10-what-is-still-changing).
 
+> **Two guides.** This one is the setup and the story workflow (with OpenSpec). How to create, use and
+> maintain the context itself, for any task and with or without OpenSpec, is in
+> **[CONTEXT-GUIDE.md](CONTEXT-GUIDE.md)**. Context is the foundation; OpenSpec is an optional layer on top.
+
 ---
 
 ## 1. What you are setting up
@@ -83,7 +87,7 @@ git checkout -b ai/context-setup
 Keep the setup in its own small pull request, separate from the story. Reviewers then see "tooling and
 context" and "feature" separately.
 
-### Step 3 — Install OpenSpec and turn on the verify step
+### Step 3 — Install OpenSpec and turn on the verify step (optional, recommended for stories)
 
 ```bash
 npm install -g @fission-ai/openspec@latest
@@ -121,6 +125,7 @@ What it adds:
 | --- | --- |
 | `.github/skills/context-bootstrap/` | Creates your context files (Step 6) |
 | `.github/skills/context-refresh/` | Updates only the context lines a change made out of date |
+| `.github/skills/context-learn/` | Turns an agent mistake or review comment into a short rule in the right file |
 | `.github/skills/story-to-change/` | Starts a story: reads it, gathers just the context it needs |
 | `.github/skills/story-finish/` | Ends a story: tests, verify, context check, PR description |
 | `.github/skills/onboard-me/` | 15-minute tour for a new team member |
@@ -135,7 +140,7 @@ What it adds:
 1. Open the service repo in VS Code. Restart VS Code if it was already open (new commands load on start).
 2. Open the Chat view, switch to **Agent** mode, and pick your model (for example Claude Sonnet 5.5).
 3. Run **Chat: Open Customizations** from the Command Palette. You should see:
-   - **Skills:** `context-bootstrap`, `context-refresh`, `story-to-change`, `story-finish`, `onboard-me`, plus the `openspec-*` skills
+   - **Skills:** `context-bootstrap`, `context-refresh`, `context-learn`, `story-to-change`, `story-finish`, `onboard-me`, plus the `openspec-*` skills
    - **Agents:** `context-steward`
    - **Hooks:** `ai-context.json` (hooks are a preview feature; if they are not listed, your VS Code version or company policy may not allow them yet — everything else still works, and the git hook and context check cover the gap)
 4. Type `/` in the chat box: the skills and the `/opsx-*` commands should appear.
@@ -224,7 +229,8 @@ Work in slices: ask it to do tasks 1–3, review the diff, run the tests, commit
 **Check:** each diff before accepting it. Watch for the hook messages: when the agent edits a file that a
 context line points to, it is told which line to re-check.
 **Write down:** every time you corrected the agent, one line each (what it did, what was right). These
-are your `#agent-miss` notes; repeated ones become new context rules.
+are your `#agent-miss` notes. For anything that would trip up the agent again, run
+`/context-learn <what happened>` so it becomes a rule for everyone.
 
 ### Phase 4 — Finish (20–40 minutes)
 **Type:**

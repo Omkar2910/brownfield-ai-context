@@ -1,4 +1,4 @@
-<title>Brownfield Story Guide</title>
+<title>{{PAGE_TITLE}}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,6 +59,8 @@ td code { white-space: nowrap; }
 li.task { list-style: none; margin-left: -1.3em; }
 li.task input { accent-color: var(--good); margin-right: 6px; }
 h3 + p strong:first-child { color: var(--accent); }
+.other { display: inline-block; margin-top: 12px; font-weight: 600; text-decoration: none; }
+.other:hover { text-decoration: underline; }
 footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 @media (max-width: 920px) {
   .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
@@ -75,9 +77,10 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>{{TITLE}}</h1>
+      {{OTHER}}
     </header>
     {{BODY}}
-    <footer>Generated from GUIDE.md. The installable kit, templates and research live alongside it in the same repository.</footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. {{OTHER}}</footer>
   </main>
 </div>
 

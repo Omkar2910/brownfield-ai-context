@@ -21,10 +21,14 @@ Goal: give the proposal step exactly the context this story needs, and nothing g
    - Contracts: API definitions (OpenAPI files, DTOs) the story changes or calls.
 4. **List open questions** for the product owner or tech lead (unclear rules, edge cases, data limits,
    permissions). Ask them now if the user is available.
-5. **Write the pack.** Choose a change id in kebab-case that starts with a verb, e.g.
-   `add-report-excel-export`. Save a context pack (under ~150 lines) to
-   `openspec/changes/<change-id>/context.md` with: story summary, acceptance checks, files that
-   matter, relevant rules and traps, open questions and answers.
-6. **Hand over.** Tell the user the next step: run `/opsx-propose <change-id>` and mention
-   `context.md` so the proposal uses it. Do not write proposal, design or tasks yourself, and do
-   not change code in this step.
+5. **Write the pack** (under ~150 lines): story summary, acceptance checks, files that matter,
+   relevant rules and traps, open questions and answers.
+   - **If the repo has an `openspec/` folder:** choose a change id in kebab-case that starts with a
+     verb (e.g. `add-report-excel-export`) and save the pack to `openspec/changes/<change-id>/context.md`.
+   - **Otherwise:** show the pack in the chat. Save it as a file only if the user asks, and never
+     inside permanent context folders (`docs/context/`, `.github/instructions/`).
+6. **Hand over.**
+   - With OpenSpec: tell the user to run `/opsx-propose <change-id>` and mention `context.md`.
+     Do not write proposal, design or tasks yourself.
+   - Without OpenSpec: propose a short plan (files to change, ordered steps, tests to add, risks)
+     and wait for the user to approve it before changing any code.
