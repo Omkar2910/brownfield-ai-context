@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+</head>
+<body>
+<title>Brownfield Context Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a field guide. Sticky contents rail on the left (desktop), one reading column, diagrams built from HTML so they reflow on phones. */
+:root {
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --ink: #15202d;
+  --muted: #566577;
+  --line: #d9e0e8;
+  --accent: #2c55d8;
+  --accent-soft: #e6ecfc;
+  --hook: #b86a00;
+  --hook-soft: #fbefdc;
+  --good: #1f7a4d;
+  --good-soft: #e1f2e9;
+  --bad: #b3363a;
+  --bad-soft: #f8e3e3;
+  --code-bg: #eef2f7;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151d; --surface: #16202b; --ink: #e6ecf3; --muted: #9aa9ba; --line: #2a3747;
+    --accent: #7f9ef5; --accent-soft: #1d2a4a; --hook: #f0a640; --hook-soft: #3a2a12;
+    --good: #5cc28f; --good-soft: #143326; --bad: #f08a8d; --bad-soft: #3d1c1e; --code-bg: #1b2633;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151d; --surface: #16202b; --ink: #e6ecf3; --muted: #9aa9ba; --line: #2a3747;
+  --accent: #7f9ef5; --accent-soft: #1d2a4a; --hook: #f0a640; --hook-soft: #3a2a12;
+  --good: #5cc28f; --good-soft: #143326; --bad: #f08a8d; --bad-soft: #3d1c1e; --code-bg: #1b2633;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 80px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.toc p { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 2px; }
+nav.toc a { color: var(--muted); text-decoration: none; display: block; padding: 4px 10px; border-left: 2px solid var(--line); }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--ink); border-left-color: var(--accent); }
+main { min-width: 0; }
+header.hero { padding-bottom: 24px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-size: clamp(32px, 5vw, 48px); line-height: 1.08; margin: 0 0 16px; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--display); font-size: 28px; line-height: 1.2; margin: 0 0 12px; text-wrap: balance; }
+h3 { font-family: var(--display); font-size: 20px; margin: 28px 0 8px; }
+section { padding-top: 48px; scroll-margin-top: 16px; }
+p, li { max-width: 68ch; }
+.lead { font-size: 20px; color: var(--muted); max-width: 60ch; margin: 0; }
+.answer { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: 14px 18px; border-radius: 6px; margin: 16px 0; max-width: 76ch; }
+.answer strong { color: var(--accent); }
+code, kbd { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; background: var(--surface); }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin: 16px 0; }
+.tablebox td:first-child { font-weight: 600; white-space: nowrap; }
+
+/* system strip */
+.strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 20px 0 8px; }
+.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px; position: relative; }
+.stage b { display: block; font-family: var(--display); font-size: 17px; }
+.stage .who { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.stage p { font-size: 14px; margin: 6px 0 0; color: var(--muted); }
+.stage:not(:last-child)::after { content: "→"; position: absolute; right: -12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; background: var(--bg); line-height: 1; }
+.stage.hookish { border-color: var(--hook); background: var(--hook-soft); }
+
+/* layer stack */
+.stack { display: grid; gap: 6px; margin: 16px 0; }
+.layer { display: grid; grid-template-columns: 56px minmax(0, 1fr) 150px; gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 15px; }
+.layer .id { font-family: var(--mono); font-weight: 600; color: var(--accent); }
+.layer .load { font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; }
+.layer .what b { font-weight: 600; }
+.layer .what span { color: var(--muted); }
+.layer.always { border-left: 4px solid var(--accent); }
+.layer.scoped { border-left: 4px solid var(--good); }
+.layer.demand { border-left: 4px solid var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+/* story timeline */
+.timeline { list-style: none; padding: 0; margin: 20px 0; position: relative; }
+.timeline::before { content: ""; position: absolute; left: 15px; top: 8px; bottom: 8px; width: 2px; background: var(--line); }
+.timeline > li { position: relative; padding: 0 0 18px 48px; max-width: none; }
+.timeline .dot { position: absolute; left: 6px; top: 4px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); font-family: var(--mono); font-size: 11px; display: grid; place-items: center; color: var(--accent); font-weight: 600; }
+.timeline h4 { margin: 0; font-family: var(--display); font-size: 18px; }
+.timeline p { margin: 2px 0 6px; color: var(--muted); font-size: 15px; }
+.hooks { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--mono); font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); }
+.chip.hook { border-color: var(--hook); background: var(--hook-soft); color: var(--ink); }
+.chip.ci { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+.chip.human { border-color: var(--good); background: var(--good-soft); color: var(--ink); }
+
+/* verdict cards */
+.duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0; }
+.card h4 { margin: 0 0 6px; font-family: var(--display); font-size: 17px; }
+.card ul { margin: 0; padding-left: 18px; font-size: 15px; }
+.card.pro h4 { color: var(--good); }
+.card.con h4 { color: var(--bad); }
+.verdict { display: inline-block; font-family: var(--mono); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 4px; background: var(--good-soft); color: var(--good); letter-spacing: .04em; text-transform: uppercase; }
+.verdict.mixed { background: var(--hook-soft); color: var(--hook); }
+
+/* budget meter */
+.meter { margin: 16px 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.meter .bar { display: flex; height: 26px; border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+.meter .bar div { display: grid; place-items: center; font-family: var(--mono); font-size: 11px; color: var(--ink); white-space: nowrap; overflow: hidden; }
+.meter .scale { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+/* steps + code */
+.steps { counter-reset: s; list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 12px; }
+.steps > li { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 14px 56px; position: relative; max-width: none; min-width: 0; }
+.steps > li::before { content: counter(s); position: absolute; left: 16px; top: 14px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--surface); font-family: var(--mono); font-size: 13px; font-weight: 600; display: grid; place-items: center; }
+.steps h4 { margin: 0 0 4px; font-family: var(--display); font-size: 17px; }
+.steps p { margin: 4px 0; font-size: 15px; }
+.code { position: relative; margin: 8px 0; }
+.code pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin: 0; overflow-x: auto; font-family: var(--mono); font-size: 13px; line-height: 1.5; }
+.code button { position: absolute; top: 6px; right: 6px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.code button:hover { color: var(--ink); border-color: var(--accent); }
+.expect { font-size: 14px; color: var(--muted); }
+.expect b { color: var(--good); font-weight: 600; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 16px 0 0; }
+.tabs button { font-family: var(--body); font-size: 15px; font-weight: 600; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+
+/* management */
+.pitch { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+.pitch .card h4 { font-size: 15px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.pitch .card p { margin: 0; font-size: 15px; }
+.note { font-size: 14px; color: var(--muted); }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+footer li { margin-bottom: 4px; }
+
+@media (max-width: 900px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { display: none; }
+  .strip { grid-template-columns: minmax(0, 1fr); }
+  .stage:not(:last-child)::after { content: "↓"; right: 50%; top: auto; bottom: -13px; transform: translateX(50%); }
+  .duo, .pitch { grid-template-columns: minmax(0, 1fr); }
+  .layer { grid-template-columns: 44px minmax(0, 1fr); }
+  .layer .load { grid-column: 2; text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Contents">
+    <p>Contents</p>
+    <ol>
+      <li><a href="#one-minute">The idea in one minute</a></li>
+      <li><a href="#layers">What "context" is</a></li>
+      <li><a href="#story">A story, end to end</a></li>
+      <li><a href="#hooks">Hooks: where and why</a></li>
+      <li><a href="#agent">A custom agent?</a></li>
+      <li><a href="#cadence">Quarter, sprint, story</a></li>
+      <li><a href="#enough">How much is enough</a></li>
+      <li><a href="#run">Run the demo kit</a></li>
+      <li><a href="#management">Explaining it upward</a></li>
+      <li><a href="#sources">Sources</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <p class="note" style="border:1px solid var(--line);border-radius:6px;padding:8px 12px;background:var(--surface)">Background explainer from the October 2026 research. For setup on your own repo, follow <b>GUIDE.md</b> at the repo root. In VS Code Copilot the OpenSpec commands are spelled <code>/opsx-propose</code>, <code>/opsx-apply</code> (hyphen); <code>/opsx:propose</code> is the Claude Code spelling.</p>
+    <header class="hero">
+      <p class="eyebrow">AI context for brownfield services</p>
+      <h1>Keep agent context small, owned, and tested like code</h1>
+      <p class="lead">How to create, use and keep updating the context that coding agents read, for a UI service and a backend service, with OpenSpec for behaviour and hooks, skills and one custom agent for upkeep.</p>
+    </header>
+
+    <section id="one-minute">
+      <h2>The idea in one minute</h2>
+      <p>Context goes stale for one reason: updating it depends on someone remembering. The fix is a system where each job goes to the cheapest thing that can do it reliably. Scripts detect drift, skills carry out the fix, one steward agent owns the upkeep, CI enforces it, and humans approve.</p>
+      <div class="strip" role="list" aria-label="Five parts of the system">
+        <div class="stage hookish" role="listitem"><span class="who">Hooks + CI</span><b>Detect</b><p>Deterministic checks on every edit, session end, commit and PR.</p></div>
+        <div class="stage" role="listitem"><span class="who">Skills</span><b>Do</b><p>Repeatable procedures: bootstrap, refresh, story to change.</p></div>
+        <div class="stage" role="listitem"><span class="who">Steward agent</span><b>Own</b><p>One role with limited tools that maintains context files only.</p></div>
+        <div class="stage" role="listitem"><span class="who">People</span><b>Approve</b><p>Every context change merges through a reviewed PR.</p></div>
+        <div class="stage" role="listitem"><span class="who">Golden tasks</span><b>Measure</b><p>Past stories re-run to prove context helps, or revert it.</p></div>
+      </div>
+      <div class="answer"><strong>Short answers to your questions.</strong> Hooks: yes, but as detectors that remind and block once, not as writers. Custom agent: yes, one narrow steward that proposes PRs, never auto-merges. Quarter/sprint/story: use them as review cadences, not as document folders. How much context: as little as passes your golden tasks; start with an always-on budget of about 1,500 tokens.</div>
+    </section>
+
+    <section id="layers">
+      <h2>What "context" actually is</h2>
+      <p>"Internal context" is really seven layers with different owners and lifetimes. Most confusion between a trainer's skill and an ad-hoc prompt comes from mixing them into one pile of files.</p>
+      <div class="legend"><span><i style="background:var(--accent)"></i>loaded on every request</span><span><i style="background:var(--good)"></i>loaded when matching files are touched</span><span><i style="background:var(--muted)"></i>loaded on demand or queried</span></div>
+      <div class="stack">
+        <div class="layer always"><span class="id">L0</span><span class="what"><b>Platform rules</b> <span>Keycloak = login only, CIAM = permissions, error envelope</span></span><span class="load">system-context</span></div>
+        <div class="layer always"><span class="id">L1</span><span class="what"><b>Repo core</b> <span>commands, non-obvious rules, pointers. Under 100 lines.</span></span><span class="load">AGENTS.md</span></div>
+        <div class="layer scoped"><span class="id">L2</span><span class="what"><b>Scoped rules</b> <span>Angular components, Spring controllers, Flyway migrations</span></span><span class="load">.instructions.md</span></div>
+        <div class="layer demand"><span class="id">L3</span><span class="what"><b>Service knowledge</b> <span>architecture, known traps, why odd code exists</span></span><span class="load">docs/context/</span></div>
+        <div class="layer demand"><span class="id">L4</span><span class="what"><b>Behaviour</b> <span>what the system does today, as requirements + scenarios</span></span><span class="load">openspec/specs/</span></div>
+        <div class="layer demand"><span class="id">L5</span><span class="what"><b>Task</b> <span>one story's proposal, design, tasks, delta specs</span></span><span class="load">openspec/changes/</span></div>
+        <div class="layer demand"><span class="id">L6</span><span class="what"><b>Retrieval</b> <span>call graph, contracts. Queried, never pasted.</span></span><span class="load">Graphify, OpenAPI</span></div>
+      </div>
+      <p>Each service repo owns L1–L3. A shared <code>system-context</code> repo owns L0, contracts, skills, the steward agent and, for a tightly coupled UI + backend pair, all OpenSpec specs. For a story that crosses services, open one multi-root VS Code workspace with all three repos.</p>
+    </section>
+
+    <section id="story">
+      <h2>A story, end to end</h2>
+      <p>The example is REPORT-142: export the filtered ratings report to Excel, for users with CIAM permission <code>REPORT_EXPORT</code>. The chips mark where each automatic check fires.</p>
+      <div class="legend"><span><i style="background:var(--hook)"></i>agent or git hook</span><span><i style="background:var(--accent)"></i>CI pipeline</span><span><i style="background:var(--good)"></i>human gate</span></div>
+      <ol class="timeline">
+        <li><span class="dot">1</span><h4>Open the workspace and start a session</h4><p>The agent gets L0–L1 automatically. A session-start hook adds a 3–6 line health line: broken anchors, active OpenSpec changes.</p><div class="hooks"><span class="chip hook">SessionStart → session-start</span></div></li>
+        <li><span class="dot">2</span><h4>Story to change</h4><p>The <code>story-to-change</code> skill builds a small context pack: relevant specs, the producer's consumer brief, the code neighbourhood from Graphify, traps.</p><div class="hooks"><span class="chip">skill: story-to-change</span></div></li>
+        <li><span class="dot">3</span><h4>Explore and propose</h4><p><code>/opsx:explore</code> then <code>/opsx:propose</code> write proposal, design, tasks and delta specs. Nothing is coded yet.</p><div class="hooks"><span class="chip">OpenSpec</span></div></li>
+        <li><span class="dot">4</span><h4>Tech lead reviews the proposal</h4><p>The review is of intent: affected repos, contract change, new permission, scenarios.</p><div class="hooks"><span class="chip human">human gate</span></div></li>
+        <li><span class="dot">5</span><h4>Apply: producer first, then consumer</h4><p>Every time the agent edits a file that a context line is anchored to, a hook tells it which line may now be wrong.</p><div class="hooks"><span class="chip hook">PostToolUse → post-edit</span></div></li>
+        <li><span class="dot">6</span><h4>Agent tries to finish</h4><p>A stop hook checks the working tree once. It flags broken anchors and anchored code that changed while its context file did not, and blocks once so the agent fixes or confirms.</p><div class="hooks"><span class="chip hook">Stop → stop (blocks once)</span></div></li>
+        <li><span class="dot">7</span><h4>Commit</h4><p>The git pre-commit hook refuses commits with broken anchors. It covers people working without an agent too.</p><div class="hooks"><span class="chip hook">git pre-commit</span></div></li>
+        <li><span class="dot">8</span><h4>Pull request</h4><p>CI runs the same check against the target branch. The PR template asks the same-PR question. CODEOWNERS adds the tech lead for context files.</p><div class="hooks"><span class="chip ci">PR pipeline: check-context</span><span class="chip human">code review</span></div></li>
+        <li><span class="dot">9</span><h4>Merge and archive</h4><p><code>/opsx:archive</code> merges delta specs into current behaviour. Its guidance lists context lines to update, and <code>/context-refresh</code> updates only those. The producer pipeline regenerates the consumer brief.</p><div class="hooks"><span class="chip">OpenSpec archive</span><span class="chip ci">contract publish</span></div></li>
+        <li><span class="dot">10</span><h4>Weekly, if anything slipped through</h4><p>A scheduled pipeline runs the check on main. Only if it finds something does it run the steward agent headless to open a fix PR.</p><div class="hooks"><span class="chip ci">weekly steward</span><span class="chip human">PR review</span></div></li>
+      </ol>
+    </section>
+
+    <section id="hooks">
+      <h2>Hooks: where to add them, and what they should do</h2>
+      <div class="answer"><strong>Verdict:</strong> use hooks to <em>detect and remind</em>, deterministically and in milliseconds. Do not use hooks to <em>write</em> context with an LLM on every edit. That is slow, costs tokens on every tool call, and produces exactly the unreviewed generated context that research found makes agents worse.</div>
+      <div class="tablebox"><table>
+        <thead><tr><th>Where</th><th>Event</th><th>What it does</th><th>Why there</th></tr></thead>
+        <tbody>
+          <tr><td>Agent: session start</td><td><code>SessionStart</code> / <code>sessionStart</code></td><td>Adds a short health line: context file count, broken anchors, active OpenSpec changes</td><td>Cheap orientation; replaces "read everything first" prompts</td></tr>
+          <tr><td>Agent: after an edit</td><td><code>PostToolUse</code> / <code>postToolUse</code></td><td>If the edited file is anchored by a context line, names that line</td><td>The agent has the change in mind right now, so the fix is cheapest here</td></tr>
+          <tr><td>Agent: before finishing</td><td><code>Stop</code> / <code>agentStop</code></td><td>Checks broken and stale anchors once; blocks a single time with the list</td><td>One consolidated check per session, with no loops</td></tr>
+          <tr><td>Steward runs only</td><td><code>PreToolUse</code> / <code>preToolUse</code></td><td>Denies any edit outside context files</td><td>Turns "edits context only" from a request into a hard rule</td></tr>
+          <tr><td>Git</td><td><code>pre-commit</code></td><td>Refuses commits with broken anchors</td><td>Covers humans and any tool without agent hooks</td></tr>
+          <tr><td>CI</td><td>PR pipeline</td><td>Same check against the target branch; warn first, then blocking</td><td>The only place you can enforce across everyone</td></tr>
+          <tr><td>OpenSpec</td><td><code>operations.archive.guidance</code></td><td>Makes archive list the context lines a change affects</td><td>Every story ends with an archive, so it is a free, reliable trigger</td></tr>
+          <tr><td>Schedule</td><td>Weekly pipeline</td><td>Runs the check; on findings, the steward opens a fix PR</td><td>Safety net for what slipped through</td></tr>
+        </tbody>
+      </table></div>
+      <div class="duo">
+        <div class="card pro"><h4>Why hooks help</h4><ul><li>Deterministic: nobody has to remember</li><li>Feedback lands while the agent still has the change in mind</li><li>No tokens unless there is a finding</li><li>One script serves Claude Code and Copilot</li></ul></div>
+        <div class="card con"><h4>Limits to plan around</h4><ul><li>Agent hooks run only inside agent sessions, so git and CI are still needed</li><li>Copilot hooks in VS Code are a preview feature; formats may change</li><li>Slow or noisy hooks get disabled; keep them under a second</li><li>A Stop hook that blocks every time traps the agent; block once</li></ul></div>
+      </div>
+      <p class="note">In the kit: <code>system-context/hooks/context-hooks.cjs</code> (Node, no dependencies), wired in <code>.claude/settings.json</code> and <code>.github/hooks/context.json</code> in each service repo, plus <code>system-context/githooks/pre-commit</code>.</p>
+    </section>
+
+    <section id="agent">
+      <h2>Should you build a custom agent for context?</h2>
+      <p><span class="verdict">Yes, one narrow steward</span></p>
+      <p>A context steward is worth it because upkeep is a role, not a single procedure. It has one job (maintain context files), limited tools, fixed modes, and a hard rule that it never touches application code. It does not replace skills; it runs them.</p>
+      <div class="tablebox"><table>
+        <thead><tr><th>Piece</th><th>Is a</th><th>Owns</th></tr></thead>
+        <tbody>
+          <tr><td>Hooks + CI</td><td>Detector</td><td>Finding drift, every time, for free</td></tr>
+          <tr><td>Skills</td><td>Procedure</td><td><code>context-bootstrap</code>, <code>context-refresh</code>, <code>story-to-change</code>, <code>onboard-me</code></td></tr>
+          <tr><td>context-steward agent</td><td>Role</td><td>Modes: bootstrap, refresh, audit, prune, sprint-digest, quarterly-review</td></tr>
+          <tr><td>Tech lead</td><td>Approver</td><td>Merging every context PR</td></tr>
+        </tbody>
+      </table></div>
+      <div class="duo">
+        <div class="card pro"><h4>Pros</h4><ul><li>One consistent way to maintain context across teams</li><li>Restricted tools and a guard hook make it safe to run headless</li><li>Same agent file for Copilot (<code>.github/agents</code>) and Claude Code (<code>.claude/agents</code>)</li><li>Can run on a schedule and open PRs</li></ul></div>
+        <div class="card con"><h4>Cons and guardrails</h4><ul><li>LLM-written context can be wrong: anchor every fact and review every PR</li><li>Agents tend to add; give it budgets and a prune mode</li><li>It is one more file to maintain; keep it in the shared repo</li><li>Never let it auto-merge</li></ul></div>
+      </div>
+      <p>Do not build one mega-agent that writes specs, code and context. Spec work stays in OpenSpec (<code>/opsx:*</code>), code in the normal agent, context in the steward. Separate roles keep each one's instructions short.</p>
+    </section>
+
+    <section id="cadence">
+      <h2>Quarter, sprint, story: cadence, not folders</h2>
+      <p><span class="verdict mixed">Good instinct, different shape</span></p>
+      <p>Organising context documents by quarter and sprint creates many dated files. An agent cannot tell which is current, every one costs tokens, and nobody maintains old ones. Keep facts where they live by <em>lifetime</em>, and use the calendar to decide <em>when you review</em>.</p>
+      <div class="tablebox"><table>
+        <thead><tr><th>Cadence</th><th>What happens</th><th>Effort</th><th>Agents load it?</th></tr></thead>
+        <tbody>
+          <tr><td>Every edit / session / commit</td><td>Hooks detect drift automatically</td><td>None</td><td>Only the reminder</td></tr>
+          <tr><td>Every story</td><td>OpenSpec change folder (dated on archive), specs merged, affected context lines refreshed</td><td>Part of the story</td><td>Specs, on demand</td></tr>
+          <tr><td>Every sprint</td><td>Steward writes a 5-bullet digest to <code>CHANGELOG.md</code>; review <code>#agent-miss</code> tags</td><td>15 min in retro</td><td><b>No</b>, human-facing</td></tr>
+          <tr><td>Every quarter</td><td>Steward's review table; re-run golden tasks; prune; tidy specs per domain</td><td>About 1 hour per team</td><td>Results only</td></tr>
+        </tbody>
+      </table></div>
+      <p class="note">Story history already exists for free: archived OpenSpec changes live in <code>openspec/changes/archive/YYYY-MM-DD-&lt;id&gt;/</code>. That is your story-level record, without anyone writing extra documents.</p>
+    </section>
+
+    <section id="enough">
+      <h2>How much context is enough?</h2>
+      <p>A 2026 ETH Zurich study tested coding agents with no context file, an LLM-generated one and a developer-written one. Generated files lowered success in most settings and added 20–23% cost. Human-written files helped about 4% on average. Agents follow what you write, so every unnecessary rule is work they will do.</p>
+      <div class="meter" role="img" aria-label="Suggested always-on context budget of about 1,500 tokens: platform rules about 400, AGENTS.md about 1,100">
+        <div class="bar">
+          <div style="width:26.7%;background:var(--accent-soft)">L0 ~400</div>
+          <div style="width:73.3%;background:var(--accent-soft);border-left:1px solid var(--line)">L1 AGENTS.md ~1,100</div>
+        </div>
+        <div class="scale"><span>0</span><span>always-on budget ≈ 1,500 tokens</span></div>
+      </div>
+      <div class="tablebox"><table>
+        <thead><tr><th>Context type</th><th>Starting budget</th><th>Test</th></tr></thead>
+        <tbody>
+          <tr><td>Always-on (L0 + L1)</td><td>~1,500 tokens; AGENTS.md under 100 lines</td><td>Each line would cause a real mistake if missing</td></tr>
+          <tr><td>Scoped instruction file</td><td>Under ~50 lines each, tight <code>applyTo</code></td><td>Fires only on files it governs (check References)</td></tr>
+          <tr><td>Story context pack</td><td>Under ~150 lines</td><td>Only domains this story touches</td></tr>
+          <tr><td>Everything else</td><td>No limit, never auto-loaded</td><td>Reachable by link, skill or query</td></tr>
+        </tbody>
+      </table></div>
+      <div class="duo">
+        <div class="card con"><h4>Signs of too much</h4><ul><li>Agents take more steps and read more files for the same task</li><li>Rules conflict or repeat each other</li><li>Lines describe things a grep finds in a minute</li><li>Cost per story rises with no quality gain</li></ul></div>
+        <div class="card pro"><h4>Signs of too little</h4><ul><li>The same <code>#agent-miss</code> comment appears twice</li><li>Agents ask the same question every session</li><li>New joiners ask humans about the same trap</li><li>Agents use Keycloak roles instead of CIAM, or similar platform slips</li></ul></div>
+      </div>
+      <p>The budgets are starting points. The real answer comes from golden tasks: keep 3–5 past stories with known-good diffs, run a fresh agent with each context variant, and keep the variant with the higher pass rate and fewer steps.</p>
+    </section>
+
+    <section id="run">
+      <h2>Run the demo kit</h2>
+      <p>Pick a track. Track A needs no AI tool and shows the core idea in five minutes. Track B is the full story in VS Code with Copilot. Track C is the same with Claude Code. On Windows, run the shell commands in Git Bash.</p>
+      <div class="tabs" role="tablist" aria-label="Demo track">
+        <button role="tab" id="tab-a" aria-selected="true" aria-controls="track-a">A · No AI, 5 min</button>
+        <button role="tab" id="tab-b" aria-selected="false" aria-controls="track-b">B · VS Code + Copilot</button>
+        <button role="tab" id="tab-c" aria-selected="false" aria-controls="track-c">C · Claude Code</button>
+      </div>
+
+      <div id="track-a" role="tabpanel" aria-labelledby="tab-a">
+        <ol class="steps">
+          <li><h4>Get the repo and set up the three demo repos</h4><p>Needs Git and Node 18+. The setup script copies the three folders to <code>~/context-demo</code> and makes each a git repo.</p>
+            <div class="code"><pre>git clone https://github.com/Omkar2910/brownfield-ai-context.git
+cd brownfield-ai-context/demo-kit
+bash setup-demo.sh            # creates ~/context-demo/{report-service,report-ui,system-context}
+cd ~/context-demo</pre><button type="button">Copy</button></div></li>
+          <li><h4>Run the context check on clean repos</h4>
+            <div class="code"><pre>bash system-context/scripts/check-context.sh report-service report-ui system-context</pre><button type="button">Copy</button></div>
+            <p class="expect">Expect: <b>0 error(s), 0 warning(s)</b>.</p></li>
+          <li><h4>Simulate a refactor and watch it get caught</h4>
+            <div class="code"><pre>cd report-service
+git mv src/main/java/com/example/report/api/ReportController.java \
+       src/main/java/com/example/report/api/ReportRowsController.java
+echo "// tweak" >> src/main/java/com/example/report/query/ReportQueryService.java
+bash ../system-context/scripts/check-context.sh .</pre><button type="button">Copy</button></div>
+            <p class="expect">Expect: <b>ERROR AGENTS.md: anchor not found</b> for the renamed controller.</p></li>
+          <li><h4>See what the agent hooks would say</h4><p>Feed the hooks the same JSON an agent would send.</p>
+            <div class="code"><pre>H=../system-context/hooks/context-hooks.cjs
+echo '{"hook_event_name":"SessionStart"}' | node $H session-start
+echo '{"hook_event_name":"PostToolUse","tool_name":"Edit","tool_input":{"file_path":"src/main/java/com/example/report/query/ReportQueryService.java"}}' | node $H post-edit
+echo '{"hook_event_name":"Stop","session_id":"demo"}' | node $H stop</pre><button type="button">Copy</button></div>
+            <p class="expect">Expect: a health line naming the broken anchor; a note that <code>AGENTS.md:18</code> references the edited file; a <b>"decision":"block"</b> listing what to fix. Run the stop line again: it stays silent, so the agent cannot loop.</p></li>
+          <li><h4>Turn on the git hook and try to commit</h4>
+            <div class="code"><pre>git config core.hooksPath ../system-context/githooks
+git commit -am "rename controller"</pre><button type="button">Copy</button></div>
+            <p class="expect">Expect: <b>commit refused</b> until the anchor in AGENTS.md is fixed. Undo with <code>git reset --hard</code>.</p></li>
+        </ol>
+      </div>
+
+      <div id="track-b" role="tabpanel" aria-labelledby="tab-b" hidden>
+        <ol class="steps">
+          <li><h4>Prerequisites</h4><p>Track A setup done; VS Code with GitHub Copilot Chat; Node 20+; OpenSpec CLI.</p>
+            <div class="code"><pre>npm install -g @fission-ai/openspec@latest
+cd ~/context-demo/system-context && openspec store register "$(pwd)"   # beta; see fallback in DEMO-SCRIPT.md
+cd ../report-service && openspec init     # choose GitHub Copilot; keep the existing config.yaml
+cd ../report-ui && openspec init</pre><button type="button">Copy</button></div></li>
+          <li><h4>Open the multi-root workspace</h4>
+            <div class="code"><pre>code ~/context-demo/system-context/workspaces/report-platform.code-workspace</pre><button type="button">Copy</button></div>
+            <p>Ask in Agent mode: "What rules apply if I add a button to the report grid? List the files you used." Expand <b>References</b>: Angular rules and the CIAM platform rule load, Spring rules do not.</p></li>
+          <li><h4>Enable hooks (preview)</h4><p>Hooks are in <code>.github/hooks/context.json</code> in each service repo. If your VS Code version gates them, turn on hooks in settings (check <b>Chat: Open Customizations → Hooks</b>). The session-start health line should appear in the agent's context.</p></li>
+          <li><h4>Explore and propose REPORT-142</h4>
+            <div class="code"><pre>/opsx:explore REPORT-142: export the filtered ratings report to Excel. Read the consumer brief and both repos' AGENTS.md first.
+/opsx:propose add-report-excel-export</pre><button type="button">Copy</button></div>
+            <p>If generation is slow, open the prepared change in <code>system-context/openspec/changes/add-report-excel-export/</code>.</p></li>
+          <li><h4>Apply the producer slice and watch the hooks</h4>
+            <div class="code"><pre>/opsx:apply add-report-excel-export — do section 1 (report-service) only</pre><button type="button">Copy</button></div>
+            <p>When the agent edits <code>ReportQueryService.java</code>, the post-edit hook names the AGENTS.md line. When it finishes, the stop hook runs once.</p></li>
+          <li><h4>Run the steward</h4><p>Pick <b>context-steward</b> from the agent dropdown and type "audit report-service". Then "sprint-digest".</p></li>
+          <li><h4>Archive and onboard</h4>
+            <div class="code"><pre>/opsx:archive add-report-excel-export
+/onboard-me</pre><button type="button">Copy</button></div></li>
+        </ol>
+      </div>
+
+      <div id="track-c" role="tabpanel" aria-labelledby="tab-c" hidden>
+        <ol class="steps">
+          <li><h4>Start Claude Code with all three repos</h4>
+            <div class="code"><pre>cd ~/context-demo/report-service
+CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD=1 claude --add-dir ../report-ui --add-dir ../system-context</pre><button type="button">Copy</button></div>
+            <p>Hooks load from <code>report-service/.claude/settings.json</code>. Skills in <code>system-context/.claude/skills</code> load automatically from the added directory (create it with <code>ln -s ../.github/skills system-context/.claude/skills</code>).</p></li>
+          <li><h4>Check the hooks are active</h4><p>Type <code>/hooks</code> to list them. Ask "what is the context health?" and the agent will quote the session-start line.</p></li>
+          <li><h4>Run the story</h4><p>Same OpenSpec commands as Track B. Then ask Claude to use the <b>context-steward</b> subagent: "use context-steward to audit report-service".</p></li>
+          <li><h4>Headless steward with the guard</h4><p>This is how the weekly pipeline runs it. The guard hook refuses edits outside context files.</p>
+            <div class="code"><pre>claude -p "Mode: audit ." --agent context-steward \
+  --add-dir ../system-context \
+  --settings ../system-context/agents/steward-settings.json</pre><button type="button">Copy</button></div></li>
+        </ol>
+      </div>
+      <p class="note">Full narrated script with timings: <code>demo-kit/DEMO-SCRIPT.md</code>. The OpenSpec "stores" feature is beta; the script ends with a fallback that does not use it.</p>
+    </section>
+
+    <section id="management">
+      <h2>Explaining it upward</h2>
+      <p>Lead with the problem and the measure. The tooling is the least interesting part for management.</p>
+      <div class="pitch">
+        <div class="card"><h4>Problem</h4><p>In existing services, agents guess conventions and contracts. Context files go stale within a sprint, and every developer prompts differently, so results vary and review effort rises.</p></div>
+        <div class="card"><h4>Approach</h4><p>Treat context as code: small files owned per service, shared contracts and platform rules in one repo, OpenSpec for behaviour, automatic drift checks, one steward agent, human approval.</p></div>
+        <div class="card"><h4>Why it is safe</h4><p>Nothing merges without review. The agent edits context only. Every check also runs in git and CI, so it does not depend on preview features.</p></div>
+        <div class="card"><h4>Effort (estimate)</h4><p>About a day per repo to bootstrap and prune, 15 minutes per sprint, 1 hour per quarter. CI cost is seconds per PR.</p></div>
+        <div class="card"><h4>What we measure</h4><p>Golden-task pass rate vs no context; agent steps and tokens per story; <code>#agent-miss</code> trend; new-joiner time to first merged story.</p></div>
+        <div class="card"><h4>The ask</h4><p>A 4-sprint pilot on one UI + backend pair, about an hour a week of tech-lead time, approval for the PR check, and optionally API access for the weekly steward.</p></div>
+      </div>
+      <h3>Pilot plan</h3>
+      <div class="tablebox"><table>
+        <thead><tr><th>Sprint</th><th>Work</th><th>Gate</th></tr></thead>
+        <tbody>
+          <tr><td>1 · Foundations</td><td>system-context repo, lean AGENTS.md per repo, Graphify, pick golden tasks, hooks on</td><td>—</td></tr>
+          <tr><td>2 · Compare</td><td>Run the trainer's skill and the prompt; five-check comparison; merge into one team skill</td><td>Team skill chosen</td></tr>
+          <tr><td>3 · Live story</td><td>One real cross-service story through explore → archive; CI check in warn mode</td><td>—</td></tr>
+          <tr><td>4 · Decide</td><td>Re-run golden tasks; review agent misses; go / no-go to template for other teams</td><td>Pass rate at or above baseline</td></tr>
+        </tbody>
+      </table></div>
+      <h3>Risks and mitigations</h3>
+      <div class="tablebox"><table>
+        <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Context bloat lowers agent quality</td><td>Budgets, prune mode, golden tasks decide</td></tr>
+          <tr><td>Generated context is wrong</td><td>Anchors on every fact, CI check, human-approved PRs</td></tr>
+          <tr><td>Preview or beta features change</td><td>Git hook, CI and repo-local OpenSpec work without them</td></tr>
+          <tr><td>Process feels heavy</td><td>Automatic checks; only the story and archive steps are new</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <footer id="sources">
+      <h2 style="font-size:20px">Sources</h2>
+      <ul>
+        <li><a href="https://arxiv.org/html/2602.11988v1">Evaluating AGENTS.md: Are repository-level context files helpful for coding agents? (ETH Zurich, 2026)</a></li>
+        <li><a href="https://code.visualstudio.com/docs/agent-customization/hooks">VS Code: Copilot hooks (preview)</a> · <a href="https://code.visualstudio.com/docs/agent-customization/custom-agents">Custom agents</a> · <a href="https://code.visualstudio.com/docs/agent-customization/custom-instructions">Custom instructions</a></li>
+        <li><a href="https://code.claude.com/docs/en/hooks">Claude Code: hooks reference</a> · <a href="https://code.claude.com/docs/en/skills">Skills</a></li>
+        <li><a href="https://openspec.dev/docs/existing-projects">OpenSpec: existing projects</a> · <a href="https://openspec.dev/docs/stores">Stores (beta)</a> · <a href="https://openspec.dev/docs/project-config">Project configuration</a></li>
+        <li><a href="https://www.thoughtworks.com/es/radar/languages-and-frameworks/github-spec-kit">Thoughtworks Radar: GitHub Spec Kit</a></li>
+      </ul>
+      <p>Full research write-up: <code>docs/research/playbook.md</code>. Setup guide: <code>GUIDE.md</code>. Demo kit: <code>demo-kit/</code>.</p>
+    </footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('.code button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.parentElement.querySelector('pre');
+      var text = pre.innerText;
+      var done = function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+      var fallback = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent = 'Selected';
+        setTimeout(function () { btn.textContent = 'Copy'; }, 1400);
+      };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (e) { fallback(); }
+    });
+  });
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+  function select(tab) {
+    tabs.forEach(function (t) {
+      var on = t === tab;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on ? 0 : -1;
+      document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+    });
+    try { localStorage.setItem('track', tab.id); } catch (e) {}
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { select(t); });
+    t.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+        select(n); n.focus();
+      }
+    });
+  });
+  try { var saved = localStorage.getItem('track'); if (saved && document.getElementById(saved)) select(document.getElementById(saved)); } catch (e) {}
+})();
+</script>
+
+</body>
+</html>

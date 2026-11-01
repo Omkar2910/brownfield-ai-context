@@ -1,0 +1,106 @@
+<title>Brownfield Story Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a working manual. Sticky section rail on wide screens, one reading column, tables and code scroll in their own boxes. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --ink: #16202c; --muted: #586779; --line: #d8dfe7;
+  --accent: #2b54d6; --accent-soft: #e7edfc; --code-bg: #edf1f6; --good: #1d7a4c;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+    --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+  --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 80px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.toc .label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc ul ul { display: none; }
+nav.toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible, nav.toc a.on { color: var(--ink); border-left-color: var(--accent); }
+main { min-width: 0; }
+header.top { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-size: clamp(30px, 4.6vw, 44px); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--display); font-size: 27px; line-height: 1.2; margin: 48px 0 12px; padding-top: 8px; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { font-family: var(--display); font-size: 20px; margin: 30px 0 8px; scroll-margin-top: 16px; }
+p, li { max-width: 70ch; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 700; }
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin: 14px 0; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+td code { white-space: nowrap; }
+.code { position: relative; margin: 12px 0; }
+.code pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13.5px; line-height: 1.5; }
+.code pre code { background: none; padding: 0; font-size: inherit; }
+.copy { position: absolute; top: 8px; right: 8px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.copy:hover { color: var(--ink); border-color: var(--accent); }
+li.task { list-style: none; margin-left: -1.3em; }
+li.task input { accent-color: var(--good); margin-right: 6px; }
+h3 + p strong:first-child { color: var(--accent); }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+@media (max-width: 920px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { display: none; }
+}
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Sections">
+    <p class="label">Sections</p>
+    {{TOC}}
+  </nav>
+  <main>
+    <header class="top">
+      <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
+      <h1>{{TITLE}}</h1>
+    </header>
+    {{BODY}}
+    <footer>Generated from GUIDE.md. The installable kit, templates and research live alongside it in the same repository.</footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('button.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.parentElement.querySelector('pre');
+      var reset = function (t) { btn.textContent = t; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+      var select = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); reset('Selected');
+      };
+      try { navigator.clipboard.writeText(pre.innerText).then(function () { reset('Copied'); }, select); } catch (e) { select(); }
+    });
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var heads = links.map(function (a) { return document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1))); });
+  function mark() {
+    var y = window.scrollY + 120, idx = 0;
+    heads.forEach(function (h, i) { if (h && h.offsetTop <= y) idx = i; });
+    links.forEach(function (a, i) { a.classList.toggle('on', i === idx); });
+  }
+  window.addEventListener('scroll', mark, { passive: true }); mark();
+})();
+</script>

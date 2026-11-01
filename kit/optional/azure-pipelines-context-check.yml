@@ -1,0 +1,32 @@
+# Optional: run the context check on every pull request in Azure DevOps.
+# Add this after your first story works end to end. Start with strict: false (warnings only).
+#
+# Option A — standalone pipeline: save as azure-pipelines-context-check.yml in your repo and create a
+#            pipeline from it, then add it as a build validation policy on the main branch.
+# Option B — add the job below to your existing pipeline.
+
+trigger: none
+pr:
+  branches:
+    include: ['*']
+
+parameters:
+  - name: strict
+    type: boolean
+    default: false
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+    fetchDepth: 0
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+  - script: |
+      TARGET="origin/${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}"
+      FLAGS="--base $TARGET"
+      if [ "${{ parameters.strict }}" = "True" ]; then FLAGS="$FLAGS --strict"; fi
+      node .github/hooks/scripts/context-tools.cjs check $FLAGS
+    displayName: AI context check

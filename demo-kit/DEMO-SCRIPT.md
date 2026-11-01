@@ -1,5 +1,7 @@
 # Demo script — REPORT-142 across UI + backend (about 20 minutes)
 
+> In VS Code Copilot type `/opsx-propose`, `/opsx-apply`, `/opsx-archive` (hyphen). The `/opsx:` spelling is Claude Code's.
+
 **Story REPORT-142.** As a credit analyst, I want to export the filtered ratings report to Excel
 so I can share it offline.
 - Export button only for users with CIAM permission `REPORT_EXPORT`

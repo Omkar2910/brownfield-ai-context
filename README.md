@@ -1,44 +1,45 @@
 # Brownfield AI Context
 
-Research and a working demo on how to **create, use and keep updated** the context that AI coding agents (GitHub Copilot, Claude Code) need in existing services, with OpenSpec for behaviour and change management.
-
-The example is a UI service (Angular) and a backend service (Spring Boot) with shared platform rules (Keycloak for login, CIAM for permissions).
+A practical kit and guide for building user stories in **existing (brownfield) services** with AI agents
+in **VS Code + GitHub Copilot** (also Claude Code): small context files the agent reads, **OpenSpec** to
+agree on the plan before code, reusable **skills**, a **context-steward** agent, and **hooks and checks**
+that keep the context up to date.
 
 ## Start here
 
-| If you want to… | Open |
+| I want to… | Open |
 | --- | --- |
-| Understand the whole approach visually, run the demo, or explain it to management | [`docs/index.html`](docs/index.html) — open in a browser, or via GitHub Pages if enabled |
-| Read the full research write-up | [`docs/playbook.md`](docs/playbook.md) |
-| Get short answers (Graphify, Spec Kit + OpenSpec, hooks, custom agent, how much context) | [`docs/faq.md`](docs/faq.md) |
-| Run the demo | [`demo-kit/README.md`](demo-kit/README.md) and [`demo-kit/DEMO-SCRIPT.md`](demo-kit/DEMO-SCRIPT.md) |
+| Understand it and set it up, step by step, in plain English | **[GUIDE.md](GUIDE.md)** (or the same guide as a web page: [docs/index.html](docs/index.html)) |
+| Install the kit into my repo | `node kit/install.mjs <path-to-your-repo>` — details in [kit/README.md](kit/README.md) |
+| Track my first story and present the results | [templates/story-log.md](templates/story-log.md), [templates/presentation-outline.md](templates/presentation-outline.md) |
+| Try everything in a sandbox first | [demo-kit/](demo-kit/README.md) (made-up UI + backend services) |
+| Read the research and sources | [docs/research/](docs/research/) — start with the [November 2026 update](docs/research/research-update-2026-11.md) |
 
-## Five-minute demo, no AI tool needed
-
-Needs Git and Node 18+ (on Windows, use Git Bash).
+## Quick start
 
 ```bash
-git clone https://github.com/Omkar2910/brownfield-ai-context.git
-cd brownfield-ai-context/demo-kit
-bash setup-demo.sh                 # creates ~/context-demo with three git repos
-cd ~/context-demo
-bash system-context/scripts/check-context.sh report-service report-ui system-context
+git clone https://github.com/<your-account>/brownfield-ai-context.git
+cd <your-service-repo> && git checkout -b ai/context-setup
+npm install -g @fission-ai/openspec@latest
+openspec init --tools github-copilot --no-copilot-cloud
+node ../brownfield-ai-context/kit/install.mjs .
 ```
 
-Then follow Track A in `docs/index.html` to rename a class and watch the check, the agent hooks and the git hook catch the stale context.
+Then open the repo in VS Code, switch Chat to agent mode and type `/context-bootstrap`.
 
-## What is in the demo kit
+## Repository layout
 
-- Lean `AGENTS.md`, scoped `.instructions.md` rules and `docs/context/` pages for both services
-- A shared `system-context` repo: platform rules, generated contracts, all OpenSpec specs, and a prepared cross-service change (REPORT-142, Excel export)
-- Team skills: `context-bootstrap`, `context-refresh`, `story-to-change`, `onboard-me`
-- A `context-steward` custom agent for Copilot and Claude Code
-- Agent hooks (session-start, post-edit, stop, guard) in one dependency-free Node script, wired for both tools
-- `check-context.sh` (anchor and drift check), a git pre-commit hook, and Azure Pipelines templates for the PR check and an optional weekly steward run
-- Golden-task template for measuring whether context helps
+```
+GUIDE.md            the guide (start here)
+kit/                installer + the files it adds to your repo
+templates/          story log and presentation outline
+demo-kit/           sandbox: two made-up services and a shared context repo
+docs/index.html     the guide as a web page
+docs/research/      playbook, FAQ, explainer, research update, sources
+```
 
-## Notes
+## Status
 
-- Service code in the kit is stub code, there only so context anchors resolve. Replace it with your own repos.
-- OpenSpec stores/worksets and VS Code Copilot hooks are beta/preview features at the time of writing; the kit documents fallbacks.
-- Research current as of October 2026. Check tool docs for changes.
+Tested with OpenSpec 1.16 and Node 20 on Linux; written for Windows, macOS and Linux. Copilot hooks
+and agent plugins are preview features in VS Code; the git hook and the context check work without them.
+Last updated November 2026. MIT licence.

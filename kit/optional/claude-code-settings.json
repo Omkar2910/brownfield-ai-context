@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/context-tools.cjs\" session-start", "timeout": 15 } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Edit|Write|MultiEdit", "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/context-tools.cjs\" post-edit", "timeout": 15 } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/context-tools.cjs\" stop", "timeout": 30 } ] }
+    ]
+  }
+}

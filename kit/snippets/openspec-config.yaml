@@ -1,0 +1,23 @@
+# --- added by the AI context kit: edit to fit this service, keep it short ---
+context: |
+  Read AGENTS.md and the files it lists under "Where to look" before writing any artifact.
+  Follow the rules in AGENTS.md and .github/instructions/ for every file you change.
+  Keep artifacts short and concrete; prefer bullet points.
+
+rules:
+  proposal:
+    - List the files, endpoints, components and data the change touches, and say whether any API contract changes
+    - Name any new permission, configuration key or database change
+  design:
+    - Describe API changes as request/response examples, not prose
+  tasks:
+    - Every new endpoint or UI action has a test for the allowed and the denied case
+    - The last task is "Update AGENTS.md or docs/context if a command, convention, trap or contract changed"
+
+operations:
+  apply:
+    guidance:
+      - Run the tests named in AGENTS.md before marking a task complete
+  archive:
+    guidance:
+      - Before archiving, list any context lines (AGENTS.md, .github/instructions, docs/context) this change made out of date, and update them

@@ -1,0 +1,17 @@
+{
+  "_comment": "Optional. Lets Copilot read Azure DevOps work items and create pull requests. Check your company policy first. Merge into .vscode/mcp.json (workspace) or your user mcp.json. Microsoft recommends the remote (hosted) server where your organization supports it; this is the local version. Needs Node 20+.",
+  "inputs": [
+    {
+      "id": "ado_org",
+      "type": "promptString",
+      "description": "Azure DevOps organization name (the part after dev.azure.com/)"
+    }
+  ],
+  "servers": {
+    "ado": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@azure-devops/mcp", "${input:ado_org}"]
+    }
+  }
+}

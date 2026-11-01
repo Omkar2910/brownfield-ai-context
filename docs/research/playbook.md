@@ -186,7 +186,7 @@ Treat context files as code: owned, reviewed in the same PR, and tested in CI. C
 
 - **Same-PR rule.** PR template checkbox: "Did this change a command, convention, contract or integration? If yes, context updated."
 - **Anchors + CI check.** Every fact in L1–L3 cites a path, command or symbol. A pipeline step checks that anchored paths exist and flags context files whose anchored code changed while the file did not. Start in warn mode; switch to blocking once noise is low. Tools such as ctxlint, ctxharness and doctyze do this off the shelf; the script in the demo kit also works.
-- **Agent hooks.** Session-start, post-edit and stop hooks remind the agent at the moment it changes anchored code (see `docs/faq.md` and the explainer).
+- **Agent hooks.** Session-start, post-edit and stop hooks remind the agent at the moment it changes anchored code (see `faq.md` and `explainer.html` in this folder).
 - **Archive hook.** OpenSpec `operations.archive.guidance` asks the agent to update context when a change altered conventions.
 - **Graph rebuild.** Graphify's post-commit hook or a pipeline job keeps L6 current, so L1–L3 never need to describe structure.
 - **Correction log.** When a reviewer fixes an agent mistake, tag the PR comment `#agent-miss`. Monthly, turn repeated misses into rules and delete rules nobody needed.
@@ -227,7 +227,7 @@ Thoughtworks' April 2026 Radar notes teams mostly use Spec Kit in brownfield set
 
 ## Demo: one story across UI + backend
 
-See `demo-kit/DEMO-SCRIPT.md` and the explainer (`docs/index.html`).
+See `demo-kit/DEMO-SCRIPT.md`, `explainer.html` in this folder, and `GUIDE.md` at the repo root.
 
 **Story REPORT-142.** As a credit analyst, I want to export the filtered ratings report to Excel so I can share it offline.
 

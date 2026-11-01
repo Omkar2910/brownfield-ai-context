@@ -1,6 +1,6 @@
 # FAQ
 
-Follow-up questions from the research, answered in short form. The explainer (`index.html`) has the visual version.
+Follow-up questions from the research, answered in short form. The explainer (`explainer.html`) has the visual version; `GUIDE.md` at the repo root has the setup steps.
 
 ## Where does Graphify help?
 

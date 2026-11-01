@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      { "type": "command", "command": "node .github/hooks/scripts/context-tools.cjs session-start", "cwd": ".", "timeoutSec": 15 }
+    ],
+    "postToolUse": [
+      { "type": "command", "command": "node .github/hooks/scripts/context-tools.cjs post-edit", "cwd": ".", "timeoutSec": 15 }
+    ],
+    "agentStop": [
+      { "type": "command", "command": "node .github/hooks/scripts/context-tools.cjs stop", "cwd": ".", "timeoutSec": 30 }
+    ]
+  }
+}
