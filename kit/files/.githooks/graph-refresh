@@ -1,0 +1,14 @@
+#!/bin/sh
+# Refreshes the Graphify code map after commits, merges and branch switches, in the background.
+# Does nothing unless Graphify is installed and the repo already has graphify-out/graph.json.
+# Code-only update: local, no LLM, no network. Skip with GRAPHIFY_SKIP_HOOK=1.
+[ "${GRAPHIFY_SKIP_HOOK:-0}" = "1" ] && exit 0
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -f "$root/graphify-out/graph.json" ] || exit 0
+command -v graphify >/dev/null 2>&1 || exit 0
+git_dir="$(git rev-parse --git-dir)"
+[ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ] || [ -f "$git_dir/MERGE_HEAD" ] && exit 0
+export PYTHONHASHSEED=0
+if [ -n "${WINDIR:-}" ] || [ -n "${MSYSTEM:-}" ]; then export GRAPHIFY_MAX_WORKERS="${GRAPHIFY_MAX_WORKERS:-1}"; fi
+( cd "$root" && graphify update . >/dev/null 2>&1 ) &
+exit 0

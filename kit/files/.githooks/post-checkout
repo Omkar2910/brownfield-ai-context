@@ -1,0 +1,4 @@
+#!/bin/sh
+# Keeps the Graphify code map fresh after a branch switch (not after single-file checkouts).
+[ "$3" = "1" ] || exit 0
+exec "$(git rev-parse --show-toplevel)/.githooks/graph-refresh"

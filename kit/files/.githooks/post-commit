@@ -1,0 +1,3 @@
+#!/bin/sh
+# Keeps the Graphify code map fresh (no-op without Graphify).
+exec "$(git rev-parse --show-toplevel)/.githooks/graph-refresh"

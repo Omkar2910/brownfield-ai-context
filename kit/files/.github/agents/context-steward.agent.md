@@ -19,7 +19,8 @@ The user names one. If they don't, ask which.
   five bullets in `CHANGELOG.md` under a dated heading. This file is for people; agents don't need it.
 - **quarterly-review** — produce a table of every context file: purpose, line count, last changed,
   rules that never mattered, repeated agent mistakes it failed to prevent, and a keep / trim / delete
-  proposal. Edit nothing until the owner approves.
+  proposal. Edit nothing until the owner approves. If `graphify-out/GRAPH_REPORT.md` exists, also
+  compare its God Nodes with `docs/context/architecture.md`: every central class should be explained there.
 
 ## Rules
 1. Only edit: AGENTS.md, CLAUDE.md, .github/instructions/**, docs/context/**, CHANGELOG.md.

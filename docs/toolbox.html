@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+</head>
+<body>
+<title>Workflow Toolbox</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a working manual. Sticky section rail on wide screens, one reading column, tables and code scroll in their own boxes. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --ink: #16202c; --muted: #586779; --line: #d8dfe7;
+  --accent: #2b54d6; --accent-soft: #e7edfc; --code-bg: #edf1f6; --good: #1d7a4c;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+    --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+  --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 80px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.toc .label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc ul ul { display: none; }
+nav.toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible, nav.toc a.on { color: var(--ink); border-left-color: var(--accent); }
+main { min-width: 0; }
+header.top { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-size: clamp(30px, 4.6vw, 44px); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--display); font-size: 27px; line-height: 1.2; margin: 48px 0 12px; padding-top: 8px; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { font-family: var(--display); font-size: 20px; margin: 30px 0 8px; scroll-margin-top: 16px; }
+p, li { max-width: 70ch; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 700; }
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin: 14px 0; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+td code { white-space: nowrap; }
+.code { position: relative; margin: 12px 0; }
+.code pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13.5px; line-height: 1.5; }
+.code pre code { background: none; padding: 0; font-size: inherit; }
+.copy { position: absolute; top: 8px; right: 8px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.copy:hover { color: var(--ink); border-color: var(--accent); }
+li.task { list-style: none; margin-left: -1.3em; }
+li.task input { accent-color: var(--good); margin-right: 6px; }
+h3 + p strong:first-child { color: var(--accent); }
+.other { display: inline-block; margin: 12px 20px 0 0; font-weight: 600; text-decoration: none; }
+.other:hover { text-decoration: underline; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+@media (max-width: 920px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { display: none; }
+}
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Sections">
+    <p class="label">Sections</p>
+    <div class="toc">
+<ul>
+<li><a href="#1-the-best-workflow-with-tools-at-each-step">1. The best workflow, with tools at each step</a></li>
+<li><a href="#2-every-tool-by-tier">2. Every tool, by tier</a></li>
+<li><a href="#3-graphify-in-depth">3. Graphify in depth</a></li>
+<li><a href="#4-which-workflow-for-which-task">4. Which workflow for which task</a></li>
+<li><a href="#5-rewriting-an-old-module">5. Rewriting an old module</a></li>
+<li><a href="#6-choosing-a-model">6. Choosing a model</a></li>
+<li><a href="#7-checklist-is-my-setup-complete">7. Checklist: is my setup complete?</a></li>
+</ul>
+</div>
+
+  </nav>
+  <main>
+    <header class="top">
+      <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
+      <h1>The complete workflow and toolbox</h1>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a>
+    </header>
+    
+<p>This is the full picture: <strong>every tool you can use</strong>, what each is for, whether you need it, and
+<strong>where it fits in the workflow</strong>. <a href="index.html">GUIDE.md</a> is the step-by-step setup;
+<a href="context.html">CONTEXT-GUIDE.md</a> explains context itself. Last checked November 2026.</p>
+<hr />
+<h2 id="1-the-best-workflow-with-tools-at-each-step">1. The best workflow, with tools at each step</h2>
+<p>Each step names the tool that does it best. Steps marked <em>(optional)</em> still work without that tool,
+just less well.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+<th>Tool</th>
+<th>Need it?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Once per repo</strong></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>1. Install</td>
+<td>Skills, steward agent, hooks, checks added to the repo</td>
+<td>Kit installer <code>kit/install.mjs --graphify</code></td>
+<td>Core</td>
+</tr>
+<tr>
+<td>2. Map the code</td>
+<td>Builds a local map of classes, calls and imports</td>
+<td><strong>Graphify</strong> (code-only, no API key)</td>
+<td>Recommended</td>
+</tr>
+<tr>
+<td>3. Create context</td>
+<td>Lean <code>AGENTS.md</code>, scoped rules, <code>docs/context/</code>, guided by the code map</td>
+<td><code>/context-bootstrap</code> skill</td>
+<td>Core</td>
+</tr>
+<tr>
+<td>4. Add the plan layer</td>
+<td><code>/opsx-*</code> commands for agreeing on stories</td>
+<td><strong>OpenSpec</strong></td>
+<td>Recommended for stories</td>
+</tr>
+<tr>
+<td><strong>Every story</strong></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>5. Read the story</td>
+<td>Work item text and acceptance criteria</td>
+<td>Azure DevOps MCP server <em>(optional)</em>, or paste it</td>
+<td>Optional</td>
+</tr>
+<tr>
+<td>6. Gather task context</td>
+<td>Relevant files, dependents, rules, traps — nothing else</td>
+<td><code>/story-to-change</code> + Graphify <code>query_graph</code> / <code>affected</code></td>
+<td>Core (+ Graphify)</td>
+</tr>
+<tr>
+<td>7. Explore risky parts</td>
+<td>Understand the area before planning</td>
+<td><code>/opsx-explore</code> + Graphify <code>shortest_path</code></td>
+<td>Recommended</td>
+</tr>
+<tr>
+<td>8. Agree the plan</td>
+<td>Proposal, spec scenarios, design, tasks — <strong>reviewed by a person</strong></td>
+<td><code>/opsx-propose</code> (or the plan from <code>/story-to-change</code>)</td>
+<td>Core</td>
+</tr>
+<tr>
+<td>9. Build</td>
+<td>Code in slices; hooks flag context lines that may now be wrong</td>
+<td><code>/opsx-apply</code> + agent hooks</td>
+<td>Core</td>
+</tr>
+<tr>
+<td>10. Test the UI</td>
+<td>Click through the Angular screen the story changed</td>
+<td>VS Code browser tools or Playwright MCP <em>(optional)</em></td>
+<td>Optional</td>
+</tr>
+<tr>
+<td>11. Check</td>
+<td>Tests, impact of changes, spec coverage, context freshness</td>
+<td><code>/story-finish</code> + <code>/opsx-verify</code> + Graphify <code>affected</code> + <code>context-tools check</code></td>
+<td>Core</td>
+</tr>
+<tr>
+<td>12. Pull request</td>
+<td>Description drafted; created by you or by the agent with approval</td>
+<td><code>/story-finish</code>, Azure DevOps MCP <em>(optional)</em>, PR template</td>
+<td>Core</td>
+</tr>
+<tr>
+<td>13. CI</td>
+<td>Context check on the PR (warnings first, blocking later)</td>
+<td>Azure Pipelines template</td>
+<td>Later</td>
+</tr>
+<tr>
+<td>14. After merge</td>
+<td>Spec record updated; code map refreshed automatically</td>
+<td><code>/opsx-archive</code> + git hooks</td>
+<td>Core</td>
+</tr>
+<tr>
+<td>15. Learn</td>
+<td>Agent mistakes and repeated review comments become rules</td>
+<td><code>/context-learn</code></td>
+<td>Core</td>
+</tr>
+<tr>
+<td><strong>Every sprint / quarter</strong></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>16. Upkeep</td>
+<td>Digest, prune, review against the code map</td>
+<td><code>context-steward</code> agent</td>
+<td>Core</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="2-every-tool-by-tier">2. Every tool, by tier</h2>
+<h3 id="core-use-from-day-one">Core — use from day one</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>What it does</th>
+<th>Where</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>VS Code + GitHub Copilot (agent mode)</strong></td>
+<td>The agent</td>
+<td>Your editor</td>
+<td>Any model; use your strongest for planning (step 8)</td>
+</tr>
+<tr>
+<td><strong>AGENTS.md + scoped instructions + docs/context</strong></td>
+<td>Lasting context</td>
+<td>Repo</td>
+<td>Created by <code>/context-bootstrap</code></td>
+</tr>
+<tr>
+<td><strong>Kit skills</strong></td>
+<td><code>context-bootstrap</code>, <code>story-to-change</code>, <code>story-finish</code>, <code>context-refresh</code>, <code>context-learn</code>, <code>onboard-me</code></td>
+<td><code>.github/skills/</code></td>
+<td>Call by name; agents often skip skills they are not told to use</td>
+</tr>
+<tr>
+<td><strong>context-steward agent</strong></td>
+<td>Maintains context files only</td>
+<td><code>.github/agents/</code></td>
+<td>Sprint and quarter upkeep</td>
+</tr>
+<tr>
+<td><strong>Agent hooks</strong></td>
+<td>Session-start note, post-edit reminders, one check before finishing</td>
+<td><code>.github/hooks/</code></td>
+<td>Preview in VS Code; git hook and check cover the gap</td>
+</tr>
+<tr>
+<td><strong>Git hooks</strong></td>
+<td>Block commits with broken context; refresh the code map</td>
+<td><code>.githooks/</code></td>
+<td>Work for every developer, with or without an agent</td>
+</tr>
+<tr>
+<td><strong>context-tools.cjs</strong></td>
+<td><code>check</code> and <code>status</code></td>
+<td><code>.github/hooks/scripts/</code></td>
+<td>Node, no dependencies</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="recommended-use-for-real-stories">Recommended — use for real stories</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>What it does</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Graphify</strong></td>
+<td>Local code map: who calls what, what depends on what</td>
+<td>Agents find the right files with fewer reads; <code>affected</code> shows the blast radius before you change shared code; central classes guide what to document. See Section 3.</td>
+</tr>
+<tr>
+<td><strong>OpenSpec</strong></td>
+<td>Proposal → reviewed spec → tasks → verify → archive</td>
+<td>Agreeing the plan before code is the biggest quality lever; the archive is a free, dated record of every change</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="optional-add-when-useful-and-allowed">Optional — add when useful and allowed</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>What it does</th>
+<th>Check first</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Azure DevOps MCP server</strong></td>
+<td>Agent reads work items, creates PRs</td>
+<td>Company policy; Microsoft recommends its hosted server where available. Config in <code>kit/optional/</code></td>
+</tr>
+<tr>
+<td><strong>VS Code browser tools / Playwright MCP</strong></td>
+<td>Agent opens the Angular app, clicks through the change, takes screenshots</td>
+<td>Local app running; test data only</td>
+</tr>
+<tr>
+<td><strong>Library docs MCP (for example Context7)</strong></td>
+<td>Up-to-date docs for the exact Angular / Spring versions you use</td>
+<td>It sends your queries to an outside service; policy</td>
+</tr>
+<tr>
+<td><strong>Static analysis (for example SonarQube)</strong></td>
+<td>Add its findings to the story-finish check</td>
+<td>Whatever your team already runs</td>
+</tr>
+<tr>
+<td><strong>Claude Code</strong></td>
+<td>Same kit for terminal-based work (<code>--tool claude</code>)</td>
+<td>Licences</td>
+</tr>
+<tr>
+<td><strong>Repomix</strong></td>
+<td>Packs a folder into one file for an agent</td>
+<td>Use only when Graphify is not available</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="later-when-several-teams-adopt-it">Later — when several teams adopt it</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Azure Pipelines context check</strong></td>
+<td>Context check on every PR (<code>kit/optional/</code>)</td>
+</tr>
+<tr>
+<td><strong>Weekly steward run</strong></td>
+<td>Scheduled check; steward proposes fixes as a PR (see <code>demo-kit/system-context/pipelines/</code>)</td>
+</tr>
+<tr>
+<td><strong>Agent plugins or APM</strong></td>
+<td>Install the kit's skills, agent and hooks across many repos from one package. New; check policy and maturity</td>
+</tr>
+<tr>
+<td><strong>Shared <code>system-context</code> repo</strong></td>
+<td>Platform rules and API contracts shared by several services (see <code>demo-kit/</code>)</td>
+</tr>
+<tr>
+<td><strong>Graphify served centrally</strong></td>
+<td>One graph server for a team (<code>graphify-mcp --transport http</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="for-special-cases">For special cases</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>GitHub Spec Kit</strong></td>
+<td>Building a genuinely new service or module from scratch (see Section 5). Not for changes to existing code.</td>
+</tr>
+<tr>
+<td><strong>BMAD <code>document-project</code></strong></td>
+<td>A one-off survey of a large, undocumented legacy system before anything else</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="3-graphify-in-depth">3. Graphify in depth</h2>
+<h3 id="what-it-gives-you">What it gives you</h3>
+<p>Graphify reads your code with a parser (Java, TypeScript and about 40 other languages) and builds a
+map of classes, methods, calls, imports and references. The map lives in <code>graphify-out/</code>:
+<code>graph.json</code> (the map), <code>GRAPH_REPORT.md</code> (central classes, module groups, surprising links) and
+<code>graph.html</code> (an interactive picture). Building it from code needs <strong>no API key and sends nothing
+anywhere</strong>.</p>
+<p>It helps in four places:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Creating context</td>
+<td>The report's "God Nodes" (most connected classes) show what <code>docs/context/architecture.md</code> must explain</td>
+</tr>
+<tr>
+<td>Gathering task context</td>
+<td><code>query_graph</code> and <code>get_neighbors</code> find the relevant code without opening dozens of files</td>
+</tr>
+<tr>
+<td>Before and after changing code</td>
+<td><code>graphify affected "&lt;Class&gt;"</code> lists everything that depends on it: callers, references, subclasses</td>
+</tr>
+<tr>
+<td>Onboarding and presenting</td>
+<td><code>graph.html</code>, <code>graphify tree</code> and <code>graphify export callflow-html</code> give pictures of the code</td>
+</tr>
+</tbody>
+</table></div>
+<p>What it does <strong>not</strong> give: rules, intent or behaviour (that is AGENTS.md and OpenSpec), and links
+between services over HTTP (the Angular call to the Spring endpoint is not in the map; use the API
+contract for that).</p>
+<h3 id="setup-5-minutes-per-developer">Setup (5 minutes per developer)</h3>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">pip install &quot;graphifyy[mcp]&quot;          # or: pipx install &quot;graphifyy[mcp]&quot;  /  uv tool install &quot;graphifyy[mcp]&quot;
+cd &lt;your-service-repo&gt;
+graphify extract . --code-only         # local parser only, no API key
+graphify cluster-only . --no-label     # writes GRAPH_REPORT.md and graph.html
+</code></pre></div>
+<p>Needs Python 3.10 or newer. The package name has two y's. The <code>[mcp]</code> part adds the server Copilot talks to.</p>
+<p>If you installed the kit with <code>--graphify</code>, the repo already has:
+- <code>.vscode/mcp.json</code> — starts the <code>graphify</code> MCP server for Copilot. Open the MCP view in VS Code (or
+  run <strong>MCP: List Servers</strong>), start <strong>graphify</strong> and trust it the first time. Its tools then appear in
+  the chat tool picker.
+- <code>.graphifyignore</code> — keeps generated and vendored code out of the map. Add your generated API client
+  folder if you have one.
+- <code>graphify-out/</code> in <code>.gitignore</code> — each developer builds their own map in seconds.
+- Git hooks that run <code>graphify update .</code> after every commit, merge and branch switch (local, no API
+  key, in the background).</p>
+<p>The agent's session-start note tells it if the map is older than the code.</p>
+<h3 id="which-tool-for-which-question">Which tool for which question</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>MCP tool (in chat)</th>
+<th>Terminal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Where is X, how does Y work?</td>
+<td><code>query_graph</code> (set <code>token_budget</code> ~1500)</td>
+<td><code>graphify query "how does report export work"</code></td>
+</tr>
+<tr>
+<td>What is directly connected to X?</td>
+<td><code>get_neighbors</code></td>
+<td><code>graphify explain "X"</code></td>
+</tr>
+<tr>
+<td>How is A connected to B?</td>
+<td><code>shortest_path</code></td>
+<td><code>graphify path "A" "B"</code></td>
+</tr>
+<tr>
+<td>What breaks if I change X?</td>
+<td>—</td>
+<td><code>graphify affected "X"</code></td>
+</tr>
+<tr>
+<td>What are the central classes?</td>
+<td><code>god_nodes</code></td>
+<td><code>graphify god-nodes</code></td>
+</tr>
+<tr>
+<td>Is the map current?</td>
+<td>—</td>
+<td><code>node .github/hooks/scripts/context-tools.cjs status</code></td>
+</tr>
+<tr>
+<td>Refresh the map now</td>
+<td>—</td>
+<td><code>graphify update .</code></td>
+</tr>
+<tr>
+<td>How many tokens does it save?</td>
+<td>—</td>
+<td><code>graphify benchmark</code> (useful numbers for a presentation)</td>
+</tr>
+</tbody>
+</table></div>
+<p>When a name matches several nodes (a class and its constructor, for example), Graphify lists the
+candidate ids; repeat the command with the full id.</p>
+<p>The agent runs terminal commands only with your approval. To avoid approving the same safe command
+again and again, add read-only Graphify commands (<code>graphify query</code>, <code>graphify affected</code>,
+<code>graphify path</code>, <code>graphify explain</code>, <code>graphify god-nodes</code>, <code>graphify update</code>) to the terminal
+auto-approve list in VS Code settings (search settings for "auto approve"). Never auto-approve
+<code>git push</code> or anything that changes remote systems.</p>
+<h3 id="choices-you-can-make-later">Choices you can make later</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Choice</th>
+<th>Default in the kit</th>
+<th>Alternative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Code-only or with documents</td>
+<td>Code-only: local, no API key</td>
+<td><code>graphify extract .</code> also maps docs, PDFs and images, but needs an LLM (Gemini, Claude, OpenAI, a company gateway via <code>OPENAI_BASE_URL</code> / <code>ANTHROPIC_BASE_URL</code>, or local Ollama). Check policy first.</td>
+</tr>
+<tr>
+<td>How the agent reaches it</td>
+<td>MCP server + a 3-line pointer in AGENTS.md</td>
+<td><code>graphify vscode install</code> adds a <code>/graphify</code> skill for your user and a section in <code>.github/copilot-instructions.md</code>. Use one approach, not both, so the instructions are not duplicated.</td>
+</tr>
+<tr>
+<td>Share the map</td>
+<td>Each developer builds locally</td>
+<td>Commit <code>graphify-out/graph.json</code> (Graphify has a merge driver: <code>graphify hook install</code> registers it), or serve one map over HTTP: <code>graphify-mcp --transport http</code></td>
+</tr>
+<tr>
+<td>Several repos</td>
+<td>One map per repo</td>
+<td><code>graphify merge-graphs a/graph.json b/graph.json</code> joins maps; useful for shared libraries, not for HTTP calls between services</td>
+</tr>
+</tbody>
+</table></div>
+<p>Note: <code>graphify hook install</code> writes to <code>.git/hooks</code>, which git ignores once the kit sets
+<code>core.hooksPath</code> to <code>.githooks</code>. The kit's own git hooks already do the refresh, so you don't need it.</p>
+<h3 id="dont">Don't</h3>
+<ul>
+<li>Paste <code>GRAPH_REPORT.md</code> into AGENTS.md or other context files. The agent queries the map when it needs it.</li>
+<li>Trust INFERRED edges blindly; the report marks them with a confidence score.</li>
+<li>Rely on a stale map; refresh with <code>graphify update .</code> (the session-start note tells the agent).</li>
+</ul>
+<hr />
+<h2 id="4-which-workflow-for-which-task">4. Which workflow for which task</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Workflow</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Typo, config tweak, one-line fix</strong></td>
+<td>Just ask the agent. Context loads automatically.</td>
+</tr>
+<tr>
+<td><strong>Bug fix</strong></td>
+<td>Ask the agent to find the cause with <code>query_graph</code>, check <code>known-traps.md</code>, and run <code>graphify affected</code> on what it plans to change. Fix, add a regression test, <code>/context-learn</code> if the bug came from a missing rule.</td>
+</tr>
+<tr>
+<td><strong>Small change (under a day)</strong></td>
+<td><code>/story-to-change</code> → approve its short plan → build → <code>/story-finish</code>. OpenSpec optional.</td>
+</tr>
+<tr>
+<td><strong>Story (1–5 days)</strong></td>
+<td>Full workflow in Section 1, with OpenSpec. This is the one to demo.</td>
+</tr>
+<tr>
+<td><strong>Story across UI and backend</strong></td>
+<td>Open both repos in one VS Code window. Backend first. One OpenSpec change per repo with the same id, or a shared store (see <code>docs/research/playbook.md</code>). The API contract is the hand-off between them.</td>
+</tr>
+<tr>
+<td><strong>Rewriting an old module</strong></td>
+<td>Section 5.</td>
+</tr>
+<tr>
+<td><strong>Code review</strong></td>
+<td>Ask: "Review this diff against AGENTS.md and the instructions that apply; run graphify affected on the changed classes and list untested dependents."</td>
+</tr>
+<tr>
+<td><strong>New team member</strong></td>
+<td><code>/onboard-me</code>, <code>graph.html</code>, then a small story with a buddy.</td>
+</tr>
+<tr>
+<td><strong>Incident or production bug</strong></td>
+<td>Fix it, then add the trap to <code>docs/context/known-traps.md</code> with <code>/context-learn</code>.</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="5-rewriting-an-old-module">5. Rewriting an old module</h2>
+<p>Old modules that come back into development are where agents help most and fail worst. Do it in this
+order.</p>
+<ol>
+<li><strong>Map it.</strong> <code>graphify god-nodes</code> and <code>graphify affected "&lt;main classes&gt;"</code> show what the module is
+   built around and what outside code depends on it. <code>graphify export callflow-html</code> gives a picture
+   for the team.</li>
+<li><strong>Write its context.</strong> Run <code>/context-bootstrap</code> focused on the module: a <code>docs/context/&lt;module&gt;.md</code>
+   page, its traps, and scoped rules for its folders.</li>
+<li><strong>Pin down current behaviour.</strong> Before changing anything, add tests that record what it does today
+   (including the odd parts). With OpenSpec, run <code>/opsx-explore</code> on the module and write baseline
+   specs for it. This is the one case where writing specs for existing code is worth it, because you
+   are about to change all of it.</li>
+<li><strong>Choose the approach.</strong>
+   - <strong>Replace it piece by piece</strong> (usually safer): each slice is a normal OpenSpec story; old code is
+     removed as each slice lands.
+   - <strong>Build a new module beside it</strong>: plan the new module with Spec Kit (made for building from
+     scratch), switch callers over, then turn its spec into OpenSpec baseline specs so later changes
+     use the normal story workflow.</li>
+<li><strong>Each slice:</strong> <code>affected</code> before and after, the behaviour tests must still pass, and
+   <code>/context-refresh</code> as the module's structure changes.</li>
+</ol>
+<hr />
+<h2 id="6-choosing-a-model">6. Choosing a model</h2>
+<p>Copilot lets you pick the model per chat. A simple rule:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Explore, propose, review plans, bootstrap context</td>
+<td>Your strongest available model</td>
+</tr>
+<tr>
+<td>Apply well-specified tasks, write tests</td>
+<td>Your standard model</td>
+</tr>
+<tr>
+<td>Quick questions, small edits</td>
+<td>The fastest model</td>
+</tr>
+</tbody>
+</table></div>
+<p>Note which model you used in your story log; it helps others repeat your results.</p>
+<hr />
+<h2 id="7-checklist-is-my-setup-complete">7. Checklist: is my setup complete?</h2>
+<ul>
+<li class="task"><input type="checkbox" aria-label="done"> Kit installed (<code>kit/install.mjs --graphify</code>), setup PR merged</li>
+<li class="task"><input type="checkbox" aria-label="done"> <code>AGENTS.md</code> about 100 lines, with "Where to look" and the code map pointer</li>
+<li class="task"><input type="checkbox" aria-label="done"> Graphify map built; <code>context-tools.cjs status</code> says "up to date"; <code>graphify</code> MCP server running in VS Code</li>
+<li class="task"><input type="checkbox" aria-label="done"> OpenSpec initialised with <code>verify</code> enabled</li>
+<li class="task"><input type="checkbox" aria-label="done"> <strong>Chat: Open Customizations</strong> lists the skills, the steward agent and the hooks</li>
+<li class="task"><input type="checkbox" aria-label="done"> <code>git config core.hooksPath</code> is <code>.githooks</code> on your clone</li>
+<li class="task"><input type="checkbox" aria-label="done"> Optional: Azure DevOps MCP connected; read-only Graphify commands auto-approved</li>
+</ul>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a></footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('button.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.parentElement.querySelector('pre');
+      var reset = function (t) { btn.textContent = t; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+      var select = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); reset('Selected');
+      };
+      try { navigator.clipboard.writeText(pre.innerText).then(function () { reset('Copied'); }, select); } catch (e) { select(); }
+    });
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var heads = links.map(function (a) { return document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1))); });
+  function mark() {
+    var y = window.scrollY + 120, idx = 0;
+    heads.forEach(function (h, i) { if (h && h.offsetTop <= y) idx = i; });
+    links.forEach(function (a, i) { a.classList.toggle('on', i === idx); });
+  }
+  window.addEventListener('scroll', mark, { passive: true }); mark();
+})();
+</script>
+
+</body>
+</html>

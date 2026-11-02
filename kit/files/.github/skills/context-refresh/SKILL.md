@@ -8,6 +8,8 @@ description: Update AI-agent context files (AGENTS.md, .instructions.md, docs/co
 Goal: change only the context lines whose facts changed. Never rewrite context files wholesale.
 
 ## Steps
+0. If `graphify-out/graph.json` exists, run `graphify update .` so the code map matches the code
+   (local, no API key). For a moved or renamed class, `graphify query "<old name>"` helps find where it went.
 1. Run `node .github/hooks/scripts/context-tools.cjs check --base origin/<main-branch>` (ask the user
    for the main branch name if unsure; `main`, `master` and `develop` are common). Collect:
    - ERROR lines: an anchor points at a file that no longer exists.

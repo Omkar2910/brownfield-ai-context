@@ -12,22 +12,25 @@ Goal: a pull request a reviewer can approve quickly, with specs, code and contex
    otherwise use the plan agreed earlier in the conversation. List anything unfinished and ask the
    user whether to finish it or move it to a follow-up.
 2. **Tests.** Run the test command from AGENTS.md. Fix failures caused by this change; report others.
-3. **Verify.** If the `/opsx-verify` command is installed, tell the user to run it now (it checks the
+3. **Impact.** If the code map exists, run `graphify update .` and then `graphify affected "<ClassName>"`
+   for each class this change modified. For each dependent, confirm it is covered by a test or not
+   affected. Add an "Impact" list to the PR description.
+4. **Verify.** If the `/opsx-verify` command is installed, tell the user to run it now (it checks the
    code against the change's requirements and scenarios). Otherwise, go through each scenario in the
    change's delta specs and state where the code and a test cover it.
-4. **Context.** Run `node .github/hooks/scripts/context-tools.cjs check --base origin/<main-branch>`.
+5. **Context.** Run `node .github/hooks/scripts/context-tools.cjs check --base origin/<main-branch>`.
    For each finding, follow the `context-refresh` skill. Context edits go in this same PR.
-5. **PR description.** Draft it from the change folder (or, without OpenSpec, from the agreed plan
+6. **PR description.** Draft it from the change folder (or, without OpenSpec, from the agreed plan
    and the diff):
    - Story id and one-line summary
    - What changed, grouped by area
    - Requirements and scenarios or acceptance checks covered
    - Context files updated, and why
-   - How it was tested
+   - Impact (dependents checked) and how it was tested
    - Link to `openspec/changes/<change-id>/` if there is one
-6. **Hand over.** Show the description and the list of changed files. The user decides how to commit,
+7. **Hand over.** Show the description and the list of changed files. The user decides how to commit,
    push and open the PR. If the user asks you to do it, use the terminal for git and the Azure DevOps
    tool (if connected) for the pull request, and show each command before running it.
-7. **Remind** the user what happens after the PR merges: with OpenSpec, `/opsx-archive <change-id>`
+8. **Remind** the user what happens after the PR merges: with OpenSpec, `/opsx-archive <change-id>`
    merges the specs into `openspec/specs/`. In every case, if an agent was corrected during this
    story, `/context-learn` turns the correction into a rule.

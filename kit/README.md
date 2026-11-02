@@ -7,7 +7,8 @@ Read [`../GUIDE.md`](../GUIDE.md) first; this page is the reference.
 node kit/install.mjs <path-to-your-repo>                  # GitHub Copilot (default)
 node kit/install.mjs <path-to-your-repo> --dry-run        # show what it would do
 node kit/install.mjs <path-to-your-repo> --tool claude    # Claude Code instead
-node kit/install.mjs <path-to-your-repo> --no-git-hook    # skip the git pre-commit hook
+node kit/install.mjs <path-to-your-repo> --no-git-hook    # skip the git hooks
+node kit/install.mjs <path-to-your-repo> --graphify       # also connect the Graphify code map (recommended)
 ```
 
 The installer only adds files. Existing files are never overwritten; it lists them and tells you what
@@ -22,6 +23,9 @@ to merge by hand. OpenSpec is optional. If you use it, run `openspec init` first
 | `files/.github/hooks/ai-context.json` | `.github/hooks/` | Copilot hooks: session start, after edit, before finishing |
 | `files/.github/hooks/scripts/context-tools.cjs` | `.github/hooks/scripts/` | The hooks and the `check` / `status` commands (Node 18+, no dependencies) |
 | `files/.githooks/pre-commit` | `.githooks/` + `git config core.hooksPath .githooks` | Refuses commits with broken anchors |
+| `files/.githooks/post-commit`, `post-merge`, `post-checkout`, `graph-refresh` | `.githooks/` | Refresh the Graphify code map in the background; no-op without Graphify |
+| `files-graphify/.vscode/mcp.json` | `.vscode/mcp.json` (with `--graphify`) | Starts the `graphify` MCP server for Copilot (`.mcp.json` for Claude Code) |
+| `files-graphify/.graphifyignore` | `.graphifyignore` (with `--graphify`) | Keeps generated code out of the map; also adds `graphify-out/` to `.gitignore` |
 | `files/.azuredevops/pull_request_template.md` | `.azuredevops/` | PR template with the context checklist |
 | `snippets/openspec-config.yaml` | appended to `openspec/config.yaml` | Points OpenSpec at your context, adds rules |
 | `optional/*` | not installed | Azure Pipelines check, Azure DevOps MCP config, Claude Code hook settings |

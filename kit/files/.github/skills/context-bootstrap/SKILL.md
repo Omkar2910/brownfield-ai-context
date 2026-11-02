@@ -15,6 +15,10 @@ Work in this order and show the user the result of each step before moving on.
 - Build, test, lint and run commands: read the build files (pom.xml, build.gradle, package.json,
   angular.json) and CI pipeline files. Run the test command once if it is quick, to confirm it works.
 - Layout: list the top-level modules/packages and what each is for (for your own understanding).
+- Code map: if `graphify-out/graph.json` exists or the graphify MCP tools are available, run
+  `god_nodes` (or `graphify god-nodes`) and read the "God Nodes" and "Surprising Connections" parts of
+  `graphify-out/GRAPH_REPORT.md`. The most connected classes are what `docs/context/architecture.md`
+  must explain. Do NOT copy graph output into context files; agents can query the graph themselves.
 - Integrations: authentication, authorization, databases, queues, caches, other services. Read config
   files and HTTP/API clients.
 - Existing docs (README, docs/, ADRs, wiki exports the user points you to). Note what is still true.

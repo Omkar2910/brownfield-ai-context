@@ -4,12 +4,13 @@
 // reported. Everything it adds is ordinary files you can review and commit (or delete) with git.
 //
 // Usage:
-//   node kit/install.mjs <path-to-your-repo> [--tool copilot|claude] [--dry-run] [--no-git-hook]
+//   node kit/install.mjs <path-to-your-repo> [--tool copilot|claude] [--graphify] [--dry-run] [--no-git-hook]
 //
 //   --tool copilot   (default) GitHub Copilot in VS Code: .github/skills, .github/agents, .github/hooks
 //   --tool claude    Claude Code: .claude/skills, .claude/agents, .claude/hooks + .claude/settings.json
 //   --dry-run        show what would happen, change nothing
-//   --no-git-hook    do not set up the git pre-commit hook
+//   --no-git-hook    do not set up the git hooks
+//   --graphify       also connect Graphify (code map): MCP server config, .graphifyignore, ignore graphify-out/
 //
 // Works on Windows (PowerShell or Git Bash), macOS and Linux. Needs Node 18+ and git.
 
@@ -28,7 +29,7 @@ const dry = has('--dry-run');
 const target = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--tool');
 
 if (!target || has('--help') || !['copilot', 'claude'].includes(tool)) {
-  console.log('Usage: node kit/install.mjs <path-to-your-repo> [--tool copilot|claude] [--dry-run] [--no-git-hook]');
+  console.log('Usage: node kit/install.mjs <path-to-your-repo> [--tool copilot|claude] [--graphify] [--dry-run] [--no-git-hook]');
   process.exit(target ? 1 : 0);
 }
 
@@ -83,7 +84,7 @@ for (const src of walk(filesDir)) {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     const text = fs.readFileSync(src, 'utf8');
     fs.writeFileSync(dest, transform(rel, text));
-    if (/\.(cjs|sh)$|pre-commit$/.test(dest)) { try { fs.chmodSync(dest, 0o755); } catch { /* Windows */ } }
+    if (/\.(cjs|sh)$/.test(dest) || destRel.startsWith('.githooks/')) { try { fs.chmodSync(dest, 0o755); } catch { /* Windows */ } }
   }
   created.push(destRel);
 }
@@ -96,6 +97,37 @@ if (tool === 'claude') {
   } else {
     if (!dry) { fs.mkdirSync(path.dirname(settings), { recursive: true }); fs.copyFileSync(path.join(kitDir, 'optional', 'claude-code-settings.json'), settings); }
     created.push('.claude/settings.json');
+  }
+}
+
+// 2b. Graphify (optional): MCP server config, ignore file, keep the generated map out of git
+if (has('--graphify')) {
+  const ignoreSrc = path.join(kitDir, 'files-graphify', '.graphifyignore');
+  const ignoreDest = path.join(root, '.graphifyignore');
+  if (fs.existsSync(ignoreDest)) skipped.push('.graphifyignore');
+  else { if (!dry) fs.copyFileSync(ignoreSrc, ignoreDest); created.push('.graphifyignore'); }
+
+  if (tool === 'copilot') {
+    const mcpDest = path.join(root, '.vscode', 'mcp.json');
+    if (fs.existsSync(mcpDest)) {
+      notes.push('.vscode/mcp.json already exists: add the "graphify" server from kit/files-graphify/.vscode/mcp.json to it.');
+    } else {
+      if (!dry) { fs.mkdirSync(path.dirname(mcpDest), { recursive: true }); fs.copyFileSync(path.join(kitDir, 'files-graphify', '.vscode', 'mcp.json'), mcpDest); }
+      created.push('.vscode/mcp.json (Graphify MCP server)');
+    }
+  } else {
+    const mcpDest = path.join(root, '.mcp.json');
+    const cfg = { mcpServers: { graphify: { command: 'graphify-mcp', args: ['graphify-out/graph.json'] } } };
+    if (fs.existsSync(mcpDest)) notes.push('.mcp.json already exists: add this server to it: ' + JSON.stringify(cfg.mcpServers));
+    else { if (!dry) fs.writeFileSync(mcpDest, JSON.stringify(cfg, null, 2) + '\n'); created.push('.mcp.json (Graphify MCP server)'); }
+  }
+
+  const gi = path.join(root, '.gitignore');
+  const current = fs.existsSync(gi) ? fs.readFileSync(gi, 'utf8') : '';
+  if (/^\/?graphify-out\/?\s*$/m.test(current)) skipped.push('.gitignore entry graphify-out/');
+  else {
+    if (!dry) fs.writeFileSync(gi, current.replace(/\s*$/, current ? '\n' : '') + '\n# Graphify code map (rebuilt locally; see kit README)\ngraphify-out/\n');
+    created.push('.gitignore: graphify-out/');
   }
 }
 
@@ -121,9 +153,9 @@ if (!has('--no-git-hook')) {
   const hooksPath = git(root, ['config', '--get', 'core.hooksPath']);
   const legacyHook = path.join(root, '.git', 'hooks', 'pre-commit');
   if (hooksPath && hooksPath !== '.githooks') {
-    notes.push(`This repo already uses git hooks from "${hooksPath}". Add this line to its pre-commit file instead:\n      node ${tool === 'claude' ? '.claude/hooks' : '.github/hooks/scripts'}/context-tools.cjs check || exit 1`);
+    notes.push(`This repo already uses git hooks from "${hooksPath}". Add this line to its pre-commit file:\n      node ${tool === 'claude' ? '.claude/hooks' : '.github/hooks/scripts'}/context-tools.cjs check || exit 1\n    and, to keep the Graphify code map fresh, this line to its post-commit and post-merge files:\n      sh .githooks/graph-refresh`);
   } else if (!hooksPath && fs.existsSync(legacyHook)) {
-    notes.push('A pre-commit hook already exists in .git/hooks. Add this line to it:\n      node .github/hooks/scripts/context-tools.cjs check || exit 1');
+    notes.push('A pre-commit hook already exists in .git/hooks. Add this line to it:\n      node .github/hooks/scripts/context-tools.cjs check || exit 1\n    and "sh .githooks/graph-refresh" to post-commit and post-merge if you use Graphify.');
   } else if (!hooksPath) {
     if (!dry) git(root, ['config', 'core.hooksPath', '.githooks']);
     created.push('git config core.hooksPath .githooks (this clone only; teammates run it once too)');
@@ -142,3 +174,13 @@ log('     the context-steward agent and the hooks are listed.');
 log('  2. In Agent mode, type /context-bootstrap and review what it writes.');
 log(`  3. Run: node ${tool === 'claude' ? '.claude/hooks' : '.github/hooks/scripts'}/context-tools.cjs check`);
 log('  4. Commit everything on a branch and open a pull request for review.');
+log('     (Team on macOS/Linux too? After "git add", run: git update-index --chmod=+x .githooks/*');
+log('      so the git hooks stay executable for everyone.)');
+if (has('--graphify')) {
+  log('');
+  log('Graphify (code map) — build it once, locally, no API key needed:');
+  log('  pip install "graphifyy[mcp]"        (or: pipx / uv tool install "graphifyy[mcp]")');
+  log('  graphify extract . --code-only');
+  log('  graphify cluster-only . --no-label');
+  log('  Then reload VS Code and start the "graphify" server in the MCP view. The git hooks keep it fresh.');
+}

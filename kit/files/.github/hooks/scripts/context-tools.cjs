@@ -202,6 +202,8 @@ function cmdStatus() {
   a.agents.items.forEach(i => console.log(`    ${i.file}: ${i.lines} lines, ≈ ${i.tokens} tokens`));
   const active = activeChanges(repo);
   console.log(`  Active OpenSpec changes: ${active.length ? active.join(', ') : 'none'}`);
+  const g = graphState(repo);
+  console.log(`  Code map (Graphify): ${!g ? 'not built' : g.stale ? `stale (built ${g.built}, HEAD ${g.head}) — run: graphify update .` : `up to date${g.built ? ` (${g.built})` : ''}`}`);
 }
 
 function activeChanges(repo) {
@@ -209,6 +211,25 @@ function activeChanges(repo) {
     return fs.readdirSync(path.join(repo, 'openspec', 'changes'), { withFileTypes: true })
       .filter(d => d.isDirectory() && d.name !== 'archive').map(d => d.name);
   } catch { return []; }
+}
+
+
+// Graphify code map: present? built from which commit? (read from its report, no Graphify needed)
+function graphState(repo) {
+  const graph = path.join(repo, 'graphify-out', 'graph.json');
+  if (!fs.existsSync(graph)) return null;
+  let built = null;
+  try { const m = /Built from commit:\s*`([0-9a-f]+)`/.exec(fs.readFileSync(path.join(repo, 'graphify-out', 'GRAPH_REPORT.md'), 'utf8')); if (m) built = m[1]; } catch { /* no report */ }
+  const head = (git(repo, ['rev-parse', 'HEAD']) || '').trim();
+  const stale = built && head && !head.startsWith(built);
+  return { built, head: head.slice(0, 8), stale };
+}
+function graphLine(repo) {
+  const g = graphState(repo);
+  if (!g) return null;
+  return g.stale
+    ? `Code map (Graphify) is older than HEAD (built ${g.built}, now ${g.head}): run "graphify update ." before relying on it.`
+    : 'Code map (Graphify) available: use the graphify MCP tools (query_graph, get_neighbors, shortest_path) or "graphify query/affected/path" before reading many files.';
 }
 
 // ---------------------------------------------------------------- hooks
@@ -257,6 +278,8 @@ function hookSessionStart(input) {
   if (a.broken.length) lines.push(`Broken anchors: ${a.broken.slice(0, 3).map(b => `${b.file}:${b.line} -> ${b.pattern}`).join('; ')}${a.broken.length > 3 ? ' …' : ''}`);
   const active = activeChanges(repo);
   if (active.length) lines.push(`Active OpenSpec changes: ${active.join(', ')}.`);
+  const gl = graphLine(repo);
+  if (gl) lines.push(gl);
   lines.push('Context files describe this code; when an edit changes what a context line says, the line is updated in the same change.');
   addContext('SessionStart', lines.join('\n'));
 }

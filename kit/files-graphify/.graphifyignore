@@ -1,0 +1,12 @@
+# Folders Graphify should not map (it also respects .gitignore).
+# Generated code and vendored files add noise to the code map.
+node_modules/
+target/
+build/
+dist/
+.angular/
+coverage/
+**/generated/
+**/generated-sources/
+# src/app/api/        (example: a generated API client folder)
+*.min.js

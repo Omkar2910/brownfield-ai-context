@@ -19,6 +19,9 @@ Read this file first. Open the files under "Where to look" only when the task ne
 - Architecture, modules and request flow: docs/context/architecture.md
 - Known traps (read before changing <risky area>): docs/context/known-traps.md
 - Rules per layer: .github/instructions/ (loaded automatically for matching files)
+- Code map (if built): query it before reading many files — graphify MCP tools (`query_graph`,
+  `get_neighbors`, `shortest_path`) or `graphify query "<question>"`. Before changing shared code,
+  run `graphify affected "<ClassName>"` to see what depends on it.
 - Current behaviour specs: openspec/specs/
 - Story workflow: /story-to-change → /opsx-propose → review → /opsx-apply → /story-finish → /opsx-archive
 

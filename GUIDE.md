@@ -5,21 +5,23 @@ Written in plain English. Read it top to bottom once (about 15 minutes), then us
 
 Last checked: November 2026. Tools in this area change monthly; see [What is still changing](#10-what-is-still-changing).
 
-> **Two guides.** This one is the setup and the story workflow (with OpenSpec). How to create, use and
-> maintain the context itself, for any task and with or without OpenSpec, is in
-> **[CONTEXT-GUIDE.md](CONTEXT-GUIDE.md)**. Context is the foundation; OpenSpec is an optional layer on top.
+> **Three guides.** This one is the setup and the story workflow. How to create, use and maintain the
+> context itself, for any task, is in **[CONTEXT-GUIDE.md](CONTEXT-GUIDE.md)**. Every tool you can use
+> (core, recommended, optional), Graphify in depth, and which workflow fits which task are in
+> **[TOOLBOX.md](TOOLBOX.md)**.
 
 ---
 
 ## 1. What you are setting up
 
-An AI agent writes better code when it knows three things: **the rules of your codebase**, **what the
-story should do**, and **whether its work broke anything it was told**. This kit gives you all three
-with four parts:
+An AI agent writes better code when it knows four things: **the rules of your codebase**, **where the
+relevant code is**, **what the story should do**, and **whether its work broke anything**. This kit
+covers all four with five parts:
 
 | Part | What it is | Where it lives in your repo |
 | --- | --- | --- |
 | **Context files** | Short notes the agent reads: commands, rules, traps, where to look | `AGENTS.md`, `.github/instructions/`, `docs/context/` |
+| **Code map (Graphify)** | A local map of classes, calls and dependencies the agent can query, so it reads fewer files and sees what a change affects | `graphify-out/` (not committed) |
 | **OpenSpec** | A way to agree on *what* to build before code is written, and a record of what the system does | `openspec/` |
 | **Skills and one agent** | Reusable step-by-step instructions you call with a slash command, plus a "context steward" agent | `.github/skills/`, `.github/agents/` |
 | **Checks and hooks** | Small scripts that notice when the context is out of date and tell the agent (or stop a commit) | `.github/hooks/`, `.githooks/` |
@@ -41,20 +43,24 @@ Three ideas behind it, all from published studies of coding agents:
 ```
  One-time per repo                     Every story
  ─────────────────                     ───────────
- install kit                           /story-to-change   read story, gather only what it needs
+ install kit (--graphify)              /story-to-change   read story; code map finds the files
+     │                                        │            and what depends on them
+ build code map (Graphify)             /opsx-propose       proposal, design, tasks, spec changes
      │                                        │
- /context-bootstrap                    /opsx-propose       proposal, design, tasks, spec changes
+ /context-bootstrap                    YOU REVIEW          ← the most important step
      │                                        │
- review + commit                       YOU REVIEW          ← the most important step
-                                              │
-                                       /opsx-apply         agent codes task by task
+ review + commit                       /opsx-apply         agent codes task by task
                                               │            (hooks remind it about context)
-                                       /story-finish       tests, /opsx-verify, context check,
-                                              │            PR description
+                                       /story-finish       tests, impact (graphify affected),
+                                              │            /opsx-verify, context check, PR text
                                        pull request        (you, or the agent with your approval)
                                               │
-                                       /opsx-archive       after merge: specs updated
+                                       /opsx-archive       after merge: specs updated,
+                                       /context-learn      code map refreshed by git hooks,
+                                                           mistakes turned into rules
 ```
+
+The full table of steps and tools, including optional ones, is in [TOOLBOX.md](TOOLBOX.md).
 
 ---
 
@@ -64,6 +70,7 @@ Three ideas behind it, all from published studies of coding agents:
 
 - [ ] VS Code with the GitHub Copilot Chat extension, signed in, agent mode available
 - [ ] Node.js 20 or newer (`node --version`). Angular developers usually have it already.
+- [ ] Python 3.10 or newer (`python --version`), for Graphify
 - [ ] Git, and (on Windows) Git Bash or PowerShell
 - [ ] Permission to install an npm package globally. If that is blocked, OpenSpec also has a standalone installer that needs no Node.js (see openspec.dev).
 - [ ] A service repo you can create a branch in
@@ -112,7 +119,7 @@ Git Bash or macOS/Linux: `openspec config set profile custom` then
 From the folder where you cloned this kit:
 
 ```bash
-node brownfield-ai-context/kit/install.mjs <your-service-repo>
+node brownfield-ai-context/kit/install.mjs <your-service-repo> --graphify
 ```
 
 It **only adds files** and never overwrites. It prints what it added, what it skipped, and anything
@@ -132,8 +139,24 @@ What it adds:
 | `.github/agents/context-steward.agent.md` | An agent that only maintains context files |
 | `.github/hooks/ai-context.json` + `scripts/context-tools.cjs` | Agent hooks and the context check (one small script, no dependencies) |
 | `.githooks/pre-commit` | Stops a commit if a context line points at a file that no longer exists |
+| `.githooks/post-commit`, `post-merge`, `post-checkout` | Refresh the Graphify code map in the background (do nothing if Graphify isn't installed) |
+| `.vscode/mcp.json`, `.graphifyignore`, `.gitignore` entry | Connect Copilot to the code map (with `--graphify`) |
 | `.azuredevops/pull_request_template.md` | PR template with the context checklist |
 | `openspec/config.yaml` (appended) | Tells OpenSpec to read your context and adds a few rules |
+
+### Step 4b — Build the code map (5 minutes)
+
+```bash
+pip install "graphifyy[mcp]"
+cd <your-service-repo>
+graphify extract . --code-only
+graphify cluster-only . --no-label
+```
+
+This runs only on your machine: no API key, nothing is sent anywhere. It writes `graphify-out/`
+(ignored by git). From now on the git hooks refresh it after each commit, merge and branch switch.
+Open `graphify-out/graph.html` in a browser to see your code as a picture. Details and choices:
+[TOOLBOX.md, Section 3](TOOLBOX.md#3-graphify-in-depth).
 
 ### Step 5 — Check that VS Code sees everything
 
@@ -142,6 +165,7 @@ What it adds:
 3. Run **Chat: Open Customizations** from the Command Palette. You should see:
    - **Skills:** `context-bootstrap`, `context-refresh`, `context-learn`, `story-to-change`, `story-finish`, `onboard-me`, plus the `openspec-*` skills
    - **Agents:** `context-steward`
+   - **MCP servers:** `graphify` (open the MCP view or run **MCP: List Servers**, start it, and trust it the first time)
    - **Hooks:** `ai-context.json` (hooks are a preview feature; if they are not listed, your VS Code version or company policy may not allow them yet — everything else still works, and the git hook and context check cover the gap)
 4. Type `/` in the chat box: the skills and the `/opsx-*` commands should appear.
 
@@ -153,7 +177,7 @@ In agent mode, type:
 /context-bootstrap
 ```
 
-The agent reads your build files, code and docs, asks you four questions (what do new joiners get
+The agent reads your build files, code, docs and the code map's list of central classes, asks you four questions (what do new joiners get
 wrong, which platform rules apply, what looks wrong but is deliberate, what must never be edited), then
 writes `AGENTS.md`, two to four scoped rule files and two pages in `docs/context/`.
 
@@ -171,7 +195,6 @@ Fix any `ERROR` lines, commit everything, and open the setup pull request.
 | Extra | Why | How |
 | --- | --- | --- |
 | **Azure DevOps MCP server** | The agent can read the work item and create the pull request | Merge `kit/optional/vscode-mcp-azure-devops.json` into `.vscode/mcp.json`. Check company policy first. Microsoft recommends their hosted (remote) server where your organization supports it. |
-| **Graphify** | Gives the agent a map of the code so it reads fewer files | `graphify .` then `graphify copilot install` in the repo |
 | **PR check in Azure Pipelines** | Runs the context check on every pull request | `kit/optional/azure-pipelines-context-check.yml` — add after your first story, warnings only at first |
 | **Claude Code** | Same kit for Claude Code users | `node kit/install.mjs <repo> --tool claude` |
 
@@ -195,7 +218,8 @@ it in as you go — the numbers in it are what make the demo convincing.
 ```
 /story-to-change <story ID or paste the story text>
 ```
-**Check:** the agent's summary matches the story; the 3–8 files it lists are the right ones; its open
+**Check:** the agent's summary matches the story; the 3–8 files it lists are the right ones (it finds
+them with the code map, and runs `graphify affected` to list what depends on them); its open
 questions are real. Answer them (ask your BA or tech lead if needed).
 **Result:** `openspec/changes/<change-id>/context.md`
 **Write down:** did it find the right files? What did it miss?
@@ -239,7 +263,9 @@ are your `#agent-miss` notes. For anything that would trip up the agent again, r
 /story-finish <change-id>
 ```
 `/opsx-verify` checks the code against the requirements and scenarios. `/story-finish` runs the tests,
-runs the context check, fixes out-of-date context lines with you, and drafts the PR description.
+refreshes the code map and runs `graphify affected` on every class you changed (so you can confirm each
+dependent is tested), runs the context check, fixes out-of-date context lines with you, and drafts the
+PR description.
 **Check:** any requirement marked not covered; any context line it wants to change.
 
 ### Phase 5 — Pull request
@@ -284,6 +310,7 @@ Compare against your Phase 0 notes and your last similar story:
 | Rework after review | The PR |
 | Tests added | The diff |
 | Copilot premium requests used (if your plan shows them) | Copilot usage page |
+| Token savings from the code map | `graphify benchmark` |
 
 One story is a demonstration, not proof. If it looks promising, repeat with 2–3 more stories, ideally
 with a colleague using the same kit.
@@ -329,6 +356,8 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 | Commit refused by the pre-commit hook | A context line points at a file that moved or was deleted. Fix the line (or run `/context-refresh`). Emergency: `git commit --no-verify`. |
 | Proposal is too big or vague | Split the story, or give `/opsx-propose` a narrower goal. Edit the files; they are plain Markdown. |
 | `openspec` not found | Re-open the terminal after installing, or use `npx @fission-ai/openspec`. |
+| `graphify` MCP server won't start | Install with the `[mcp]` extra; check `graphify-mcp` runs in a terminal; build the map first (Step 4b). |
+| Agent says the code map is stale | `graphify update .` (seconds, local). The git hooks normally do this. |
 
 ---
 
@@ -342,6 +371,7 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 | **Skill** | A folder with step-by-step instructions the agent follows when you call `/skill-name` |
 | **Custom agent** | A named agent with its own instructions and limited tools (here: `context-steward`) |
 | **Hook** | A small script the editor runs at a moment in the agent's work (session start, after an edit, before finishing) |
+| **Code map** | Graphify's local graph of classes, calls and dependencies (`graphify-out/`) |
 | **Anchor** | `[anchor: path]` at the end of a context line, saying which code the line describes, so changes can be detected |
 | **OpenSpec change** | A folder with proposal, design, tasks and spec changes for one story |
 | **Delta spec** | The requirements a change adds, modifies or removes |
@@ -354,6 +384,7 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 
 - **Copilot hooks in VS Code** are a preview feature. File formats may change.
 - **Agent plugins** and their marketplace settings are experimental.
+- **Graphify** releases very often (0.9.x at the time of writing); command names occasionally change. Check `graphify --help`.
 - **OpenSpec** releases often (1.16 at the time of writing). Its multi-repo "stores" and "worksets" are beta. Run `openspec update` after upgrading.
 - **Research on context files** is young and some results disagree. Measure on your own stories.
 

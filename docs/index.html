@@ -67,7 +67,7 @@ td code { white-space: nowrap; }
 li.task { list-style: none; margin-left: -1.3em; }
 li.task input { accent-color: var(--good); margin-right: 6px; }
 h3 + p strong:first-child { color: var(--accent); }
-.other { display: inline-block; margin-top: 12px; font-weight: 600; text-decoration: none; }
+.other { display: inline-block; margin: 12px 20px 0 0; font-weight: 600; text-decoration: none; }
 .other:hover { text-decoration: underline; }
 footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
 @media (max-width: 920px) {
@@ -99,22 +99,23 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>Guide: building brownfield stories with AI agents</h1>
-      <a class="other" href="context.html">Creating, using and maintaining context →</a>
+      <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a>
     </header>
     
 <p>For developers using <strong>VS Code + GitHub Copilot</strong> (agent mode, any Claude or GPT model) on existing services.
 Written in plain English. Read it top to bottom once (about 15 minutes), then use it as a checklist.</p>
 <p>Last checked: November 2026. Tools in this area change monthly; see <a href="#10-what-is-still-changing">What is still changing</a>.</p>
 <blockquote>
-<p><strong>Two guides.</strong> This one is the setup and the story workflow (with OpenSpec). How to create, use and
-maintain the context itself, for any task and with or without OpenSpec, is in
-<strong><a href="context.html">CONTEXT-GUIDE.md</a></strong>. Context is the foundation; OpenSpec is an optional layer on top.</p>
+<p><strong>Three guides.</strong> This one is the setup and the story workflow. How to create, use and maintain the
+context itself, for any task, is in <strong><a href="context.html">CONTEXT-GUIDE.md</a></strong>. Every tool you can use
+(core, recommended, optional), Graphify in depth, and which workflow fits which task are in
+<strong><a href="toolbox.html">TOOLBOX.md</a></strong>.</p>
 </blockquote>
 <hr />
 <h2 id="1-what-you-are-setting-up">1. What you are setting up</h2>
-<p>An AI agent writes better code when it knows three things: <strong>the rules of your codebase</strong>, <strong>what the
-story should do</strong>, and <strong>whether its work broke anything it was told</strong>. This kit gives you all three
-with four parts:</p>
+<p>An AI agent writes better code when it knows four things: <strong>the rules of your codebase</strong>, <strong>where the
+relevant code is</strong>, <strong>what the story should do</strong>, and <strong>whether its work broke anything</strong>. This kit
+covers all four with five parts:</p>
 <div class="tablebox"><table>
 <thead>
 <tr>
@@ -128,6 +129,11 @@ with four parts:</p>
 <td><strong>Context files</strong></td>
 <td>Short notes the agent reads: commands, rules, traps, where to look</td>
 <td><code>AGENTS.md</code>, <code>.github/instructions/</code>, <code>docs/context/</code></td>
+</tr>
+<tr>
+<td><strong>Code map (Graphify)</strong></td>
+<td>A local map of classes, calls and dependencies the agent can query, so it reads fewer files and sees what a change affects</td>
+<td><code>graphify-out/</code> (not committed)</td>
 </tr>
 <tr>
 <td><strong>OpenSpec</strong></td>
@@ -160,26 +166,30 @@ with four parts:</p>
 <h2 id="2-the-workflow-in-one-picture">2. The workflow in one picture</h2>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code> One-time per repo                     Every story
  ─────────────────                     ───────────
- install kit                           /story-to-change   read story, gather only what it needs
+ install kit (--graphify)              /story-to-change   read story; code map finds the files
+     │                                        │            and what depends on them
+ build code map (Graphify)             /opsx-propose       proposal, design, tasks, spec changes
      │                                        │
- /context-bootstrap                    /opsx-propose       proposal, design, tasks, spec changes
+ /context-bootstrap                    YOU REVIEW          ← the most important step
      │                                        │
- review + commit                       YOU REVIEW          ← the most important step
-                                              │
-                                       /opsx-apply         agent codes task by task
+ review + commit                       /opsx-apply         agent codes task by task
                                               │            (hooks remind it about context)
-                                       /story-finish       tests, /opsx-verify, context check,
-                                              │            PR description
+                                       /story-finish       tests, impact (graphify affected),
+                                              │            /opsx-verify, context check, PR text
                                        pull request        (you, or the agent with your approval)
                                               │
-                                       /opsx-archive       after merge: specs updated
+                                       /opsx-archive       after merge: specs updated,
+                                       /context-learn      code map refreshed by git hooks,
+                                                           mistakes turned into rules
 </code></pre></div>
+<p>The full table of steps and tools, including optional ones, is in <a href="toolbox.html">TOOLBOX.md</a>.</p>
 <hr />
 <h2 id="3-one-time-setup-about-an-hour">3. One-time setup (about an hour)</h2>
 <h3 id="before-you-start">Before you start</h3>
 <ul>
 <li class="task"><input type="checkbox" aria-label="done"> VS Code with the GitHub Copilot Chat extension, signed in, agent mode available</li>
 <li class="task"><input type="checkbox" aria-label="done"> Node.js 20 or newer (<code>node --version</code>). Angular developers usually have it already.</li>
+<li class="task"><input type="checkbox" aria-label="done"> Python 3.10 or newer (<code>python --version</code>), for Graphify</li>
 <li class="task"><input type="checkbox" aria-label="done"> Git, and (on Windows) Git Bash or PowerShell</li>
 <li class="task"><input type="checkbox" aria-label="done"> Permission to install an npm package globally. If that is blocked, OpenSpec also has a standalone installer that needs no Node.js (see openspec.dev).</li>
 <li class="task"><input type="checkbox" aria-label="done"> A service repo you can create a branch in</li>
@@ -209,7 +219,7 @@ Git Bash or macOS/Linux: <code>openspec config set profile custom</code> then
 <code>openspec config set workflows '["propose","explore","apply","update","sync","archive","verify"]'</code>.)</p>
 <h3 id="step-4-install-the-kit">Step 4 — Install the kit</h3>
 <p>From the folder where you cloned this kit:</p>
-<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs &lt;your-service-repo&gt;
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs &lt;your-service-repo&gt; --graphify
 </code></pre></div>
 <p>It <strong>only adds files</strong> and never overwrites. It prints what it added, what it skipped, and anything
 you need to do by hand (for example, if your repo already uses Husky for git hooks, it tells you the
@@ -260,6 +270,14 @@ one line to add). Use <code>--dry-run</code> first if you want to see the list w
 <td>Stops a commit if a context line points at a file that no longer exists</td>
 </tr>
 <tr>
+<td><code>.githooks/post-commit</code>, <code>post-merge</code>, <code>post-checkout</code></td>
+<td>Refresh the Graphify code map in the background (do nothing if Graphify isn't installed)</td>
+</tr>
+<tr>
+<td><code>.vscode/mcp.json</code>, <code>.graphifyignore</code>, <code>.gitignore</code> entry</td>
+<td>Connect Copilot to the code map (with <code>--graphify</code>)</td>
+</tr>
+<tr>
 <td><code>.azuredevops/pull_request_template.md</code></td>
 <td>PR template with the context checklist</td>
 </tr>
@@ -269,6 +287,16 @@ one line to add). Use <code>--dry-run</code> first if you want to see the list w
 </tr>
 </tbody>
 </table></div>
+<h3 id="step-4b-build-the-code-map-5-minutes">Step 4b — Build the code map (5 minutes)</h3>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">pip install &quot;graphifyy[mcp]&quot;
+cd &lt;your-service-repo&gt;
+graphify extract . --code-only
+graphify cluster-only . --no-label
+</code></pre></div>
+<p>This runs only on your machine: no API key, nothing is sent anywhere. It writes <code>graphify-out/</code>
+(ignored by git). From now on the git hooks refresh it after each commit, merge and branch switch.
+Open <code>graphify-out/graph.html</code> in a browser to see your code as a picture. Details and choices:
+<a href="toolbox.html#3-graphify-in-depth">TOOLBOX.md, Section 3</a>.</p>
 <h3 id="step-5-check-that-vs-code-sees-everything">Step 5 — Check that VS Code sees everything</h3>
 <ol>
 <li>Open the service repo in VS Code. Restart VS Code if it was already open (new commands load on start).</li>
@@ -276,6 +304,7 @@ one line to add). Use <code>--dry-run</code> first if you want to see the list w
 <li>Run <strong>Chat: Open Customizations</strong> from the Command Palette. You should see:
    - <strong>Skills:</strong> <code>context-bootstrap</code>, <code>context-refresh</code>, <code>context-learn</code>, <code>story-to-change</code>, <code>story-finish</code>, <code>onboard-me</code>, plus the <code>openspec-*</code> skills
    - <strong>Agents:</strong> <code>context-steward</code>
+   - <strong>MCP servers:</strong> <code>graphify</code> (open the MCP view or run <strong>MCP: List Servers</strong>, start it, and trust it the first time)
    - <strong>Hooks:</strong> <code>ai-context.json</code> (hooks are a preview feature; if they are not listed, your VS Code version or company policy may not allow them yet — everything else still works, and the git hook and context check cover the gap)</li>
 <li>Type <code>/</code> in the chat box: the skills and the <code>/opsx-*</code> commands should appear.</li>
 </ol>
@@ -283,7 +312,7 @@ one line to add). Use <code>--dry-run</code> first if you want to see the list w
 <p>In agent mode, type:</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>/context-bootstrap
 </code></pre></div>
-<p>The agent reads your build files, code and docs, asks you four questions (what do new joiners get
+<p>The agent reads your build files, code, docs and the code map's list of central classes, asks you four questions (what do new joiners get
 wrong, which platform rules apply, what looks wrong but is deliberate, what must never be edited), then
 writes <code>AGENTS.md</code>, two to four scoped rule files and two pages in <code>docs/context/</code>.</p>
 <p><strong>Your job is to review and cut.</strong> For every line ask: <em>would someone find this in a minute by
@@ -305,11 +334,6 @@ searching?</em> If yes, delete it. Then run:</p>
 <td><strong>Azure DevOps MCP server</strong></td>
 <td>The agent can read the work item and create the pull request</td>
 <td>Merge <code>kit/optional/vscode-mcp-azure-devops.json</code> into <code>.vscode/mcp.json</code>. Check company policy first. Microsoft recommends their hosted (remote) server where your organization supports it.</td>
-</tr>
-<tr>
-<td><strong>Graphify</strong></td>
-<td>Gives the agent a map of the code so it reads fewer files</td>
-<td><code>graphify .</code> then <code>graphify copilot install</code> in the repo</td>
 </tr>
 <tr>
 <td><strong>PR check in Azure Pipelines</strong></td>
@@ -340,7 +364,8 @@ it in as you go — the numbers in it are what make the demo convincing.</p>
 <p><strong>Type:</strong></p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>/story-to-change &lt;story ID or paste the story text&gt;
 </code></pre></div>
-<p><strong>Check:</strong> the agent's summary matches the story; the 3–8 files it lists are the right ones; its open
+<p><strong>Check:</strong> the agent's summary matches the story; the 3–8 files it lists are the right ones (it finds
+them with the code map, and runs <code>graphify affected</code> to list what depends on them); its open
 questions are real. Answer them (ask your BA or tech lead if needed).
 <strong>Result:</strong> <code>openspec/changes/&lt;change-id&gt;/context.md</code>
 <strong>Write down:</strong> did it find the right files? What did it miss?</p>
@@ -375,7 +400,9 @@ are your <code>#agent-miss</code> notes. For anything that would trip up the age
 /story-finish &lt;change-id&gt;
 </code></pre></div>
 <p><code>/opsx-verify</code> checks the code against the requirements and scenarios. <code>/story-finish</code> runs the tests,
-runs the context check, fixes out-of-date context lines with you, and drafts the PR description.
+refreshes the code map and runs <code>graphify affected</code> on every class you changed (so you can confirm each
+dependent is tested), runs the context check, fixes out-of-date context lines with you, and drafts the
+PR description.
 <strong>Check:</strong> any requirement marked not covered; any context line it wants to change.</p>
 <h3 id="phase-5-pull-request">Phase 5 — Pull request</h3>
 <p>Two options:</p>
@@ -457,6 +484,10 @@ At the end of the sprint, select the <strong>context-steward</strong> agent and 
 <tr>
 <td>Copilot premium requests used (if your plan shows them)</td>
 <td>Copilot usage page</td>
+</tr>
+<tr>
+<td>Token savings from the code map</td>
+<td><code>graphify benchmark</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -542,6 +573,14 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 <td><code>openspec</code> not found</td>
 <td>Re-open the terminal after installing, or use <code>npx @fission-ai/openspec</code>.</td>
 </tr>
+<tr>
+<td><code>graphify</code> MCP server won't start</td>
+<td>Install with the <code>[mcp]</code> extra; check <code>graphify-mcp</code> runs in a terminal; build the map first (Step 4b).</td>
+</tr>
+<tr>
+<td>Agent says the code map is stale</td>
+<td><code>graphify update .</code> (seconds, local). The git hooks normally do this.</td>
+</tr>
 </tbody>
 </table></div>
 <hr />
@@ -579,6 +618,10 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 <td>A small script the editor runs at a moment in the agent's work (session start, after an edit, before finishing)</td>
 </tr>
 <tr>
+<td><strong>Code map</strong></td>
+<td>Graphify's local graph of classes, calls and dependencies (<code>graphify-out/</code>)</td>
+</tr>
+<tr>
 <td><strong>Anchor</strong></td>
 <td><code>[anchor: path]</code> at the end of a context line, saying which code the line describes, so changes can be detected</td>
 </tr>
@@ -605,11 +648,12 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 <ul>
 <li><strong>Copilot hooks in VS Code</strong> are a preview feature. File formats may change.</li>
 <li><strong>Agent plugins</strong> and their marketplace settings are experimental.</li>
+<li><strong>Graphify</strong> releases very often (0.9.x at the time of writing); command names occasionally change. Check <code>graphify --help</code>.</li>
 <li><strong>OpenSpec</strong> releases often (1.16 at the time of writing). Its multi-repo "stores" and "worksets" are beta. Run <code>openspec update</code> after upgrading.</li>
 <li><strong>Research on context files</strong> is young and some results disagree. Measure on your own stories.</li>
 </ul>
 <p>Background research, sources and the longer explanations: <code>docs/research/</code>.</p>
-    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="context.html">Creating, using and maintaining context →</a></footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a></footer>
   </main>
 </div>
 

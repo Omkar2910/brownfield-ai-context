@@ -3,6 +3,7 @@
 
   GUIDE.md          -> docs/index.html
   CONTEXT-GUIDE.md  -> docs/context.html
+  TOOLBOX.md        -> docs/toolbox.html
 
 Usage:  pip install markdown   then   python tools/build-guide.py
 Edit the .md files, never the .html files directly.
@@ -18,9 +19,10 @@ ROOT = Path(__file__).resolve().parent.parent
 PAGES = [
     ("GUIDE.md", "index.html", "Brownfield Story Guide", "Setup and story workflow"),
     ("CONTEXT-GUIDE.md", "context.html", "AI Context Guide", "Creating, using and maintaining context"),
+    ("TOOLBOX.md", "toolbox.html", "Workflow Toolbox", "Workflow and toolbox"),
 ]
 TEMPLATE = (ROOT / "tools" / "guide-template.html").read_text(encoding="utf-8")
-LINKS = {"GUIDE.md": "index.html", "CONTEXT-GUIDE.md": "context.html"}
+LINKS = {"GUIDE.md": "index.html", "CONTEXT-GUIDE.md": "context.html", "TOOLBOX.md": "toolbox.html"}
 
 
 def build(src_name, out_name, page_title, other_label):
@@ -45,8 +47,7 @@ def build(src_name, out_name, page_title, other_label):
         body = body.replace(f'href="{md_name}', f'href="{html_name}')
     body = body.replace('href="docs/', 'href="').replace('href="templates/', 'href="../templates/')
 
-    other = [p for p in PAGES if p[1] != out_name][0]
-    nav = f'<a class="other" href="{other[1]}">{other[3]} →</a>'
+    nav = " ".join(f'<a class="other" href="{p[1]}">{p[3]} →</a>' for p in PAGES if p[1] != out_name)
     fragment = (TEMPLATE.replace("{{PAGE_TITLE}}", page_title).replace("{{TITLE}}", title)
                 .replace("{{TOC}}", toc).replace("{{BODY}}", body).replace("{{OTHER}}", nav))
     page = (

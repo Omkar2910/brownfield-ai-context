@@ -30,3 +30,17 @@ What changed since the first round of research (October 2026), and how it change
 3. Spend the effort on the proposal review and on tests; context supports, it does not replace them.
 4. Keep context honest automatically (anchors, hooks, pre-commit, PR check).
 5. Measure on your own stories; published results disagree and are small.
+
+## Graphify, tested hands-on (graphifyy 0.9.100)
+
+- Code-only build (`graphify extract . --code-only`, then `graphify cluster-only . --no-label`) runs locally with
+  no API key; a small Spring + Angular sample built in about 3 seconds.
+- `graphify affected "<Class>"` lists dependents (callers, references, subclasses) — the most useful command
+  for impact checks before and after a change.
+- MCP server: `graphify-mcp` (install with the `[mcp]` extra) exposes `query_graph`, `get_node`,
+  `get_neighbors`, `get_community`, `god_nodes`, `graph_stats`, `shortest_path` and PR tools.
+- `graphify vscode install` adds a user-level `/graphify` skill and a section in `.github/copilot-instructions.md`.
+  The kit uses the MCP server plus a short AGENTS.md pointer instead, to keep always-on context small.
+- `graphify hook install` writes to `.git/hooks`, which is ignored when `core.hooksPath` is set; the kit's own
+  `.githooks/post-*` hooks run `graphify update .` instead.
+- `merge-graphs` links code-level calls across repos (shared types); it does not link HTTP calls between services.

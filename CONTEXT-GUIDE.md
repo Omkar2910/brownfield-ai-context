@@ -58,8 +58,9 @@ Ask these questions in order. Stop at the first "yes".
    → a page in `docs/context/`, listed in the "Where to look" section of `AGENTS.md`.
 4. **Is it a procedure** (how to add an endpoint end to end, how to release, how to create context)?
    → a skill in `.github/skills/`, called by name (`/skill-name`).
-5. **Is it structure** (what calls what, where a class lives)?
-   → don't write it down; the agent searches the code, or uses a code graph (Graphify).
+5. **Is it structure** (what calls what, where a class lives, what depends on what)?
+   → don't write it down. The agent queries the Graphify code map (or searches the code). Context
+   files only point to the map; they never copy it.
 6. **Is it about how the system behaves** (requirements and scenarios)?
    → OpenSpec specs, if you use OpenSpec; otherwise tests are the best record.
 7. **Is it only about the current task?**
@@ -86,6 +87,10 @@ The best rules are already written somewhere, just not for agents. Collect, don'
 | Code comments with WHY / HACK / NOTE | Deliberate oddities |
 | ADRs and design docs | Decisions and their reasons |
 | Team chat FAQs | Questions people ask again and again |
+
+### Step 1b — Build the code map (5 min)
+`graphify extract . --code-only` then `graphify cluster-only . --no-label` (local, no API key). The report's
+most connected classes tell you what the architecture page must explain. See [TOOLBOX.md](TOOLBOX.md#3-graphify-in-depth).
 
 ### Step 2 — Draft with the agent (20 min)
 In agent mode: `/context-bootstrap`. It reads the code and build files and drafts `AGENTS.md`, two to four
@@ -125,7 +130,7 @@ The point of good context is that you **stop re-typing the same instructions**. 
 
 | Task | What to do |
 | --- | --- |
-| **Small change or bug fix** | Just describe it. Add "check docs/context/known-traps.md first" if it touches a risky area. |
+| **Small change or bug fix** | Just describe it. Add "check docs/context/known-traps.md first" if it touches a risky area, and "run graphify affected on what you change" if it touches shared code. |
 | **Bigger change or story** | `/story-to-change` gathers only the context the task needs (works with or without OpenSpec), then you agree a plan before coding. |
 | **Unfamiliar area** | Ask the agent to explain the area first and list which rules apply, before any edits. |
 | **Code review** | "Review this diff against AGENTS.md and the instructions that apply. List violations with file and line." |
@@ -150,6 +155,7 @@ with four layers, from fully automatic to occasional.
 | Agent hook: after an edit | Each time the agent edits a file | If a context line is anchored to that file, the agent is told which line to re-check |
 | Agent hook: before finishing | When the agent tries to stop | It checks for broken or stale anchors once and asks the agent to fix or confirm |
 | Git pre-commit hook | Each commit, by anyone | Refuses the commit if a context line points at a file that no longer exists |
+| Git post-commit / post-merge / post-checkout hooks | Each commit, merge, branch switch | Refresh the Graphify code map in the background, so structure is never stale |
 | PR pipeline check (optional) | Each pull request | Same check, against the target branch; warnings at first, blocking later |
 
 ### Layer 2 — When something happens (minutes)
@@ -240,6 +246,7 @@ when you change the context. Keep the change only if results are the same or bet
 | Tour for new joiners | `/onboard-me` skill |
 | Sprint and quarter upkeep | `context-steward` agent |
 | Notice drift automatically | Agent hooks, git pre-commit hook, `context-tools.cjs check` |
+| Structure and impact without writing it down | Graphify code map (`--graphify`), refreshed by git hooks |
 | Same-PR rule | Pull request template |
 
 Install it with `node kit/install.mjs <your-repo>` (see [GUIDE.md](GUIDE.md), Section 3). OpenSpec is
@@ -251,6 +258,7 @@ not required; without it, skip the OpenSpec steps and everything above still wor
 
 **Creating context (once per repo)**
 - [ ] Harvest: build files, CI, README, review comments, incidents, code comments
+- [ ] Build the Graphify code map
 - [ ] `/context-bootstrap`, answer the four questions
 - [ ] Prune with the six properties; `AGENTS.md` about 100 lines
 - [ ] Anchors on code-dependent lines

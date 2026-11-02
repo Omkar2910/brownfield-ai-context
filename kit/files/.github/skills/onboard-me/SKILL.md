@@ -11,14 +11,17 @@ Give a 15-minute guided tour. Ask the person's role first (developer, QA, BA) an
    who calls it, what it calls, how a request flows.
 2. **Rules you must not break.** The non-obvious rules in AGENTS.md and the top 3 traps from
    docs/context/known-traps.md, each with its reason.
-3. **How context is organised.** AGENTS.md (always read), .github/instructions/ (loaded for matching
+3. **The code map.** If `graphify-out/` exists: show the top "God Nodes" from `GRAPH_REPORT.md` (the
+   central classes) and suggest opening `graphify-out/graph.html` in a browser to explore. Show one
+   `graphify affected "<a central class>"` result to explain why changes there need care.
+4. **How context is organised.** AGENTS.md (always read), .github/instructions/ (loaded for matching
    files), docs/context/ (read when needed), openspec/specs/ (current behaviour), openspec/changes/
    (work in progress), skills in .github/skills/. Open one example of each.
-4. **How we build a story.** /story-to-change → /opsx-propose → review → /opsx-apply → /story-finish →
+5. **How we build a story.** /story-to-change → /opsx-propose → review → /opsx-apply → /story-finish →
    pull request → /opsx-archive after merge.
-5. **Worked examples.** List the most recent folders in openspec/changes/archive/ and walk through one:
+6. **Worked examples.** List the most recent folders in openspec/changes/archive/ and walk through one:
    proposal, delta spec, tasks, and the code that changed.
-6. **First task.** Suggest a small open story and offer to run /story-to-change together.
+7. **First task.** Suggest a small open story and offer to run /story-to-change together.
 
 End by asking: "What did you have to ask a person about today?" Write the answers down as possible
 gaps in the context for the tech lead.

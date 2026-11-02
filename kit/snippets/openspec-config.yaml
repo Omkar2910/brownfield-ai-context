@@ -2,6 +2,7 @@
 context: |
   Read AGENTS.md and the files it lists under "Where to look" before writing any artifact.
   Follow the rules in AGENTS.md and .github/instructions/ for every file you change.
+  If the graphify tools are available, use them to find relevant code and its dependents before reading files.
   Keep artifacts short and concrete; prefer bullet points.
 
 rules:
