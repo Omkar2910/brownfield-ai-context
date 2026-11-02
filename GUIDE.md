@@ -79,7 +79,7 @@ The full table of steps and tools, including optional ones, is in [TOOLBOX.md](T
 ### Step 1 — Get this kit onto your laptop
 
 ```bash
-git clone https://github.com/<your-account>/brownfield-ai-context.git
+git clone https://github.com/Omkar2910/brownfield-ai-context.git
 ```
 
 You only need this folder to *install* the kit. Nothing in your service repo will depend on it afterwards.

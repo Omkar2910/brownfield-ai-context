@@ -20,7 +20,7 @@ that keep the context up to date.
 ## Quick start
 
 ```bash
-git clone https://github.com/<your-account>/brownfield-ai-context.git
+git clone https://github.com/Omkar2910/brownfield-ai-context.git
 cd <your-service-repo> && git checkout -b ai/context-setup
 npm install -g @fission-ai/openspec@latest
 openspec init --tools github-copilot --no-copilot-cloud
