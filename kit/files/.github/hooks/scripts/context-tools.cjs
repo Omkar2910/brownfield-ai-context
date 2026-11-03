@@ -284,15 +284,30 @@ function hookSessionStart(input) {
   addContext('SessionStart', lines.join('\n'));
 }
 
+// The git repository a file belongs to. In a multi-root VS Code window (UI + service side by side)
+// an edited file can live in a different repo from the one the chat session started in.
+function repoOfFile(abs) {
+  let dir = path.dirname(abs);
+  while (!fs.existsSync(dir) && path.dirname(dir) !== dir) dir = path.dirname(dir); // new file in a new folder
+  const top = git(dir, ['rev-parse', '--show-toplevel']);
+  return top ? path.resolve(top.trim()) : null;
+}
+
 function hookPostEdit(input) {
   if (!looksLikeEdit(input.tool_name || input.toolName)) return;
-  const repo = resolveRepo(input);
-  const ctx = readContext(repo, listFiles(repo));
+  const sessionRepo = resolveRepo(input);
+  const contexts = new Map(); // repo -> anchors, read once per repo
   const notes = [];
   for (const p of editedPaths(input)) {
-    const rel = relTo(repo, p);
+    const abs = path.isAbsolute(p) ? p : path.join(sessionRepo, p);
+    const repo = repoOfFile(abs) || sessionRepo;
+    const rel = toPosix(path.relative(repo, abs));
     if (rel.startsWith('..') || isContextFile(rel)) continue;
-    for (const a of ctx.anchors.filter(x => x.re.test(rel))) notes.push(`${rel} is referenced by ${a.file}:${a.line} ("${a.text}").`);
+    if (!contexts.has(repo)) contexts.set(repo, readContext(repo, listFiles(repo)));
+    const label = repo === sessionRepo ? rel : `${path.basename(repo)}/${rel}`;
+    for (const a of contexts.get(repo).anchors.filter(x => x.re.test(rel))) {
+      notes.push(`${label} is referenced by ${repo === sessionRepo ? '' : path.basename(repo) + '/'}${a.file}:${a.line} ("${a.text}").`);
+    }
   }
   if (notes.length) addContext('PostToolUse', notes.slice(0, 5).join('\n') + '\nIf this edit changed what that line describes, update the line in the same change; otherwise no action is needed.');
 }

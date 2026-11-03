@@ -190,6 +190,70 @@ node .github/hooks/scripts/context-tools.cjs check
 
 Fix any `ERROR` lines, commit everything, and open the setup pull request.
 
+### UI and backend: one VS Code window or two?
+
+**Rule: install per repo, open per story.** Each repo carries its own kit and context. You choose how
+to open them based on what the story touches.
+
+**If the UI and the service are two separate git repos (the usual case):**
+
+1. **Install the kit in each repo**, each on its own setup branch and setup PR:
+
+        node brownfield-ai-context/kit/install.mjs ../report-service --graphify
+        node brownfield-ai-context/kit/install.mjs ../report-ui --graphify
+
+    Then run `/context-bootstrap` in each and build each code map (Step 4b) inside each repo.
+2. **What each repo ends up with:**
+
+    | In each repo | report-service | report-ui |
+    | --- | --- | --- |
+    | `AGENTS.md` | Spring rules, Maven commands, its traps | Angular rules, npm commands, its traps |
+    | `.github/instructions/` | Controllers, persistence, migrations | Components, services, tests |
+    | `docs/context/` | Its architecture and traps | Its architecture and traps |
+    | `.github/skills/`, `.github/agents/`, hooks, `.githooks/` | Same kit files | Same kit files (identical) |
+    | `openspec/` | Its own specs and changes | Its own specs and changes |
+    | `graphify-out/` (not committed) | Map of the Java code | Map of the TypeScript code |
+
+    Platform rules that apply to both (login with Keycloak, permissions through CIAM, error format) go in
+    each `AGENTS.md` as the same 2–3 short lines. With more services, move them to one shared place
+    (GitHub organization instructions or a shared repo, see `demo-kit/`).
+3. **The API contract is the link.** The service owns it (OpenAPI file or DTOs). In the UI's `AGENTS.md`,
+   under "Where to look", point to it, for example
+   `API contract: ../report-service/src/main/resources/openapi/report-api.yaml`.
+
+**How to open them:**
+
+| Story touches | Open | Why |
+| --- | --- | --- |
+| Only the service, or only the UI | That repo alone (**File → Open Folder**) | The agent sees one set of rules and one code map; less noise |
+| Both | One window with both repos as separate folders: open the service, then **File → Add Folder to Workspace** → the UI, then **File → Save Workspace As** `report-platform.code-workspace` | Each folder keeps its own context; the agent reads both codebases and the contract |
+
+- Save the `.code-workspace` file **next to** the two repos (for example `C:\work\report-platform.code-workspace`),
+  not inside either repo. Each developer keeps their own.
+- **Do not** open the parent folder that contains both clones as a single folder. VS Code then looks for
+  `AGENTS.md`, skills and hooks only at that parent level and misses the ones inside each repo.
+- **Do not** copy both into one repo just for the agent.
+- In a two-folder window the skills and `/opsx-*` commands may appear twice (one per repo). They are the
+  same files, so either works. The agent hooks follow edits into either repo; the git hooks and the
+  context check run separately in each repo when you commit there.
+
+**Running a cross-service story with OpenSpec:** make one change per repo with the same id.
+1. In the service: `/opsx-propose add-report-excel-export` (tell the agent "create the change in
+   report-service"). Review it; the design holds the API request/response examples.
+2. In the UI: `/opsx-propose add-report-excel-export` ("create the change in report-ui; use the API
+   design from report-service's change").
+3. Build the service first, then the UI. Two PRs, one per repo, each linking the other.
+4. Archive each after its merge.
+
+For Graphify across both: each repo's map answers questions about its own code. Start each repo's
+`graphify` server in the MCP view, or ask the agent to run `graphify query` / `affected` inside the right
+folder. The maps do not connect the Angular HTTP call to the Spring endpoint; the API contract does.
+
+**If the UI and the service are folders in one git repo:** install the kit once at the root and open the
+root folder. Keep the root `AGENTS.md` short (shared rules and the map of folders), add `ui/AGENTS.md` and
+`service/AGENTS.md` for each side, and give the scoped instruction files `applyTo` patterns such as
+`ui/**/*.ts` and `service/**/*.java`. One `openspec/`, one code map.
+
 ### Optional extras
 
 | Extra | Why | How |
