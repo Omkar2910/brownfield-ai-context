@@ -1,0 +1,61 @@
+{
+  "product": "Ratings Platform (example — replace with your product)",
+  "cloneUrlPattern": "https://dev.azure.com/<org>/<project>/_git/{name}",
+  "repos": [
+    {
+      "name": "shell-app",
+      "type": "mfe-shell",
+      "description": "Angular host: login, layout, navigation; loads the remotes at runtime",
+      "owner": "ui-platform-team",
+      "areas": ["platform"],
+      "loads": ["reports-mfe", "admin-mfe"],
+      "uses": ["ui-shared-lib"]
+    },
+    {
+      "name": "reports-mfe",
+      "type": "mfe-remote",
+      "description": "Ratings report grid, filters and exports",
+      "owner": "reports-team",
+      "areas": ["reports"],
+      "exposes": ["./ReportsRoutes mounted at /reports"],
+      "calls": ["report-service"],
+      "uses": ["ui-shared-lib"]
+    },
+    {
+      "name": "admin-mfe",
+      "type": "mfe-remote",
+      "description": "User and permission administration screens",
+      "owner": "admin-team",
+      "areas": ["admin"],
+      "exposes": ["./AdminRoutes mounted at /admin"],
+      "calls": ["ciam-service"],
+      "uses": ["ui-shared-lib"]
+    },
+    {
+      "name": "report-service",
+      "type": "service",
+      "description": "Spring Boot API for reports and exports",
+      "owner": "reports-team",
+      "areas": ["reports"],
+      "api": "/api/v1/reports",
+      "contract": "src/main/resources/openapi/report-api.yaml",
+      "calls": ["ciam-service"]
+    },
+    {
+      "name": "ciam-service",
+      "type": "service",
+      "description": "Authorization: permission checks for every product (platform team)",
+      "owner": "platform-team",
+      "areas": ["platform", "admin"],
+      "api": "/api/v1/ciam",
+      "contract": "src/main/resources/openapi/ciam-api.yaml"
+    },
+    {
+      "name": "ui-shared-lib",
+      "type": "library",
+      "description": "Angular design system, auth guard, HTTP interceptors, shared event bus",
+      "owner": "ui-platform-team",
+      "areas": ["platform"]
+    }
+  ]
+}

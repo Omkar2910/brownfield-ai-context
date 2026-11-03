@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+</head>
+<body>
+<title>Many-Repo Setup</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a working manual. Sticky section rail on wide screens, one reading column, tables and code scroll in their own boxes. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --ink: #16202c; --muted: #586779; --line: #d8dfe7;
+  --accent: #2b54d6; --accent-soft: #e7edfc; --code-bg: #edf1f6; --good: #1d7a4c;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+    --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+  --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 80px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.toc .label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc ul ul { display: none; }
+nav.toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible, nav.toc a.on { color: var(--ink); border-left-color: var(--accent); }
+main { min-width: 0; }
+header.top { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-size: clamp(30px, 4.6vw, 44px); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--display); font-size: 27px; line-height: 1.2; margin: 48px 0 12px; padding-top: 8px; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { font-family: var(--display); font-size: 20px; margin: 30px 0 8px; scroll-margin-top: 16px; }
+p, li { max-width: 70ch; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 700; }
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin: 14px 0; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+td code { white-space: nowrap; }
+.code { position: relative; margin: 12px 0; }
+.code pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13.5px; line-height: 1.5; }
+.code pre code { background: none; padding: 0; font-size: inherit; }
+.copy { position: absolute; top: 8px; right: 8px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.copy:hover { color: var(--ink); border-color: var(--accent); }
+li.task { list-style: none; margin-left: -1.3em; }
+li.task input { accent-color: var(--good); margin-right: 6px; }
+h3 + p strong:first-child { color: var(--accent); }
+.other { display: inline-block; margin: 12px 20px 0 0; font-weight: 600; text-decoration: none; }
+.other:hover { text-decoration: underline; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+@media (max-width: 920px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { display: none; }
+}
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Sections">
+    <p class="label">Sections</p>
+    <div class="toc">
+<ul>
+<li><a href="#1-the-idea-in-one-paragraph">1. The idea in one paragraph</a></li>
+<li><a href="#2-what-goes-where">2. What goes where</a></li>
+<li><a href="#3-setting-it-up">3. Setting it up</a></li>
+<li><a href="#4-opening-the-right-repos-for-a-story">4. Opening the right repos for a story</a></li>
+<li><a href="#5-running-a-story-that-crosses-repos">5. Running a story that crosses repos</a></li>
+<li><a href="#6-seeing-impact-across-repos">6. Seeing impact across repos</a></li>
+<li><a href="#7-keeping-it-maintained">7. Keeping it maintained</a></li>
+<li><a href="#8-rolling-it-out">8. Rolling it out</a></li>
+<li><a href="#9-commands-at-a-glance">9. Commands at a glance</a></li>
+</ul>
+</div>
+
+  </nav>
+  <main>
+    <header class="top">
+      <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
+      <h1>Many repos: micro-frontends and backend services</h1>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a>
+    </header>
+    
+<p>How to set up and run AI-assisted work when a product is split across <strong>many separate repos</strong>:
+a micro-frontend shell, several micro-frontend remotes, several backend services and shared libraries.
+Plain English, about 15 minutes. Read <a href="index.html">GUIDE.md</a> first for the single-repo setup.</p>
+<hr />
+<h2 id="1-the-idea-in-one-paragraph">1. The idea in one paragraph</h2>
+<p>Context lives at <strong>three levels</strong>, and each fact goes to exactly one of them. Each repo keeps its own
+rules. A small <strong>product context hub</strong> repo keeps what no single repo owns: which repos exist and how
+they depend on each other, platform rules, API contracts, and notes for stories that cross repos. For
+each story you open <strong>only the repos it touches, plus the hub</strong>, in one VS Code window. A small script
+in the hub generates that window for you.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Holds</th>
+<th>Lives in</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Organization</strong></td>
+<td>Rules for every product (security, coding standards)</td>
+<td>GitHub organization custom instructions, or a platform hub</td>
+<td>Architecture / platform team</td>
+</tr>
+<tr>
+<td><strong>Product (hub)</strong></td>
+<td>Repo catalog, system map, platform rules for this product, API contracts, cross-repo story notes, cross-repo skill</td>
+<td><code>product-context</code> repo</td>
+<td>Tech leads of the product</td>
+</tr>
+<tr>
+<td><strong>Repo</strong></td>
+<td>Its commands, rules, traps, code map, its own specs and changes</td>
+<td>Each repo (<code>AGENTS.md</code>, <code>.github/</code>, <code>docs/context/</code>, <code>openspec/</code>)</td>
+<td>That repo's team</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="2-what-goes-where">2. What goes where</h2>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code>work/
+├── product-context/                 ← the hub (one per product)
+│   ├── catalog.json                 every repo: type, owner, areas, exposes/API, calls, uses
+│   ├── context/system-map.md        generated: tables, &quot;which UI calls which API&quot; matrix, diagram
+│   ├── context/platform/            auth, micro-frontends, errors and logging rules
+│   ├── contracts/&lt;service&gt;/         copies of each service's API contract
+│   ├── initiatives/&lt;change-id&gt;.md   one note per cross-repo story
+│   ├── workspaces/*.code-workspace  generated VS Code windows per story or area
+│   ├── .github/skills/cross-repo-story/
+│   └── scripts/hub.mjs              map, workspace, impact, status, clone, contracts
+├── shell-app/                       ← micro-frontend shell
+├── reports-mfe/                     ← micro-frontend remote
+├── admin-mfe/
+├── report-service/                  ← backend service
+├── ciam-service/
+└── ui-shared-lib/                   ← shared library
+    (each repo: AGENTS.md, .github/instructions, .github/skills, hooks, .githooks,
+     docs/context, openspec/, graphify-out/)
+</code></pre></div>
+<p>Keep all clones <strong>side by side in one folder</strong>. The hub's scripts and the workspace files assume that.</p>
+<h3 id="what-each-kind-of-repo-says-about-the-others">What each kind of repo says about the others</h3>
+<p><code>/context-bootstrap</code> asks what kind of repo it is working in and adds these (details in
+<code>kit/files/.github/skills/context-bootstrap/references/repo-types.md</code>):</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Repo type</th>
+<th>Its AGENTS.md must say</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Micro-frontend shell</strong></td>
+<td>Which remotes it loads and where that list lives; top-level routes it owns; pinned shared dependency versions</td>
+</tr>
+<tr>
+<td><strong>Micro-frontend remote</strong></td>
+<td>What it exposes and the exact name the shell uses; which services it calls and where the generated clients are; events it sends or listens to; "never import from another remote"</td>
+</tr>
+<tr>
+<td><strong>Backend service</strong></td>
+<td>API base path and where the contract lives; who calls it (from the hub); permission per endpoint</td>
+</tr>
+<tr>
+<td><strong>Shared library</strong></td>
+<td>Who uses it; how releases reach them; breaking changes are a cross-repo initiative</td>
+</tr>
+<tr>
+<td><strong>Every repo</strong></td>
+<td>A "Where to look" line pointing at <code>../product-context/</code>; 2–3 lines of platform rules that apply to almost every task</td>
+</tr>
+</tbody>
+</table></div>
+<p>Rules that apply everywhere (Keycloak for login, CIAM for permissions, one error format, how
+micro-frontends share dependencies) are written <strong>once</strong> in the hub's <code>context/platform/</code>. Each repo has
+only a short summary line and the link.</p>
+<hr />
+<h2 id="3-setting-it-up">3. Setting it up</h2>
+<h3 id="once-per-product-about-an-hour-one-person">Once per product (about an hour, one person)</h3>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs --create-hub ../product-context
+cd ../product-context
+# edit catalog.json: one entry per repo
+# edit context/platform/*.md: your real rules, short, with reasons
+node scripts/hub.mjs map
+git init &amp;&amp; git add -A &amp;&amp; git commit -m &quot;Product context hub&quot;   # then push to Azure Repos
+</code></pre></div>
+<p>The catalog is the most valuable part. For each repo record: <code>type</code> (<code>mfe-shell</code>, <code>mfe-remote</code>,
+<code>service</code>, <code>library</code>), <code>owner</code>, <code>areas</code> (business areas such as <code>reports</code>; use <code>platform</code> for repos
+almost everything uses), <code>exposes</code> (micro-frontends) or <code>api</code> and <code>contract</code> (services), and <code>calls</code>,
+<code>uses</code>, <code>loads</code> (dependencies). See the example <code>catalog.json</code>.</p>
+<h3 id="once-per-repo-each-team-on-their-own-setup-pr">Once per repo (each team, on their own setup PR)</h3>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs ../reports-mfe --graphify
+# then in VS Code: /context-bootstrap, build the code map, review, commit
+</code></pre></div>
+<p>For many repos at once (PowerShell):</p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-powershell">foreach ($r in &quot;shell-app&quot;,&quot;reports-mfe&quot;,&quot;admin-mfe&quot;,&quot;report-service&quot;) {
+  node brownfield-ai-context/kit/install.mjs &quot;..\$r&quot; --graphify
+}
+</code></pre></div>
+<h3 id="keeping-the-kit-the-same-everywhere">Keeping the kit the same everywhere</h3>
+<p>Each repo records its kit version in <code>.github/ai-kit.json</code>. When the kit improves:</p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs ../reports-mfe --upgrade
+</code></pre></div>
+<p>This replaces only the kit's own files (skills, steward agent, hook script and config, git hooks). It
+never touches <code>AGENTS.md</code>, instructions, <code>docs/context/</code> or your PR template. Commit the result in a
+small PR. Later, an agent plugin or APM package can do this centrally (see <a href="toolbox.html">TOOLBOX.md</a>).</p>
+<hr />
+<h2 id="4-opening-the-right-repos-for-a-story">4. Opening the right repos for a story</h2>
+<p>Do not open every repo at once: more folders mean more rules, more duplicate skills and more code for
+the agent to wade through. Open the <strong>working set</strong> for the story.</p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">cd product-context
+node scripts/hub.mjs workspace reports                    # the &quot;reports&quot; area + its direct dependencies
+node scripts/hub.mjs workspace reports-mfe report-service # exactly these repos
+node scripts/hub.mjs workspace reports ciam-service --name reports-with-auth
+</code></pre></div>
+<p>This writes <code>workspaces/&lt;name&gt;.code-workspace</code> with the repos (producers first, then micro-frontends, then
+the shell) <strong>plus the hub</strong>. Open it with <strong>File → Open Workspace from File</strong>. Platform repos (areas
+include <code>platform</code>) are listed but not added unless you name them, so they don't end up in every window.
+It warns when a repo isn't cloned (<code>node scripts/hub.mjs clone reports --run</code> clones it) and when the
+window would hold more than five repos.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Story touches</th>
+<th>Open</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One repo</td>
+<td>That repo alone. Add the hub only if you need the platform rules or contracts.</td>
+</tr>
+<tr>
+<td>One micro-frontend + the service it calls</td>
+<td><code>hub.mjs workspace &lt;mfe&gt; &lt;service&gt;</code></td>
+</tr>
+<tr>
+<td>A whole area</td>
+<td><code>hub.mjs workspace &lt;area&gt;</code></td>
+</tr>
+<tr>
+<td>A shared library or a platform service</td>
+<td>Start with <code>hub.mjs impact &lt;repo&gt;</code>, then open the library or service plus the consumers you will change</td>
+</tr>
+</tbody>
+</table></div>
+<p>With the hub in the window, its <code>cross-repo-story</code> skill is available alongside each repo's own skills.</p>
+<hr />
+<h2 id="5-running-a-story-that-crosses-repos">5. Running a story that crosses repos</h2>
+<ol>
+<li><strong>Plan across repos:</strong> <code>/cross-repo-story &lt;story&gt;</code>. It reads the catalog and system map, lists the
+   repos involved, runs <code>hub.mjs impact</code> on every service whose API changes (to find every
+   micro-frontend that calls it), agrees the API contract first, and writes
+   <code>initiatives/&lt;change-id&gt;.md</code> with the repos <strong>in order</strong>:
+   services and shared libraries → micro-frontend remotes → shell.</li>
+<li><strong>Review the initiative note</strong> with the tech lead. This replaces many late surprises between teams.</li>
+<li><strong>Per repo, in that order:</strong> the normal single-repo flow (<code>/story-to-change</code> → <code>/opsx-propose &lt;change-id&gt;</code>
+   → review → <code>/opsx-apply</code> → <code>/story-finish</code>). Same change id in every repo. One PR per repo, each linking
+   the initiative note.</li>
+<li><strong>After each service PR merges:</strong> <code>node scripts/hub.mjs contracts --sync</code> in the hub and commit, so the
+   micro-frontends see the new contract.</li>
+<li><strong>Finish:</strong> archive each repo's OpenSpec change; update <code>catalog.json</code> if a dependency was added or
+   removed (<code>hub.mjs map</code>); mark the initiative done.</li>
+</ol>
+<p>Why one change per repo with a shared id (and not one change in the hub): each repo's specs keep describing
+that repo, each team reviews its own part, and nothing depends on beta features. OpenSpec's "stores" feature
+can hold one change for several repos; try it later if this becomes awkward (see <code>demo-kit/</code>).</p>
+<hr />
+<h2 id="6-seeing-impact-across-repos">6. Seeing impact across repos</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Tool</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Which repos break if this service, library or remote changes?</td>
+<td><code>node scripts/hub.mjs impact &lt;repo&gt;</code> (from the catalog)</td>
+</tr>
+<tr>
+<td>Which micro-frontends call this API?</td>
+<td>The matrix in <code>context/system-map.md</code></td>
+</tr>
+<tr>
+<td>Which classes inside a repo depend on this one?</td>
+<td><code>graphify affected "&lt;Class&gt;"</code> in that repo</td>
+</tr>
+<tr>
+<td>Where is a concept anywhere in the product?</td>
+<td>Graphify global graph: <code>graphify global add graphify-out/graph.json --as &lt;repo&gt;</code> in each repo, then query with <code>--graph</code> pointing at <code>graphify global path</code></td>
+</tr>
+<tr>
+<td>Has a service's contract changed since the hub copy?</td>
+<td><code>node scripts/hub.mjs contracts</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Graphify maps code inside repos; it does not connect an Angular HTTP call to a Spring endpoint or a shell
+to its remotes. The catalog's <code>calls</code> and <code>loads</code> fields fill exactly that gap. Keep them current: a new
+dependency is added to the catalog in the same PR that introduces it.</p>
+<hr />
+<h2 id="7-keeping-it-maintained">7. Keeping it maintained</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>When</th>
+<th>What</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Every PR in any repo</td>
+<td>Normal per-repo checks (hooks, pre-commit, same-PR rule)</td>
+<td>Everyone</td>
+</tr>
+<tr>
+<td>A dependency is added or removed</td>
+<td>Update <code>catalog.json</code>, run <code>hub.mjs map</code></td>
+<td>The PR author</td>
+</tr>
+<tr>
+<td>A service API changes</td>
+<td><code>hub.mjs contracts --sync</code> after merge (or automate it in the service's pipeline)</td>
+<td>Service team</td>
+</tr>
+<tr>
+<td>A platform rule changes</td>
+<td>Edit <code>context/platform/</code>, announce it; repos only link to it</td>
+<td>Platform / architecture team</td>
+</tr>
+<tr>
+<td>Weekly (5 min)</td>
+<td><code>hub.mjs status</code>: repos missing context, failing checks, missing code maps</td>
+<td>Product tech lead</td>
+</tr>
+<tr>
+<td>Each kit release</td>
+<td><code>install.mjs &lt;repo&gt; --upgrade</code> per repo</td>
+<td>Each team</td>
+</tr>
+<tr>
+<td>Quarterly</td>
+<td><code>context-steward quarterly-review</code> in each repo; review the catalog for drift</td>
+<td>Tech leads</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ownership: put the hub under CODEOWNERS (or branch policies in Azure Repos): platform rules → platform
+team; catalog and initiatives → product tech leads; <code>contracts/</code> → updated only by the sync, never by hand.</p>
+<hr />
+<h2 id="8-rolling-it-out">8. Rolling it out</h2>
+<ol>
+<li><strong>Start small:</strong> the hub with a catalog of every repo (cheap, immediately useful), but the kit only in
+   one micro-frontend and the service it calls. Run one real cross-repo story.</li>
+<li><strong>Add repos as teams pick up stories</strong>, not all at once. Each team owns its setup PR.</li>
+<li><strong>Automate later:</strong> contract sync in service pipelines, the context check in PR pipelines, kit
+   distribution via plugin or APM, a central Graphify server.</li>
+</ol>
+<hr />
+<h2 id="9-commands-at-a-glance">9. Commands at a glance</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Create the hub</td>
+<td><code>node kit/install.mjs --create-hub ../product-context</code></td>
+</tr>
+<tr>
+<td>Install the kit in a repo</td>
+<td><code>node kit/install.mjs ../&lt;repo&gt; --graphify</code></td>
+</tr>
+<tr>
+<td>Upgrade the kit in a repo</td>
+<td><code>node kit/install.mjs ../&lt;repo&gt; --upgrade</code></td>
+</tr>
+<tr>
+<td>Regenerate the system map</td>
+<td><code>node scripts/hub.mjs map</code></td>
+</tr>
+<tr>
+<td>Window for a story</td>
+<td><code>node scripts/hub.mjs workspace &lt;area or repos&gt;</code></td>
+</tr>
+<tr>
+<td>What does a change affect</td>
+<td><code>node scripts/hub.mjs impact &lt;repo&gt;</code></td>
+</tr>
+<tr>
+<td>Context health of every repo</td>
+<td><code>node scripts/hub.mjs status</code></td>
+</tr>
+<tr>
+<td>Clone what's missing</td>
+<td><code>node scripts/hub.mjs clone &lt;area&gt; --run</code></td>
+</tr>
+<tr>
+<td>Contract copies up to date?</td>
+<td><code>node scripts/hub.mjs contracts [--sync]</code></td>
+</tr>
+</tbody>
+</table></div>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a></footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('button.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.parentElement.querySelector('pre');
+      var reset = function (t) { btn.textContent = t; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+      var select = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); reset('Selected');
+      };
+      try { navigator.clipboard.writeText(pre.innerText).then(function () { reset('Copied'); }, select); } catch (e) { select(); }
+    });
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var heads = links.map(function (a) { return document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1))); });
+  function mark() {
+    var y = window.scrollY + 120, idx = 0;
+    heads.forEach(function (h, i) { if (h && h.offsetTop <= y) idx = i; });
+    links.forEach(function (a, i) { a.classList.toggle('on', i === idx); });
+  }
+  window.addEventListener('scroll', mark, { passive: true }); mark();
+})();
+</script>
+
+</body>
+</html>

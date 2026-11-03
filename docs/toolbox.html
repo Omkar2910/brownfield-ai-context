@@ -96,7 +96,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>The complete workflow and toolbox</h1>
-      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="multi-repo.html">Many repos →</a>
     </header>
     
 <p>This is the full picture: <strong>every tool you can use</strong>, what each is for, whether you need it, and
@@ -375,8 +375,8 @@ just less well.</p>
 <td>Install the kit's skills, agent and hooks across many repos from one package. New; check policy and maturity</td>
 </tr>
 <tr>
-<td><strong>Shared <code>system-context</code> repo</strong></td>
-<td>Platform rules and API contracts shared by several services (see <code>demo-kit/</code>)</td>
+<td><strong>Product context hub</strong></td>
+<td>Catalog of repos, platform rules, API contracts, cross-repo story notes and a workspace generator for many micro-frontends and services: <a href="multi-repo.html">MULTI-REPO.md</a></td>
 </tr>
 <tr>
 <td><strong>Graphify served centrally</strong></td>
@@ -585,7 +585,11 @@ auto-approve list in VS Code settings (search settings for "auto approve"). Neve
 </tr>
 <tr>
 <td><strong>Story across UI and backend</strong></td>
-<td>Open both repos in one VS Code window. Backend first. One OpenSpec change per repo with the same id, or a shared store (see <code>docs/research/playbook.md</code>). The API contract is the hand-off between them.</td>
+<td>Open both repos in one VS Code window. Backend first. One OpenSpec change per repo with the same id. The API contract is the hand-off between them.</td>
+</tr>
+<tr>
+<td><strong>Story across several micro-frontends and services</strong></td>
+<td><code>/cross-repo-story</code> from the product context hub; <code>hub.mjs workspace</code> for the window; producers first, shell last (<a href="multi-repo.html">MULTI-REPO.md</a>).</td>
 </tr>
 <tr>
 <td><strong>Rewriting an old module</strong></td>
@@ -665,7 +669,7 @@ order.</p>
 <li class="task"><input type="checkbox" aria-label="done"> <code>git config core.hooksPath</code> is <code>.githooks</code> on your clone</li>
 <li class="task"><input type="checkbox" aria-label="done"> Optional: Azure DevOps MCP connected; read-only Graphify commands auto-approved</li>
 </ul>
-    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a></footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="multi-repo.html">Many repos →</a></footer>
   </main>
 </div>
 

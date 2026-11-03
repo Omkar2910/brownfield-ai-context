@@ -12,6 +12,7 @@ that keep the context up to date.
 | Set it up and run a story, step by step, in plain English | **[GUIDE.md](GUIDE.md)** (web page: [docs/index.html](docs/index.html)) |
 | Understand how to create, use and maintain context for any task, with or without OpenSpec | **[CONTEXT-GUIDE.md](CONTEXT-GUIDE.md)** (web page: [docs/context.html](docs/context.html)) |
 | See every tool (core, recommended, optional), Graphify in depth, and which workflow fits which task | **[TOOLBOX.md](TOOLBOX.md)** (web page: [docs/toolbox.html](docs/toolbox.html)) |
+| Set it up across many repos: micro-frontends, backend services, shared libraries | **[MULTI-REPO.md](MULTI-REPO.md)** (web page: [docs/multi-repo.html](docs/multi-repo.html)) |
 | Install the kit into my repo | `node kit/install.mjs <path-to-your-repo>` — details in [kit/README.md](kit/README.md) |
 | Track my first story and present the results | [templates/story-log.md](templates/story-log.md), [templates/presentation-outline.md](templates/presentation-outline.md) |
 | Try everything in a sandbox first | [demo-kit/](demo-kit/README.md) (made-up UI + backend services) |
@@ -36,10 +37,11 @@ Then open the repo in VS Code, switch Chat to agent mode and type `/context-boot
 GUIDE.md            setup + story workflow (start here)
 CONTEXT-GUIDE.md    creating, using and maintaining context (any task, OpenSpec optional)
 TOOLBOX.md          every tool by tier, Graphify in depth, workflow per task type, module rewrites
-kit/                installer + the files it adds to your repo
+MULTI-REPO.md       many micro-frontends + services: product context hub, workspaces, cross-repo stories
+kit/                installer, the files it adds to each repo, and the product hub template
 templates/          story log and presentation outline
 demo-kit/           sandbox: two made-up services and a shared context repo
-docs/*.html         the three guides as web pages
+docs/*.html         the guides as web pages
 docs/research/      playbook, FAQ, explainer, research update, sources
 ```
 

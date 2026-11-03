@@ -32,6 +32,8 @@ Ask these questions together, in one message, and wait for answers:
 2. Which rules from the platform or architecture team apply (for example authentication, permissions, logging, error format)?
 3. Is there anything in this repo that looks wrong but is deliberate?
 4. Which files or folders should an agent never change?
+5. What kind of repo is this: micro-frontend shell, micro-frontend remote, backend service, or shared
+   library? Is there a product context hub (for example `../product-context/`)?
 
 ## 3. Draft the files
 Use the templates in `references/`:
@@ -45,6 +47,8 @@ Use the templates in `references/`:
 - `docs/context/architecture.md` (modules, request flow, integrations, why odd things are the way they are)
   and `docs/context/known-traps.md` (numbered list, each trap with its reason).
 - `CLAUDE.md` containing only the line `@AGENTS.md` (so Claude-based tools read the same file).
+- The lines `references/repo-types.md` requires for this kind of repo (how it connects to the other
+  micro-frontends and services). Link to the product context hub instead of copying its content.
 Do not overwrite files that already exist without showing the user a diff first.
 
 ## 4. Prune

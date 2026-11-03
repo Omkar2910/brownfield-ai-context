@@ -74,7 +74,7 @@ just less well.
 | **Azure Pipelines context check** | Context check on every PR (`kit/optional/`) |
 | **Weekly steward run** | Scheduled check; steward proposes fixes as a PR (see `demo-kit/system-context/pipelines/`) |
 | **Agent plugins or APM** | Install the kit's skills, agent and hooks across many repos from one package. New; check policy and maturity |
-| **Shared `system-context` repo** | Platform rules and API contracts shared by several services (see `demo-kit/`) |
+| **Product context hub** | Catalog of repos, platform rules, API contracts, cross-repo story notes and a workspace generator for many micro-frontends and services: [MULTI-REPO.md](MULTI-REPO.md) |
 | **Graphify served centrally** | One graph server for a team (`graphify-mcp --transport http`) |
 
 ### For special cases
@@ -180,7 +180,8 @@ Note: `graphify hook install` writes to `.git/hooks`, which git ignores once the
 | **Bug fix** | Ask the agent to find the cause with `query_graph`, check `known-traps.md`, and run `graphify affected` on what it plans to change. Fix, add a regression test, `/context-learn` if the bug came from a missing rule. |
 | **Small change (under a day)** | `/story-to-change` → approve its short plan → build → `/story-finish`. OpenSpec optional. |
 | **Story (1–5 days)** | Full workflow in Section 1, with OpenSpec. This is the one to demo. |
-| **Story across UI and backend** | Open both repos in one VS Code window. Backend first. One OpenSpec change per repo with the same id, or a shared store (see `docs/research/playbook.md`). The API contract is the hand-off between them. |
+| **Story across UI and backend** | Open both repos in one VS Code window. Backend first. One OpenSpec change per repo with the same id. The API contract is the hand-off between them. |
+| **Story across several micro-frontends and services** | `/cross-repo-story` from the product context hub; `hub.mjs workspace` for the window; producers first, shell last ([MULTI-REPO.md](MULTI-REPO.md)). |
 | **Rewriting an old module** | Section 5. |
 | **Code review** | Ask: "Review this diff against AGENTS.md and the instructions that apply; run graphify affected on the changed classes and list untested dependents." |
 | **New team member** | `/onboard-me`, `graph.html`, then a small story with a buddy. |

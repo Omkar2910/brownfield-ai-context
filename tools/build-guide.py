@@ -4,6 +4,7 @@
   GUIDE.md          -> docs/index.html
   CONTEXT-GUIDE.md  -> docs/context.html
   TOOLBOX.md        -> docs/toolbox.html
+  MULTI-REPO.md     -> docs/multi-repo.html
 
 Usage:  pip install markdown   then   python tools/build-guide.py
 Edit the .md files, never the .html files directly.
@@ -20,9 +21,10 @@ PAGES = [
     ("GUIDE.md", "index.html", "Brownfield Story Guide", "Setup and story workflow"),
     ("CONTEXT-GUIDE.md", "context.html", "AI Context Guide", "Creating, using and maintaining context"),
     ("TOOLBOX.md", "toolbox.html", "Workflow Toolbox", "Workflow and toolbox"),
+    ("MULTI-REPO.md", "multi-repo.html", "Many-Repo Setup", "Many repos"),
 ]
 TEMPLATE = (ROOT / "tools" / "guide-template.html").read_text(encoding="utf-8")
-LINKS = {"GUIDE.md": "index.html", "CONTEXT-GUIDE.md": "context.html", "TOOLBOX.md": "toolbox.html"}
+LINKS = {"GUIDE.md": "index.html", "CONTEXT-GUIDE.md": "context.html", "TOOLBOX.md": "toolbox.html", "MULTI-REPO.md": "multi-repo.html"}
 
 
 def build(src_name, out_name, page_title, other_label):

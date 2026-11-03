@@ -22,6 +22,8 @@ Read this file first. Open the files under "Where to look" only when the task ne
 - Code map (if built): query it before reading many files — graphify MCP tools (`query_graph`,
   `get_neighbors`, `shortest_path`) or `graphify query "<question>"`. Before changing shared code,
   run `graphify affected "<ClassName>"` to see what depends on it.
+- Product-wide context (system map, platform rules, API contracts), if the product has a hub:
+  ../product-context/ — open it in the same VS Code window for work that crosses repos.
 - Current behaviour specs: openspec/specs/
 - Story workflow: /story-to-change → /opsx-propose → review → /opsx-apply → /story-finish → /opsx-archive
 

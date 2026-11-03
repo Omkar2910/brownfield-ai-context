@@ -11,6 +11,11 @@
 //   --dry-run        show what would happen, change nothing
 //   --no-git-hook    do not set up the git hooks
 //   --graphify       also connect Graphify (code map): MCP server config, .graphifyignore, ignore graphify-out/
+//   --upgrade        also replace kit-owned files (skills, steward agent, hook script and config, git hooks)
+//                    with this kit version. Never touches AGENTS.md, instructions, docs/context or your PR template.
+//
+// Create a product context hub (shared repo for many micro-frontends and services):
+//   node kit/install.mjs --create-hub <path-for-new-hub-folder>
 //
 // Works on Windows (PowerShell or Git Bash), macOS and Linux. Needs Node 18+ and git.
 
@@ -26,10 +31,30 @@ const opt = n => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : unde
 const has = n => args.includes(n);
 const tool = opt('--tool') || 'copilot';
 const dry = has('--dry-run');
-const target = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--tool');
+const target = args.find((a, i) => !a.startsWith('--') && !['--tool', '--create-hub'].includes(args[i - 1]));
+const upgrade = has('--upgrade');
+const kitVersion = fs.readFileSync(path.join(kitDir, 'VERSION'), 'utf8').trim();
+
+// --create-hub: copy the hub template into a new folder (never overwrites), then stop.
+if (has('--create-hub')) {
+  const hubDir = path.resolve(opt('--create-hub') || '');
+  if (!opt('--create-hub')) { console.log('Usage: node kit/install.mjs --create-hub <path-for-new-hub-folder>'); process.exit(1); }
+  const tplDir = path.join(kitDir, 'hub-template');
+  const walkAll = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walkAll(path.join(d, e.name)) : [path.join(d, e.name)]);
+  let added = 0, kept = 0;
+  for (const src of walkAll(tplDir)) {
+    const dest = path.join(hubDir, path.relative(tplDir, src));
+    if (fs.existsSync(dest)) { kept++; continue; }
+    if (!dry) { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.copyFileSync(src, dest); }
+    added++;
+  }
+  console.log(`Product context hub at ${hubDir}: ${added} files added, ${kept} already there.`);
+  console.log('Next: edit catalog.json and context/platform/, run "node scripts/hub.mjs map", then git init / commit / push.');
+  process.exit(0);
+}
 
 if (!target || has('--help') || !['copilot', 'claude'].includes(tool)) {
-  console.log('Usage: node kit/install.mjs <path-to-your-repo> [--tool copilot|claude] [--graphify] [--dry-run] [--no-git-hook]');
+  console.log('Usage: node kit/install.mjs <path-to-your-repo> [--tool copilot|claude] [--graphify] [--upgrade] [--dry-run] [--no-git-hook]\n       node kit/install.mjs --create-hub <path-for-new-hub-folder>');
   process.exit(target ? 1 : 0);
 }
 
@@ -38,7 +63,12 @@ const repo = git(path.resolve(target), ['rev-parse', '--show-toplevel']);
 if (!repo) { console.error(`Not a git repository: ${path.resolve(target)}`); process.exit(1); }
 const root = path.resolve(repo);
 
-const created = [], skipped = [], notes = [];
+const created = [], skipped = [], notes = [], updated = [];
+// Files the kit owns: safe to replace on --upgrade. Everything a team writes or customises is not listed.
+const KIT_SKILLS = ['context-bootstrap', 'context-refresh', 'context-learn', 'story-to-change', 'story-finish', 'onboard-me'];
+const kitOwned = rel => /^\.(github|claude)\/skills\/([^/]+)\//.test(rel) && KIT_SKILLS.includes(rel.split('/')[2])
+  || /context-steward(\.agent)?\.md$/.test(rel) || /context-tools\.cjs$/.test(rel)
+  || rel === '.github/hooks/ai-context.json' || rel.startsWith('.githooks/');
 const log = (s = '') => console.log(s);
 
 // Map a kit path to its destination for the chosen tool, and adjust text if needed.
@@ -70,7 +100,7 @@ function walk(dir) {
   });
 }
 
-log(`AI context kit → ${root}  (tool: ${tool}${dry ? ', dry run' : ''})`);
+log(`AI context kit ${kitVersion} → ${root}  (tool: ${tool}${upgrade ? ', upgrade' : ''}${dry ? ', dry run' : ''})`);
 log('');
 
 // 1. Copy files (never overwrite)
@@ -79,14 +109,18 @@ for (const src of walk(filesDir)) {
   const destRel = destination(rel);
   if (!destRel) continue;
   const dest = path.join(root, ...destRel.split('/'));
-  if (fs.existsSync(dest)) { skipped.push(destRel); continue; }
+  const text = transform(rel, fs.readFileSync(src, 'utf8'));
+  const exists = fs.existsSync(dest);
+  if (exists) {
+    if (!(upgrade && kitOwned(destRel))) { skipped.push(destRel); continue; }
+    if (fs.readFileSync(dest, 'utf8') === text) { skipped.push(destRel); continue; }
+  }
   if (!dry) {
     fs.mkdirSync(path.dirname(dest), { recursive: true });
-    const text = fs.readFileSync(src, 'utf8');
-    fs.writeFileSync(dest, transform(rel, text));
+    fs.writeFileSync(dest, text);
     if (/\.(cjs|sh)$/.test(dest) || destRel.startsWith('.githooks/')) { try { fs.chmodSync(dest, 0o755); } catch { /* Windows */ } }
   }
-  created.push(destRel);
+  (exists ? updated : created).push(destRel);
 }
 
 // 2. Claude Code hook settings
@@ -162,11 +196,25 @@ if (!has('--no-git-hook')) {
   }
 }
 
+// Version stamp, so teams can see which kit each repo runs
+const stampRel = (tool === 'claude' ? '.claude' : '.github') + '/ai-kit.json';
+const stamp = path.join(root, ...stampRel.split('/'));
+let previous = null;
+try { previous = JSON.parse(fs.readFileSync(stamp, 'utf8')).version; } catch { /* first install */ }
+if (previous !== kitVersion && (!previous || upgrade) && !dry) {
+  fs.mkdirSync(path.dirname(stamp), { recursive: true });
+  fs.writeFileSync(stamp, JSON.stringify({ kit: 'brownfield-ai-context', version: kitVersion, tool, source: 'https://github.com/Omkar2910/brownfield-ai-context' }, null, 2) + '\n');
+}
+if (previous && previous !== kitVersion && !upgrade) notes.push(`This repo has kit ${previous}; this is ${kitVersion}. Run again with --upgrade to update the kit's own files.`);
+
 // Report
+if (updated.length) { log('Updated to this kit version:'); updated.forEach(f => log('  ~ ' + f)); log(''); }
 log('Added:');
 created.length ? created.forEach(f => log('  + ' + f)) : log('  (nothing)');
 if (skipped.length) { log(''); log('Already there, left unchanged:'); skipped.forEach(f => log('  = ' + f)); }
 if (notes.length) { log(''); log('Please check:'); notes.forEach(n => log('  ! ' + n)); }
+log('');
+log(`Kit version ${kitVersion} recorded in ${stampRel}.`);
 log('');
 log('Next steps:');
 log('  1. Open the repo in VS Code. In Chat, run "Chat: Open Customizations" and confirm the skills,');

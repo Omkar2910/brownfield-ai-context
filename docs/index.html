@@ -99,17 +99,17 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>Guide: building brownfield stories with AI agents</h1>
-      <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a>
+      <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a>
     </header>
     
 <p>For developers using <strong>VS Code + GitHub Copilot</strong> (agent mode, any Claude or GPT model) on existing services.
 Written in plain English. Read it top to bottom once (about 15 minutes), then use it as a checklist.</p>
 <p>Last checked: November 2026. Tools in this area change monthly; see <a href="#10-what-is-still-changing">What is still changing</a>.</p>
 <blockquote>
-<p><strong>Three guides.</strong> This one is the setup and the story workflow. How to create, use and maintain the
+<p><strong>Four guides.</strong> This one is the setup and the story workflow. How to create, use and maintain the
 context itself, for any task, is in <strong><a href="context.html">CONTEXT-GUIDE.md</a></strong>. Every tool you can use
 (core, recommended, optional), Graphify in depth, and which workflow fits which task are in
-<strong><a href="toolbox.html">TOOLBOX.md</a></strong>.</p>
+<strong><a href="toolbox.html">TOOLBOX.md</a></strong>. Many micro-frontends and services in separate repos: <strong><a href="multi-repo.html">MULTI-REPO.md</a></strong>.</p>
 </blockquote>
 <hr />
 <h2 id="1-what-you-are-setting-up">1. What you are setting up</h2>
@@ -323,6 +323,11 @@ searching?</em> If yes, delete it. Then run:</p>
 <h3 id="ui-and-backend-one-vs-code-window-or-two">UI and backend: one VS Code window or two?</h3>
 <p><strong>Rule: install per repo, open per story.</strong> Each repo carries its own kit and context. You choose how
 to open them based on what the story touches.</p>
+<blockquote>
+<p><strong>Several micro-frontends and services?</strong> Use a product context hub (catalog of repos, platform rules,
+contracts, cross-repo story notes, a script that builds the right VS Code window per story). See
+<strong><a href="multi-repo.html">MULTI-REPO.md</a></strong>. This section covers the simplest case: one UI repo and one service repo.</p>
+</blockquote>
 <p><strong>If the UI and the service are two separate git repos (the usual case):</strong></p>
 <ol>
 <li>
@@ -760,7 +765,7 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 <li><strong>Research on context files</strong> is young and some results disagree. Measure on your own stories.</li>
 </ul>
 <p>Background research, sources and the longer explanations: <code>docs/research/</code>.</p>
-    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a></footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a></footer>
   </main>
 </div>
 

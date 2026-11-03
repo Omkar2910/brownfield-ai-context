@@ -49,4 +49,22 @@ applyTo: '**/src/app/**/*.{ts,html}'
 - One test per permission state for every permission-gated action.
 ```
 
+## Micro-frontend remote — `.github/instructions/federation.instructions.md`
+
+```markdown
+---
+name: 'Micro-frontend boundaries'
+description: 'Use when changing exposed modules, routes, federation config, shared dependencies or cross-app events.'
+applyTo: '**/{federation.config.js,webpack.config.js,module-federation.config.ts,src/app/app.routes.ts}'
+---
+# Micro-frontend boundaries
+
+- This remote exposes `./ReportsRoutes`; the shell loads it by that exact name. Renaming it breaks
+  the shell at runtime, not at build time. [anchor: federation.config.js]
+- Angular, RxJS and the shared library are singletons with versions pinned by the shell; do not
+  upgrade them here alone.
+- Never import from another remote. Send events through the shared event bus (see
+  ../product-context/context/platform/micro-frontends.md).
+```
+
 Tips: keep `applyTo` tight so rules only load where they apply. Do not use `applyTo: '**'` for long files.

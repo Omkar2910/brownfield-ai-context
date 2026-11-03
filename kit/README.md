@@ -9,6 +9,8 @@ node kit/install.mjs <path-to-your-repo> --dry-run        # show what it would d
 node kit/install.mjs <path-to-your-repo> --tool claude    # Claude Code instead
 node kit/install.mjs <path-to-your-repo> --no-git-hook    # skip the git hooks
 node kit/install.mjs <path-to-your-repo> --graphify       # also connect the Graphify code map (recommended)
+node kit/install.mjs <path-to-your-repo> --upgrade        # replace the kit's own files with this version
+node kit/install.mjs --create-hub ../product-context      # new product context hub (many repos, see MULTI-REPO.md)
 ```
 
 The installer only adds files. Existing files are never overwritten; it lists them and tells you what
@@ -29,6 +31,8 @@ to merge by hand. OpenSpec is optional. If you use it, run `openspec init` first
 | `files/.azuredevops/pull_request_template.md` | `.azuredevops/` | PR template with the context checklist |
 | `snippets/openspec-config.yaml` | appended to `openspec/config.yaml` | Points OpenSpec at your context, adds rules |
 | `optional/*` | not installed | Azure Pipelines check, Azure DevOps MCP config, Claude Code hook settings |
+| `hub-template/` | a new folder, with `--create-hub` | Product context hub: catalog, platform rules, contracts, initiatives, `cross-repo-story` skill, `scripts/hub.mjs` |
+| (generated) | `.github/ai-kit.json` | Which kit version this repo runs; `--upgrade` updates it |
 
 `git config core.hooksPath` is stored per clone, so each teammate runs
 `git config core.hooksPath .githooks` once (or add it to your project's setup script).

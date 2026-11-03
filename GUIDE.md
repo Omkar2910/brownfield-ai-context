@@ -5,10 +5,10 @@ Written in plain English. Read it top to bottom once (about 15 minutes), then us
 
 Last checked: November 2026. Tools in this area change monthly; see [What is still changing](#10-what-is-still-changing).
 
-> **Three guides.** This one is the setup and the story workflow. How to create, use and maintain the
+> **Four guides.** This one is the setup and the story workflow. How to create, use and maintain the
 > context itself, for any task, is in **[CONTEXT-GUIDE.md](CONTEXT-GUIDE.md)**. Every tool you can use
 > (core, recommended, optional), Graphify in depth, and which workflow fits which task are in
-> **[TOOLBOX.md](TOOLBOX.md)**.
+> **[TOOLBOX.md](TOOLBOX.md)**. Many micro-frontends and services in separate repos: **[MULTI-REPO.md](MULTI-REPO.md)**.
 
 ---
 
@@ -194,6 +194,10 @@ Fix any `ERROR` lines, commit everything, and open the setup pull request.
 
 **Rule: install per repo, open per story.** Each repo carries its own kit and context. You choose how
 to open them based on what the story touches.
+
+> **Several micro-frontends and services?** Use a product context hub (catalog of repos, platform rules,
+> contracts, cross-repo story notes, a script that builds the right VS Code window per story). See
+> **[MULTI-REPO.md](MULTI-REPO.md)**. This section covers the simplest case: one UI repo and one service repo.
 
 **If the UI and the service are two separate git repos (the usual case):**
 
