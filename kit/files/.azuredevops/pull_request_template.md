@@ -6,7 +6,7 @@
 
 ## Spec
 - OpenSpec change: `openspec/changes/<change-id>/`
-- [ ] Proposal and delta specs were reviewed before implementation
+- [ ] Proposal, delta specs and technical design (`design.md`) were reviewed before implementation
 - [ ] `/opsx-verify` (or a manual scenario walk-through) done
 
 ## AI context (same-PR rule)
@@ -16,6 +16,7 @@ Did this PR change a command, convention, trap, contract or integration?
 - [ ] `node .github/hooks/scripts/context-tools.cjs check` shows no errors
 
 ## Testing
-<!-- How it was tested -->
+- [ ] Every row in the test plan (`test-plan.md`) names a test that exists and passes, or says why it is manual
+<!-- Anything else about how it was tested -->
 
 <!-- Reviewers: tag comments where an AI agent got something wrong with #agent-miss -->

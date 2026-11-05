@@ -11,8 +11,13 @@ rules:
     - Name any new permission, configuration key or database change
   design:
     - Describe API changes as request/response examples, not prose
-  tasks:
+    # Have your own TDD skill write the technical design (uncomment and use its name):
+    # - Write this artifact with the tdd-doc skill, using our team's TDD format
+  test-plan:
     - Every new endpoint or UI action has a test for the allowed and the denied case
+    # Name your test stack so the plan uses it, for example:
+    # - Backend tests use JUnit 5, Mockito and Testcontainers; UI tests use Jasmine and Karma
+  tasks:
     - The last task is "Update AGENTS.md or docs/context if a command, convention, trap or contract changed"
 
 operations:

@@ -1,0 +1,315 @@
+# Story workflow for brownfield services: proposal -> specs -> technical design (TDD) -> test plan -> tasks.
+# Made by the AI context kit from OpenSpec 1.16 "spec-driven" (proposal and specs steps unchanged).
+# The kit may replace THIS file on --upgrade. Customise the documents through templates/ and the
+# rules: block in openspec/config.yaml instead; those are never overwritten.
+name: story-tdd
+version: 1
+description: Story workflow - proposal → specs → technical design (TDD) → test plan → test-first tasks
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    description: Initial proposal document outlining the change
+    template: proposal.md
+    instruction: |
+      Create the proposal document that establishes WHY this change is needed.
+
+      Sections:
+      - **Story**: the work item id and title, and its acceptance criteria as a numbered list
+        (AC1, AC2...). Copy them from the work item or from context.md; the test plan maps
+        each one to tests.
+      - **Why**: 1-2 sentences on the problem or opportunity. What problem does this solve? Why now?
+      - **What Changes**: Bullet list of changes. Be specific about new capabilities, modifications, or removals. Mark breaking changes with **BREAKING**.
+      - **Capabilities**: Identify which specs will be created or modified:
+        - **New Capabilities**: List capabilities being introduced. Each becomes a new `specs/<capability-path>/spec.md`. Name each capability for a durable system behavior (for example, `user-auth`), not the work in this change (for example, `add-login-endpoint`). Choose a cohesive boundary that can own related requirements as the system evolves; avoid broad catch-all capabilities. Use kebab-case for path segments you introduce (e.g., `user-auth` or `identity/user-auth`) and follow the project's existing spec organization.
+        - **Modified Capabilities**: List existing capabilities whose REQUIREMENTS are changing. Only include if spec-level behavior changes (not just implementation details). Each needs a delta spec file. Use the exact existing path under `openspec/specs/`. Leave empty if no requirement changes.
+      - **Impact**: Affected code, APIs, dependencies, or systems.
+
+      IMPORTANT: The Capabilities section is critical. It creates the contract between
+      proposal and specs phases. Research existing specs before filling this in:
+      run `openspec list --specs` for the project's capability inventory, then
+      `openspec show "<spec-id>" --type spec --json --no-scenarios` for any that
+      look related - that returns a capability's purpose and requirement texts
+      without pulling whole spec files into context. Append `--store "<id>"` to
+      both commands only for a registered standalone store, and keep `--type
+      spec`: a change and a spec sharing a name is otherwise an ambiguous-item
+      error. `openspec list` without `--specs` lists in-flight changes, not
+      specs - it never shows what the project already covers. Reuse an existing
+      capability's exact path instead of introducing a near-duplicate name.
+      The filtered read is only an overview. Before deciding what is already
+      covered or what should change, read each relevant spec in full, including
+      scenarios, with `openspec show "<spec-id>" --type spec` (same `--store` rule).
+      Each capability listed here will need a corresponding spec file.
+
+      Every change must either declare at least one capability (new or
+      modified) or explicitly opt out of specs: `openspec validate` rejects a
+      change with zero deltas unless the change's `.openspec.yaml` sets
+      `skip_specs: true`. Use `skip_specs: true` only when no spec-level
+      behavior changes (pure refactor, tooling, docs) - specs describe
+      behavior, so if behavior does not change, no spec should change either.
+      Do not invent a requirement just to satisfy validation.
+
+      Keep it concise (1-2 pages). Focus on the "why" not the "how" -
+      implementation details belong in design.md.
+
+      This is the foundation - specs, design, and tasks all build on this.
+    requires: []
+
+  - id: specs
+    generates: "specs/**/*.md"
+    description: Detailed specifications for the change
+    template: spec.md
+    instruction: |
+      Create specification files that define WHAT the system should do.
+
+      A spec is a behavior contract, not an implementation plan.
+
+      Good spec content:
+      - Observable behavior users or downstream systems rely on
+      - Inputs, outputs, and error conditions
+      - External constraints (security, privacy, reliability, compatibility)
+      - Scenarios that can be tested or explicitly validated
+
+      Avoid in specs:
+      - Internal class/function names
+      - Library or framework choices
+      - Step-by-step implementation details
+      - Detailed execution plans (those belong in design.md or tasks.md)
+
+      Quick test: if the implementation can change without changing externally
+      visible behavior, it likely does not belong in the spec.
+
+      Create one spec file per capability listed in the proposal's Capabilities section.
+      `<capability-path>` is the spec directory relative to `specs/` (for example,
+      `user-auth` or `identity/user-auth`). Preserve the full path:
+      - New capabilities: use the exact path from the proposal at `specs/<capability-path>/spec.md`. Any path segment newly introduced in the proposal must be kebab-case. Follow the project's existing organization; do not add a new domain level when the project uses a flat layout.
+      - Modified capabilities: use the exact existing path from `openspec/specs/<capability-path>/` when creating the delta at `specs/<capability-path>/spec.md`. Run `openspec list --specs` to confirm that path before writing the delta, appending `--store "<id>"` only for a registered standalone store - a mistyped or invented path targets a capability that does not exist rather than the one you meant. Do not move or rename the capability.
+
+      Write the spec files one at a time, so the user sees progress and an
+      interrupted run keeps the files it already wrote:
+      - Before writing anything, compare the capabilities the proposal lists
+        with the `specs/<capability-path>/spec.md` files that already exist,
+        and start with the first capability that has no file. Do not rewrite
+        an existing file unless the user asks you to.
+      - Before each file, say in one line which capability you are writing.
+      - Write each file as soon as you have drafted it. Do not plan every file
+        before writing the first.
+      - Stop when every capability the proposal lists has its file.
+
+      There must be at least one spec file unless the change's `.openspec.yaml`
+      sets `skip_specs: true` (no spec-level behavior change) - `openspec validate`
+      rejects a zero-delta change without that marker. If the proposal lists no
+      capabilities and `skip_specs` is not set, revisit the proposal first.
+
+      Delta operations (use ## headers):
+      - **ADDED Requirements**: New capabilities
+      - **MODIFIED Requirements**: Changed behavior - MUST include full updated content
+      - **REMOVED Requirements**: Deprecated features - MUST include **Reason** and **Migration**
+      - **RENAMED Requirements**: Name changes only - use FROM:/TO: format
+
+      Format requirements:
+      - Each requirement: `### Requirement: <name>` followed by description
+      - Use SHALL/MUST for normative requirements (avoid should/may)
+      - Each scenario: `#### Scenario: <name>` with WHEN/THEN format
+      - **CRITICAL**: Scenarios MUST use exactly 4 hashtags (`####`). Using 3 hashtags or bullets will fail silently.
+      - Every requirement MUST have at least one scenario.
+      - Every scenario MUST have a WHEN/GIVEN step (its trigger) and a THEN step (its outcome). A scenario with only AND lines or plain prose still counts as a scenario, but `openspec validate` flags it as a warning: normal validation still passes, but `openspec validate --strict` fails on it.
+      - Keep each requirement's description (the text between `### Requirement:` and its first scenario) to 500 characters or fewer. `openspec validate` flags longer descriptions in ADDED requirements and in the main spec. This is a warning: normal validation still passes, but `openspec validate --strict` fails on it. When writing a new requirement, state one behavior per requirement: move examples and edge cases into scenarios, and split a requirement that covers several behaviors into separate `### Requirement:` blocks, each with its own scenarios. Under MODIFIED, keep the existing requirement block whole; never split, trim or rewrite existing text just to meet the length. Split an existing long requirement only when the user asks for it, in a change made for that purpose: under MODIFIED, keep its header and every scenario and cut its description down to one behavior without changing its meaning, then add each behavior you removed as its own ADDED requirement with its own scenarios.
+
+      New capabilities only: the delta spec's first section is `## Purpose` -
+      one or two sentences (50+ characters, or `openspec validate --strict`
+      reports it as too brief) describing what the capability is for. Archive
+      copies it into the main spec it creates; without it the new main spec is
+      left with a `TBD ... Update Purpose after archive` placeholder to fill in
+      by hand. Do NOT add `## Purpose` to a delta for an existing capability -
+      that spec already has one and the delta's is ignored. To change an
+      existing capability's Purpose - including a leftover `TBD` placeholder -
+      edit `<planningHome.root>/openspec/specs/<capability-path>/spec.md`
+      directly. `planningHome.root` comes from the `openspec instructions ...
+      --json` response. Always use it rather than a repo-relative path: it
+      resolves to the store whenever the change lives in one - whether that
+      came from `--store`, a project `store:` pointer, or a global default
+      store - and to the current repository otherwise. Do not try to work out
+      which case applies; the field already has.
+
+      MODIFIED requirements workflow:
+      1. Locate the existing requirement in `<planningHome.root>/openspec/specs/<capability-path>/spec.md` (the same store-aware root as above)
+      2. Copy the ENTIRE requirement block (from `### Requirement:` through all scenarios)
+      3. Paste under `## MODIFIED Requirements` and edit to reflect new behavior
+      4. Ensure header text matches exactly (whitespace-insensitive)
+
+      Common pitfall: Using MODIFIED with partial content loses detail at archive time.
+      If adding new concerns without changing existing behavior, use ADDED instead.
+
+      Example (a new capability, so its first section is `## Purpose`):
+      ```
+      # Spec Delta
+
+      ## Purpose
+
+      Lets users take their data out of the product in a portable format.
+
+      ## ADDED Requirements
+
+      ### Requirement: User can export data
+      The system SHALL allow users to export their data in CSV format.
+
+      #### Scenario: Successful export
+      - **WHEN** user clicks "Export" button
+      - **THEN** system downloads a CSV file with all user data
+
+      ## REMOVED Requirements
+
+      ### Requirement: Legacy export
+      **Reason**: Replaced by new export system
+      **Migration**: Use new export endpoint at /api/v2/export
+      ```
+
+      Specs should be testable - each scenario is a potential test case.
+    requires:
+      - proposal
+
+  - id: design
+    generates: design.md
+    description: Technical design document (TDD) for this story - always created, sized to the story
+    template: design.md
+    instruction: |
+      Create the technical design document (TDD) for this story. It explains HOW the change
+      will be built, so a reviewer can approve the approach before any code is written.
+      The file is named design.md so /opsx-verify can check the code against it.
+
+      Team skill: if the `rules` for this artifact name a skill or a template to use
+      (for example "Write this with the tdd-doc skill"), invoke that skill and have it
+      write to the resolved output path, then check the result covers the rules below.
+      Otherwise use the template.
+
+      Size it to the story - this is required, but length is not:
+      - Small story (one layer, no API or data change): write the "Lite" form - Overview,
+        Approach, Changes by layer, Risks. Remove the other sections; do not fill them with
+        "N/A".
+      - Normal or large story: use every section that applies; remove the rest.
+      Most stories fit in 1-2 pages. If it is getting longer, the story is probably two stories.
+
+      Inspect before writing:
+      - Read the proposal and the specs; refer to them instead of restating them.
+      - Read the code you will change. If the graphify tools are available, use them to find
+        the classes involved and their dependents (`affected`), and list those dependents
+        under Impact.
+      - Read AGENTS.md "Where to look" and any docs/context page for the area.
+
+      Content rules:
+      - Name real files, classes, endpoints, tables and components. Each "current state"
+        statement points at the file it comes from.
+      - API changes: show request and response examples and status codes, and say whether
+        the change is backward compatible.
+      - Data changes: tables and columns, the migration script, and how to roll it back.
+      - Decisions: for each, the option chosen, the main alternative, and why.
+      - Never invent a convention, rule or reason you did not see in the code or context
+        files. Write "Unknown - ask <role>" under Open Questions instead.
+      - If an open question would change the specs, the approach or the tasks, ask the
+        user now instead of guessing.
+    requires:
+      - proposal
+
+  - id: test-plan
+    generates: test-plan.md
+    description: Test plan for this story - which tests prove each scenario, written before the code
+    template: test-plan.md
+    instruction: |
+      Create the test plan: the list of tests that will prove this story works and did not
+      break anything. Tasks are ordered from this list, and tests are written before code.
+
+      Do not copy the scenarios. Spec scenarios (WHEN/THEN) already describe behaviour;
+      this plan maps each one to concrete tests and adds what the specs do not cover.
+
+      1. Traceability: one row per spec scenario and per acceptance criterion from the
+         proposal. For each, the test level (unit, integration, API, UI component, end-to-end,
+         manual), where the test will live (test class and method, or spec file and `it`
+         name), and Status (start every row as `planned`). Every scenario needs at least one
+         automated test unless you say why it is manual.
+      2. Extra cases the specs do not list: invalid input and boundaries, permission denied,
+         downstream failure or timeout, empty and large data, concurrency if relevant.
+      3. Regression: existing behaviour this change could break. Use the dependents listed in
+         design.md (or `graphify affected`) and name the existing tests that cover them, or
+         the new tests needed.
+      4. Test data and setup: fixtures, seed data, mocks or test containers, feature flags.
+      5. Manual / QA checks: only what cannot reasonably be automated.
+
+      Follow the test conventions in AGENTS.md and .github/instructions/ (framework, naming,
+      folder). Use the project's real test command. Keep it to what this story needs.
+    requires:
+      - specs
+      - design
+
+  - id: tasks
+    generates: tasks.md
+    description: Implementation checklist, test-first
+    template: tasks.md
+    instruction: |
+      Create the task list that breaks down the implementation work, test-first.
+
+      Before writing tasks, check design.md for Open Questions. If any of them
+      would change what gets built, resolve them with the user first - do not
+      bake an unstated assumption into the task list.
+
+      **IMPORTANT: Follow the template below for tracked tasks.** The apply phase parses
+      checkbox format to track progress. A box holding only `x` counts as done,
+      upper or lower case and with any spacing, so `- [ x]` is done too. Every
+      other marker, including `- [~]`, `- [-]` and an empty `- []`, reads as
+      unfinished. A line with no checkbox is not tracked at all.
+
+      Test-first (TDD): within each group that changes behaviour,
+      - the FIRST task writes the tests for that group from test-plan.md (name them) and
+        verifies they fail for the expected reason;
+      - the next tasks implement until those tests pass;
+      - the last task of the group runs the related existing tests and sets the matching
+        test-plan.md rows to `passing`.
+
+      Guidelines:
+      - Group related tracked tasks under ## numbered headings, one group per layer or slice
+        (for example: database, service, API, UI). Order groups by dependency: producers
+        before consumers (database → service → API → UI).
+      - Each tracked task MUST be a checkbox: `- [ ] X.Y Task description`
+      - Tasks should be small enough to complete in one session
+      - Each task MUST state how to verify completion (a test, command, observable
+        behavior, or delivered artifact) in its checkbox description.
+      - Each task group MUST land the tests and documentation its own work calls for. Do NOT
+        collect testing or documentation into a final group. A final group is for
+        integration checks only.
+      - Every row in test-plan.md is covered by some task.
+      - If the change alters a command, convention, trap or contract, add a task to update
+        AGENTS.md or docs/context in the group that makes the change.
+      - If the requested workflow includes archive, keep those steps as plain bullets in an
+        optional `## Workflow follow-up` section at the end. They are not tracked.
+
+      Example:
+      ```
+      # Tasks
+
+      ## 1. Service: export limit
+
+      - [ ] 1.1 Write ReportExportServiceTest.rejectsMoreThan50kRows and allowsExactly50kRows (test-plan rows 1-2); verify both fail because the limit does not exist yet
+      - [ ] 1.2 Add the row limit check to ReportExportService; verify tests 1.1 pass
+      - [ ] 1.3 Run the existing ReportExportService tests and set test-plan rows 1-2 to passing; verify the test command is green
+
+      ## 2. API: error response
+
+      - [ ] 2.1 Write ReportControllerIT.returns413WhenTooManyRows (test-plan row 3); verify it fails
+      - [ ] 2.2 Map ExportLimitException to 413 with the standard error body; verify 2.1 passes
+      ```
+
+      Reference specs for what to build, design.md for how, test-plan.md for the tests.
+    requires:
+      - specs
+      - design
+      - test-plan
+
+apply:
+  requires: [ tasks ]
+  tracks: tasks.md
+  instruction: |
+    Read the context files, then work through pending tasks in order, mark each complete as you go.
+    Write the tests in a group before its implementation and confirm they fail first.
+    Keep test-plan.md current: set a row to `passing` when its test passes, and add a row
+    for any test you add that the plan did not list.
+    Pause if you hit blockers or need clarification. If the code shows design.md is wrong,
+    stop and suggest updating design.md before continuing.

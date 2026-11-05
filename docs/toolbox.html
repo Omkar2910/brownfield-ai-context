@@ -172,13 +172,13 @@ just less well.</p>
 </tr>
 <tr>
 <td>8. Agree the plan</td>
-<td>Proposal, spec scenarios, design, tasks — <strong>reviewed by a person</strong></td>
-<td><code>/opsx-propose</code> (or the plan from <code>/story-to-change</code>)</td>
+<td>Proposal, spec scenarios, technical design (TDD), test plan, test-first tasks — <strong>reviewed by a person</strong></td>
+<td><code>/opsx-propose</code> with the kit's <code>story-tdd</code> schema (or the documents from <code>/story-to-change</code>)</td>
 <td>Core</td>
 </tr>
 <tr>
 <td>9. Build</td>
-<td>Code in slices; hooks flag context lines that may now be wrong</td>
+<td>Code in slices, tests first; hooks flag context lines that may now be wrong</td>
 <td><code>/opsx-apply</code> + agent hooks</td>
 <td>Core</td>
 </tr>
@@ -190,7 +190,7 @@ just less well.</p>
 </tr>
 <tr>
 <td>11. Check</td>
-<td>Tests, impact of changes, spec coverage, context freshness</td>
+<td>Tests, test-plan rows all passing, impact of changes, spec and design coverage, context freshness</td>
 <td><code>/story-finish</code> + <code>/opsx-verify</code> + Graphify <code>affected</code> + <code>context-tools check</code></td>
 <td>Core</td>
 </tr>

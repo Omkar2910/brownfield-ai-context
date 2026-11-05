@@ -10,6 +10,7 @@ node kit/install.mjs <path-to-your-repo> --tool claude    # Claude Code instead
 node kit/install.mjs <path-to-your-repo> --no-git-hook    # skip the git hooks
 node kit/install.mjs <path-to-your-repo> --graphify       # also connect the Graphify code map (recommended)
 node kit/install.mjs <path-to-your-repo> --upgrade        # replace the kit's own files with this version
+node kit/install.mjs <path-to-your-repo> --keep-schema    # with OpenSpec: don't switch to the story-tdd workflow
 node kit/install.mjs --create-hub ../product-context      # new product context hub (many repos, see MULTI-REPO.md)
 ```
 
@@ -30,12 +31,34 @@ to merge by hand. OpenSpec is optional. If you use it, run `openspec init` first
 | `files-graphify/.graphifyignore` | `.graphifyignore` (with `--graphify`) | Keeps generated code out of the map; also adds `graphify-out/` to `.gitignore` |
 | `files/.azuredevops/pull_request_template.md` | `.azuredevops/` | PR template with the context checklist |
 | `snippets/openspec-config.yaml` | appended to `openspec/config.yaml` | Points OpenSpec at your context, adds rules |
+| `openspec-schema/story-tdd/` | `openspec/schemas/story-tdd/` + `schema: story-tdd` in `openspec/config.yaml` | Story workflow: proposal → specs → technical design (`design.md`) → `test-plan.md` → test-first tasks. `schema.yaml` is kit-owned; `templates/` are yours and never overwritten |
 | `optional/*` | not installed | Azure Pipelines check, Azure DevOps MCP config, Claude Code hook settings |
 | `hub-template/` | a new folder, with `--create-hub` | Product context hub: catalog, platform rules, contracts, initiatives, `cross-repo-story` skill, `scripts/hub.mjs` |
 | (generated) | `.github/ai-kit.json` | Which kit version this repo runs; `--upgrade` updates it |
 
 `git config core.hooksPath` is stored per clone, so each teammate runs
 `git config core.hooksPath .githooks` once (or add it to your project's setup script).
+
+## The story workflow (OpenSpec schema)
+
+When the repo has `openspec/`, the installer adds the `story-tdd` schema and makes it the default for
+**new** changes (changes already started keep theirs; `--keep-schema` skips the switch). Each change
+then has five documents, created in this order:
+
+| Artifact | File | Needs |
+| --- | --- | --- |
+| proposal | `proposal.md` (now with the story's acceptance criteria) | — |
+| specs | `specs/<capability>/spec.md` | proposal |
+| design | `design.md`: the technical design document, always created, "Lite" for small stories | proposal |
+| test-plan | `test-plan.md`: each scenario and acceptance criterion mapped to a named test, extra cases, regression, test data | specs, design |
+| tasks | `tasks.md`: per layer, tests first, then code, then mark test-plan rows `passing` | specs, design, test-plan |
+
+It keeps the id `design` and the file name `design.md` on purpose: `/opsx-verify` checks the code
+against an artifact with that id. The proposal and specs steps are OpenSpec 1.16's own, unchanged.
+Customise with `openspec/schemas/story-tdd/templates/` (your TDD format) and `rules:` in
+`openspec/config.yaml` (for example, name your own TDD skill under `design:`). Check it with
+`openspec schema validate story-tdd`. When you upgrade OpenSpec, run `--upgrade` with the latest kit
+so the schema follows OpenSpec's own improvements.
 
 ## The context tool
 

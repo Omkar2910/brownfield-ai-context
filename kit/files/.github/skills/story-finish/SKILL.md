@@ -12,6 +12,9 @@ Goal: a pull request a reviewer can approve quickly, with specs, code and contex
    otherwise use the plan agreed earlier in the conversation. List anything unfinished and ask the
    user whether to finish it or move it to a follow-up.
 2. **Tests.** Run the test command from AGENTS.md. Fix failures caused by this change; report others.
+   Then open the test plan (`openspec/changes/<change-id>/test-plan.md`, or
+   `docs/stories/<story-id>/test-plan.md` without OpenSpec). Every row must name a test that exists
+   and passes, or say why it is manual. Set each row's Status, and list any row still `planned`.
 3. **Impact.** If the code map exists, run `graphify update .` and then `graphify affected "<ClassName>"`
    for each class this change modified. For each dependent, confirm it is covered by a test or not
    affected. Add an "Impact" list to the PR description.
@@ -24,7 +27,9 @@ Goal: a pull request a reviewer can approve quickly, with specs, code and contex
    and the diff):
    - Story id and one-line summary
    - What changed, grouped by area
-   - Requirements and scenarios or acceptance checks covered
+   - Requirements and scenarios or acceptance checks covered, with the test that proves each
+     (from the test plan)
+   - Link to the technical design (`design.md` or `technical-design.md`)
    - Context files updated, and why
    - Impact (dependents checked) and how it was tested
    - Link to `openspec/changes/<change-id>/` if there is one

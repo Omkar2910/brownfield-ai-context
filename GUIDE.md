@@ -45,8 +45,8 @@ Three ideas behind it, all from published studies of coding agents:
  ─────────────────                     ───────────
  install kit (--graphify)              /story-to-change   read story; code map finds the files
      │                                        │            and what depends on them
- build code map (Graphify)             /opsx-propose       proposal, design, tasks, spec changes
-     │                                        │
+ build code map (Graphify)             /opsx-propose       proposal, spec changes, technical design
+     │                                        │            (TDD), test plan, test-first tasks
  /context-bootstrap                    YOU REVIEW          ← the most important step
      │                                        │
  review + commit                       /opsx-apply         agent codes task by task
@@ -143,6 +143,7 @@ What it adds:
 | `.vscode/mcp.json`, `.graphifyignore`, `.gitignore` entry | Connect Copilot to the code map (with `--graphify`) |
 | `.azuredevops/pull_request_template.md` | PR template with the context checklist |
 | `openspec/config.yaml` (appended) | Tells OpenSpec to read your context and adds a few rules |
+| `openspec/schemas/story-tdd/` + `schema: story-tdd` | The story workflow: every change also gets a technical design document and a test plan, and tasks are written test-first (Step 4c) |
 
 ### Step 4b — Build the code map (5 minutes)
 
@@ -157,6 +158,43 @@ This runs only on your machine: no API key, nothing is sent anywhere. It writes 
 (ignored by git). From now on the git hooks refresh it after each commit, merge and branch switch.
 Open `graphify-out/graph.html` in a browser to see your code as a picture. Details and choices:
 [TOOLBOX.md, Section 3](TOOLBOX.md#3-graphify-in-depth).
+
+### Step 4c — Fit the technical design and test plan to your team (10 minutes)
+
+With OpenSpec, the kit sets your repo to its **story workflow** (`schema: story-tdd` in
+`openspec/config.yaml`). Every `/opsx-propose` then creates five documents instead of four:
+
+| Document | What it is |
+| --- | --- |
+| `proposal.md` | Why, what changes, and the story's acceptance criteria (AC1, AC2…) |
+| `specs/…/spec.md` | The behaviour, as requirements and WHEN/THEN scenarios |
+| `design.md` | **The technical design document (TDD)**, always created: changes per layer, API and data changes, security, errors, risks, rollback. A small story gets the short "Lite" form. |
+| `test-plan.md` | **The test cases**: every scenario and acceptance criterion mapped to a named test, plus extra cases (permissions, bad input, failures), regression on dependents, test data and manual checks |
+| `tasks.md` | Ordered **test-first**: each group writes its tests, sees them fail, then implements until they pass |
+
+Make it yours:
+
+- **Your team's TDD format:** replace `openspec/schemas/story-tdd/templates/design.md` with your
+  sections (keep the file name). The kit never overwrites the templates.
+- **Your test stack:** add a rule under `test-plan:`, for example
+  `- Backend tests use JUnit 5, Mockito and Testcontainers; UI tests use Jasmine and Karma`.
+- **Your own TDD skill:** if you already have one, put it in `.github/skills/` and name it in
+  `openspec/config.yaml` (example below). You no longer have to ask for it each time.
+- **Don't want it?** Install with `--keep-schema`, or set `schema: spec-driven` again. Changes you
+  already started keep the workflow they were created with.
+
+```yaml
+rules:
+  design:
+    - Write this artifact with the tdd-doc skill, using our team's TDD format
+  test-plan:
+    - Backend tests use JUnit 5, Mockito and Testcontainers; UI tests use Jasmine and Karma
+```
+
+Already installed the kit before this existed? Run the installer again with `--upgrade`.
+
+Not using OpenSpec? `/story-to-change` writes the same two documents to `docs/stories/<story-id>/`
+(`technical-design.md` and `test-plan.md`) and waits for your approval before any code.
 
 ### Step 5 — Check that VS Code sees everything
 
@@ -305,8 +343,9 @@ Optionally, before proposing, explore the risky part:
 **Check — this is the most important step in the whole workflow:**
 - `proposal.md`: is the scope right? Anything out of scope that crept in?
 - `specs/.../spec.md`: are the requirements and scenarios what the story really means? Missing edge cases (permissions, empty data, large data, errors)?
-- `design.md`: does it follow your codebase's patterns?
-- `tasks.md`: small, ordered steps, each testable?
+- `design.md` (the technical design): does it follow your codebase's patterns? Are the API examples, data changes and rollback right?
+- `test-plan.md`: does every scenario and acceptance criterion have a named test? Are the denied, empty, large and failure cases there?
+- `tasks.md`: small, ordered steps, each group starting with its tests?
 
 Edit the files directly or ask the agent to change them. **Show the proposal and spec to your tech lead**
 before any code. This replaces a lot of later review comments.
@@ -318,6 +357,9 @@ before any code. This replaces a lot of later review comments.
 /opsx-apply <change-id>
 ```
 Work in slices: ask it to do tasks 1–3, review the diff, run the tests, commit, then continue.
+With the story workflow, each slice starts with its tests: check that they fail before the code is
+written (a test that passes straight away is not testing the change). The agent marks rows in
+`test-plan.md` as `passing` as it goes.
 **Check:** each diff before accepting it. Watch for the hook messages: when the agent edits a file that a
 context line points to, it is told which line to re-check.
 **Write down:** every time you corrected the agent, one line each (what it did, what was right). These
@@ -330,7 +372,8 @@ are your `#agent-miss` notes. For anything that would trip up the agent again, r
 /opsx-verify <change-id>
 /story-finish <change-id>
 ```
-`/opsx-verify` checks the code against the requirements and scenarios. `/story-finish` runs the tests,
+`/opsx-verify` checks the code against the requirements, scenarios and `design.md`. `/story-finish` runs the tests,
+checks every test-plan row names a test that exists and passes,
 refreshes the code map and runs `graphify affected` on every class you changed (so you can confirm each
 dependent is tested), runs the context check, fixes out-of-date context lines with you, and drafts the
 PR description.
@@ -351,7 +394,9 @@ Two options:
 /opsx-archive <change-id>
 ```
 This merges the spec changes into `openspec/specs/` (the record of what the system now does) and moves
-the change to `openspec/changes/archive/`. Commit it.
+the change to `openspec/changes/archive/`. Commit it. The story's technical design and test plan stay
+there (`openspec/changes/archive/<date>-<change-id>/design.md` and `test-plan.md`); link them from the
+work item or copy them to your wiki if your process asks for that.
 At the end of the sprint, select the **context-steward** agent and type `sprint-digest`.
 
 ### Rough timeline for a 3–5 day story
@@ -441,7 +486,9 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 | **Hook** | A small script the editor runs at a moment in the agent's work (session start, after an edit, before finishing) |
 | **Code map** | Graphify's local graph of classes, calls and dependencies (`graphify-out/`) |
 | **Anchor** | `[anchor: path]` at the end of a context line, saying which code the line describes, so changes can be detected |
-| **OpenSpec change** | A folder with proposal, design, tasks and spec changes for one story |
+| **OpenSpec change** | A folder with proposal, spec changes, technical design, test plan and tasks for one story |
+| **Technical design document (TDD)** | `design.md` in the change: how the story will be built, reviewed before code |
+| **Test-first** | Write the test, see it fail, then write the code that makes it pass |
 | **Delta spec** | The requirements a change adds, modifies or removes |
 | **Archive** | Merging a finished change's spec into the main spec record |
 | **MCP server** | A connector that lets the agent use another tool, such as Azure DevOps |

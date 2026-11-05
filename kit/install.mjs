@@ -11,8 +11,10 @@
 //   --dry-run        show what would happen, change nothing
 //   --no-git-hook    do not set up the git hooks
 //   --graphify       also connect Graphify (code map): MCP server config, .graphifyignore, ignore graphify-out/
-//   --upgrade        also replace kit-owned files (skills, steward agent, hook script and config, git hooks)
-//                    with this kit version. Never touches AGENTS.md, instructions, docs/context or your PR template.
+//   --upgrade        also replace kit-owned files (skills, steward agent, hook script and config, git hooks,
+//                    openspec/schemas/story-tdd/schema.yaml) with this kit version. Never touches AGENTS.md,
+//                    instructions, docs/context, your PR template or the schema's templates.
+//   --keep-schema    with OpenSpec: install the story-tdd schema but do not make it the default
 //
 // Create a product context hub (shared repo for many micro-frontends and services):
 //   node kit/install.mjs --create-hub <path-for-new-hub-folder>
@@ -54,7 +56,7 @@ if (has('--create-hub')) {
 }
 
 if (!target || has('--help') || !['copilot', 'claude'].includes(tool)) {
-  console.log('Usage: node kit/install.mjs <path-to-your-repo> [--tool copilot|claude] [--graphify] [--upgrade] [--dry-run] [--no-git-hook]\n       node kit/install.mjs --create-hub <path-for-new-hub-folder>');
+  console.log('Usage: node kit/install.mjs <path-to-your-repo> [--tool copilot|claude] [--graphify] [--upgrade] [--keep-schema] [--dry-run] [--no-git-hook]\n       node kit/install.mjs --create-hub <path-for-new-hub-folder>');
   process.exit(target ? 1 : 0);
 }
 
@@ -179,6 +181,30 @@ if (!fs.existsSync(path.join(root, 'openspec'))) {
     created.push('openspec/config.yaml (added context, rules, operations)');
   } else {
     notes.push(`openspec/config.yaml already has: ${present.join(', ')}. Compare with kit/snippets/openspec-config.yaml and merge by hand.`);
+  }
+
+  // 3b. Story workflow schema: technical design (TDD) + test plan + test-first tasks.
+  //     schema.yaml belongs to the kit (replaced on --upgrade); templates belong to the team (never replaced).
+  const schemaSrc = path.join(kitDir, 'openspec-schema', 'story-tdd');
+  for (const src of walk(schemaSrc)) {
+    const destRel = 'openspec/schemas/story-tdd/' + path.relative(schemaSrc, src).split(path.sep).join('/');
+    const dest = path.join(root, ...destRel.split('/'));
+    const text = fs.readFileSync(src, 'utf8');
+    const exists = fs.existsSync(dest);
+    if (exists && !(upgrade && destRel.endsWith('/schema.yaml'))) { skipped.push(destRel); continue; }
+    if (exists && fs.readFileSync(dest, 'utf8') === text) { skipped.push(destRel); continue; }
+    if (!dry) { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, text); }
+    (exists ? updated : created).push(destRel);
+  }
+  const cfgNow = (!dry && fs.existsSync(osConfig)) ? fs.readFileSync(osConfig, 'utf8') : current;
+  const schemaLine = cfgNow.match(/^schema:\s*(\S+)\s*$/m);
+  if (has('--keep-schema')) {
+    notes.push('Kept your OpenSpec schema (--keep-schema). To use the story workflow later, set "schema: story-tdd" in openspec/config.yaml.');
+  } else if (!schemaLine || schemaLine[1] === 'spec-driven') {
+    if (!dry) fs.writeFileSync(osConfig, schemaLine ? cfgNow.replace(schemaLine[0], 'schema: story-tdd') : 'schema: story-tdd\n' + cfgNow);
+    created.push('openspec/config.yaml: schema: story-tdd (new changes get design.md as a TDD, test-plan.md and test-first tasks; changes already started keep their schema)');
+  } else if (schemaLine[1] !== 'story-tdd') {
+    notes.push(`openspec/config.yaml uses schema "${schemaLine[1]}"; left unchanged. Set "schema: story-tdd" to use the kit's story workflow.`);
   }
 }
 

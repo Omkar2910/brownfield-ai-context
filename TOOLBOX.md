@@ -22,10 +22,10 @@ just less well.
 | 5. Read the story | Work item text and acceptance criteria | Azure DevOps MCP server *(optional)*, or paste it | Optional |
 | 6. Gather task context | Relevant files, dependents, rules, traps — nothing else | `/story-to-change` + Graphify `query_graph` / `affected` | Core (+ Graphify) |
 | 7. Explore risky parts | Understand the area before planning | `/opsx-explore` + Graphify `shortest_path` | Recommended |
-| 8. Agree the plan | Proposal, spec scenarios, design, tasks — **reviewed by a person** | `/opsx-propose` (or the plan from `/story-to-change`) | Core |
-| 9. Build | Code in slices; hooks flag context lines that may now be wrong | `/opsx-apply` + agent hooks | Core |
+| 8. Agree the plan | Proposal, spec scenarios, technical design (TDD), test plan, test-first tasks — **reviewed by a person** | `/opsx-propose` with the kit's `story-tdd` schema (or the documents from `/story-to-change`) | Core |
+| 9. Build | Code in slices, tests first; hooks flag context lines that may now be wrong | `/opsx-apply` + agent hooks | Core |
 | 10. Test the UI | Click through the Angular screen the story changed | VS Code browser tools or Playwright MCP *(optional)* | Optional |
-| 11. Check | Tests, impact of changes, spec coverage, context freshness | `/story-finish` + `/opsx-verify` + Graphify `affected` + `context-tools check` | Core |
+| 11. Check | Tests, test-plan rows all passing, impact of changes, spec and design coverage, context freshness | `/story-finish` + `/opsx-verify` + Graphify `affected` + `context-tools check` | Core |
 | 12. Pull request | Description drafted; created by you or by the agent with approval | `/story-finish`, Azure DevOps MCP *(optional)*, PR template | Core |
 | 13. CI | Context check on the PR (warnings first, blocking later) | Azure Pipelines template | Later |
 | 14. After merge | Spec record updated; code map refreshed automatically | `/opsx-archive` + git hooks | Core |

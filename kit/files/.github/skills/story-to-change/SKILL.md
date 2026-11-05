@@ -35,6 +35,15 @@ Goal: give the proposal step exactly the context this story needs, and nothing g
      inside permanent context folders (`docs/context/`, `.github/instructions/`).
 6. **Hand over.**
    - With OpenSpec: tell the user to run `/opsx-propose <change-id>` and mention `context.md`.
-     Do not write proposal, design or tasks yourself.
-   - Without OpenSpec: propose a short plan (files to change, ordered steps, tests to add, risks)
-     and wait for the user to approve it before changing any code.
+     Do not write the change documents yourself. With the kit's `story-tdd` schema (check
+     `schema:` in `openspec/config.yaml`), propose creates proposal, specs, `design.md` (the technical
+     design document), `test-plan.md` and test-first `tasks.md`.
+   - Without OpenSpec: write two documents in `docs/stories/<story-id>/` and wait for the user to
+     approve them before changing any code:
+     - `technical-design.md` from `references/technical-design.template.md` (the "Lite" form for a
+       small story: Overview, Approach, Changes by layer, Risks). If the team has its own TDD skill,
+       use that instead.
+     - `test-plan.md` from `references/test-plan.template.md`: each acceptance check mapped to a
+       named test, plus extra cases and regression.
+     Then list the ordered steps, test-first: for each layer, write its tests from the plan, confirm
+     they fail, then implement until they pass.

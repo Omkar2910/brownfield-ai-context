@@ -2,7 +2,7 @@
 
 A practical kit and guide for building user stories in **existing (brownfield) services** with AI agents
 in **VS Code + GitHub Copilot** (also Claude Code): small context files the agent reads, a **Graphify** code map it can
-query, **OpenSpec** to agree on the plan before code, reusable **skills**, a **context-steward** agent, and **hooks and checks**
+query, **OpenSpec** to agree on the plan before code (with a technical design document and a test plan for every story, tasks written test-first), reusable **skills**, a **context-steward** agent, and **hooks and checks**
 that keep the context up to date.
 
 ## Start here

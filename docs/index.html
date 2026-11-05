@@ -168,8 +168,8 @@ covers all four with five parts:</p>
  ─────────────────                     ───────────
  install kit (--graphify)              /story-to-change   read story; code map finds the files
      │                                        │            and what depends on them
- build code map (Graphify)             /opsx-propose       proposal, design, tasks, spec changes
-     │                                        │
+ build code map (Graphify)             /opsx-propose       proposal, spec changes, technical design
+     │                                        │            (TDD), test plan, test-first tasks
  /context-bootstrap                    YOU REVIEW          ← the most important step
      │                                        │
  review + commit                       /opsx-apply         agent codes task by task
@@ -285,6 +285,10 @@ one line to add). Use <code>--dry-run</code> first if you want to see the list w
 <td><code>openspec/config.yaml</code> (appended)</td>
 <td>Tells OpenSpec to read your context and adds a few rules</td>
 </tr>
+<tr>
+<td><code>openspec/schemas/story-tdd/</code> + <code>schema: story-tdd</code></td>
+<td>The story workflow: every change also gets a technical design document and a test plan, and tasks are written test-first (Step 4c)</td>
+</tr>
 </tbody>
 </table></div>
 <h3 id="step-4b-build-the-code-map-5-minutes">Step 4b — Build the code map (5 minutes)</h3>
@@ -297,6 +301,59 @@ graphify cluster-only . --no-label
 (ignored by git). From now on the git hooks refresh it after each commit, merge and branch switch.
 Open <code>graphify-out/graph.html</code> in a browser to see your code as a picture. Details and choices:
 <a href="toolbox.html#3-graphify-in-depth">TOOLBOX.md, Section 3</a>.</p>
+<h3 id="step-4c-fit-the-technical-design-and-test-plan-to-your-team-10-minutes">Step 4c — Fit the technical design and test plan to your team (10 minutes)</h3>
+<p>With OpenSpec, the kit sets your repo to its <strong>story workflow</strong> (<code>schema: story-tdd</code> in
+<code>openspec/config.yaml</code>). Every <code>/opsx-propose</code> then creates five documents instead of four:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Document</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>proposal.md</code></td>
+<td>Why, what changes, and the story's acceptance criteria (AC1, AC2…)</td>
+</tr>
+<tr>
+<td><code>specs/…/spec.md</code></td>
+<td>The behaviour, as requirements and WHEN/THEN scenarios</td>
+</tr>
+<tr>
+<td><code>design.md</code></td>
+<td><strong>The technical design document (TDD)</strong>, always created: changes per layer, API and data changes, security, errors, risks, rollback. A small story gets the short "Lite" form.</td>
+</tr>
+<tr>
+<td><code>test-plan.md</code></td>
+<td><strong>The test cases</strong>: every scenario and acceptance criterion mapped to a named test, plus extra cases (permissions, bad input, failures), regression on dependents, test data and manual checks</td>
+</tr>
+<tr>
+<td><code>tasks.md</code></td>
+<td>Ordered <strong>test-first</strong>: each group writes its tests, sees them fail, then implements until they pass</td>
+</tr>
+</tbody>
+</table></div>
+<p>Make it yours:</p>
+<ul>
+<li><strong>Your team's TDD format:</strong> replace <code>openspec/schemas/story-tdd/templates/design.md</code> with your
+  sections (keep the file name). The kit never overwrites the templates.</li>
+<li><strong>Your test stack:</strong> add a rule under <code>test-plan:</code>, for example
+  <code>- Backend tests use JUnit 5, Mockito and Testcontainers; UI tests use Jasmine and Karma</code>.</li>
+<li><strong>Your own TDD skill:</strong> if you already have one, put it in <code>.github/skills/</code> and name it in
+  <code>openspec/config.yaml</code> (example below). You no longer have to ask for it each time.</li>
+<li><strong>Don't want it?</strong> Install with <code>--keep-schema</code>, or set <code>schema: spec-driven</code> again. Changes you
+  already started keep the workflow they were created with.</li>
+</ul>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-yaml">rules:
+  design:
+    - Write this artifact with the tdd-doc skill, using our team's TDD format
+  test-plan:
+    - Backend tests use JUnit 5, Mockito and Testcontainers; UI tests use Jasmine and Karma
+</code></pre></div>
+<p>Already installed the kit before this existed? Run the installer again with <code>--upgrade</code>.</p>
+<p>Not using OpenSpec? <code>/story-to-change</code> writes the same two documents to <code>docs/stories/&lt;story-id&gt;/</code>
+(<code>technical-design.md</code> and <code>test-plan.md</code>) and waits for your approval before any code.</p>
 <h3 id="step-5-check-that-vs-code-sees-everything">Step 5 — Check that VS Code sees everything</h3>
 <ol>
 <li>Open the service repo in VS Code. Restart VS Code if it was already open (new commands load on start).</li>
@@ -491,8 +548,9 @@ questions are real. Answer them (ask your BA or tech lead if needed).
 <p><strong>Check — this is the most important step in the whole workflow:</strong>
 - <code>proposal.md</code>: is the scope right? Anything out of scope that crept in?
 - <code>specs/.../spec.md</code>: are the requirements and scenarios what the story really means? Missing edge cases (permissions, empty data, large data, errors)?
-- <code>design.md</code>: does it follow your codebase's patterns?
-- <code>tasks.md</code>: small, ordered steps, each testable?</p>
+- <code>design.md</code> (the technical design): does it follow your codebase's patterns? Are the API examples, data changes and rollback right?
+- <code>test-plan.md</code>: does every scenario and acceptance criterion have a named test? Are the denied, empty, large and failure cases there?
+- <code>tasks.md</code>: small, ordered steps, each group starting with its tests?</p>
 <p>Edit the files directly or ask the agent to change them. <strong>Show the proposal and spec to your tech lead</strong>
 before any code. This replaces a lot of later review comments.
 <strong>Write down:</strong> how many changes you made to the proposal, and what they were.</p>
@@ -501,6 +559,9 @@ before any code. This replaces a lot of later review comments.
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>/opsx-apply &lt;change-id&gt;
 </code></pre></div>
 <p>Work in slices: ask it to do tasks 1–3, review the diff, run the tests, commit, then continue.
+With the story workflow, each slice starts with its tests: check that they fail before the code is
+written (a test that passes straight away is not testing the change). The agent marks rows in
+<code>test-plan.md</code> as <code>passing</code> as it goes.
 <strong>Check:</strong> each diff before accepting it. Watch for the hook messages: when the agent edits a file that a
 context line points to, it is told which line to re-check.
 <strong>Write down:</strong> every time you corrected the agent, one line each (what it did, what was right). These
@@ -511,7 +572,8 @@ are your <code>#agent-miss</code> notes. For anything that would trip up the age
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>/opsx-verify &lt;change-id&gt;
 /story-finish &lt;change-id&gt;
 </code></pre></div>
-<p><code>/opsx-verify</code> checks the code against the requirements and scenarios. <code>/story-finish</code> runs the tests,
+<p><code>/opsx-verify</code> checks the code against the requirements, scenarios and <code>design.md</code>. <code>/story-finish</code> runs the tests,
+checks every test-plan row names a test that exists and passes,
 refreshes the code map and runs <code>graphify affected</code> on every class you changed (so you can confirm each
 dependent is tested), runs the context check, fixes out-of-date context lines with you, and drafts the
 PR description.
@@ -529,7 +591,9 @@ PR description.
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>/opsx-archive &lt;change-id&gt;
 </code></pre></div>
 <p>This merges the spec changes into <code>openspec/specs/</code> (the record of what the system now does) and moves
-the change to <code>openspec/changes/archive/</code>. Commit it.
+the change to <code>openspec/changes/archive/</code>. Commit it. The story's technical design and test plan stay
+there (<code>openspec/changes/archive/&lt;date&gt;-&lt;change-id&gt;/design.md</code> and <code>test-plan.md</code>); link them from the
+work item or copy them to your wiki if your process asks for that.
 At the end of the sprint, select the <strong>context-steward</strong> agent and type <code>sprint-digest</code>.</p>
 <h3 id="rough-timeline-for-a-35-day-story">Rough timeline for a 3–5 day story</h3>
 <div class="tablebox"><table>
@@ -739,7 +803,15 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 </tr>
 <tr>
 <td><strong>OpenSpec change</strong></td>
-<td>A folder with proposal, design, tasks and spec changes for one story</td>
+<td>A folder with proposal, spec changes, technical design, test plan and tasks for one story</td>
+</tr>
+<tr>
+<td><strong>Technical design document (TDD)</strong></td>
+<td><code>design.md</code> in the change: how the story will be built, reviewed before code</td>
+</tr>
+<tr>
+<td><strong>Test-first</strong></td>
+<td>Write the test, see it fail, then write the code that makes it pass</td>
 </tr>
 <tr>
 <td><strong>Delta spec</strong></td>
