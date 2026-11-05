@@ -1,6 +1,6 @@
 # --- added by the AI context kit: edit to fit this service, keep it short ---
 context: |
-  Read AGENTS.md and the files it lists under "Where to look" before writing any artifact.
+  Read AGENTS.md first. Open the files it lists under "Where to look" only when this change needs them.
   Follow the rules in AGENTS.md and .github/instructions/ for every file you change.
   If the graphify tools are available, use them to find relevant code and its dependents before reading files.
   Keep artifacts short and concrete; prefer bullet points.
@@ -17,8 +17,6 @@ rules:
     - Every new endpoint or UI action has a test for the allowed and the denied case
     # Name your test stack so the plan uses it, for example:
     # - Backend tests use JUnit 5, Mockito and Testcontainers; UI tests use Jasmine and Karma
-  tasks:
-    - The last task is "Update AGENTS.md or docs/context if a command, convention, trap or contract changed"
 
 operations:
   apply:

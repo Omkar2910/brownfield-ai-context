@@ -4,18 +4,23 @@
  * Works on Windows, macOS and Linux. Works with GitHub Copilot and Claude Code.
  *
  * Commands you run yourself (or in CI / git hooks):
- *   check   [--base <git-ref>] [--strict]   Broken anchors (error), stale context and size budget (warnings).
- *                                           Exit 1 on errors, or on warnings with --strict.
+ *   check   [--base <git-ref>] [--staged] [--strict]
+ *           Broken anchors (error), stale context and size budget (warnings). Exit 1 on errors, or on
+ *           warnings with --strict. --staged checks what is about to be committed (used by pre-commit).
  *   status                                  Short summary: context files, anchors, always-on size.
  *
  * Agent hooks (read the event JSON on stdin, print one JSON object, never fail the agent):
  *   session-start   Adds a short "context health" note when a chat session starts.
  *   post-edit       After the agent edits a file, names any context line anchored to that file.
- *   stop            When the agent tries to finish, checks for broken/stale anchors. Blocks ONCE.
+ *   stop            When the agent tries to finish: if files IT edited this session broke an anchor or touch
+ *                   anchored code whose context line it did not revisit, blocks ONCE with the list.
  *   guard           Refuses edits outside context files (used only for the context-steward agent).
  *
  * Options: --repo <dir> (default: git root of the current folder), --format copilot|claude (default: auto).
- * Anchors: write [anchor: path/or/glob/**.java] at the end of any context line that depends on code.
+ * Anchors: write [anchor: <path>] at the end of any context line that depends on code. <path> can be a
+ *   file, a folder (src/main/resources/db/migration/), a glob (with * or **) or several of
+ *   these separated by commas. Backticks, #L12 / :12 line suffixes and Windows backslashes are fine.
+ *   Paths outside the repo (../product-context/...) are not checked.
  * Budgets (env vars): CONTEXT_MAX_AGENTS_LINES (default 150), CONTEXT_ALWAYS_ON_TOKENS (default 2000).
  */
 'use strict';
@@ -92,8 +97,11 @@ function walk(dir, root, out) {
   return out;
 }
 
+const STAGED = flag('--staged');
 // All files that exist now (tracked + untracked, minus deleted), repo-relative, forward slashes.
+// With --staged: the files in the commit being made (the index), not the working tree.
 function listFiles(repo) {
+  if (STAGED) { const idx = git(repo, ['ls-files', '-z', '--cached']); if (idx !== null) return idx.split('\0').filter(Boolean); }
   const listed = git(repo, ['ls-files', '-z', '-co', '--exclude-standard']);
   if (listed === null) return walk(repo, repo, []);
   const deleted = new Set((git(repo, ['ls-files', '-z', '-d']) || '').split('\0').filter(Boolean));
@@ -103,6 +111,10 @@ function listFiles(repo) {
 // Files changed in the working tree (and since --base, if given).
 function changedFiles(repo, base) {
   const out = new Set();
+  if (STAGED) {
+    (git(repo, ['diff', '--cached', '--name-only', '-z']) || '').split('\0').filter(Boolean).forEach(f => out.add(toPosix(f)));
+    return [...out];
+  }
   const status = git(repo, ['status', '--porcelain=v1', '-z', '-uall']);
   if (status) {
     const parts = status.split('\0');
@@ -121,17 +133,38 @@ function changedFiles(repo, base) {
   return [...out].map(toPosix);
 }
 
+function readText(repo, rel) {
+  if (STAGED) { const t = git(repo, ['show', ':' + rel]); if (t !== null) return t; }
+  return fs.readFileSync(path.join(repo, rel), 'utf8');
+}
+
+// One anchor can hold several paths. Accepts files, folders (trailing / or an existing folder), globs,
+// backticks or quotes, #L12 or :12 suffixes and backslashes. Returns [{ pattern, re }] to check.
+function anchorPatterns(repo, raw) {
+  const out = [];
+  for (let p of raw.split(',')) {
+    p = p.trim().replace(/^[`'"]+|[`'"]+$/g, '').replace(/\\/g, '/').replace(/#.*$/, '').replace(/:\d+(-\d+)?$/, '').replace(/^\.\//, '').trim();
+    if (!p || /[<>]/.test(p)) continue;                 // empty or a template placeholder such as <path>
+    if (p.startsWith('../') || path.isAbsolute(p)) continue; // outside this repo (e.g. the product hub): not checked
+    let glob = p;
+    if (p.endsWith('/')) glob = p + '**';
+    else if (!/[*?{]/.test(p)) { try { if (fs.statSync(path.join(repo, p)).isDirectory()) glob = p + '/**'; } catch { /* file or missing */ } }
+    out.push({ pattern: p, re: globToRegex(glob) });
+  }
+  return out;
+}
+
 function readContext(repo, files) {
   const contextFiles = files.filter(isContextFile);
   const anchors = [];
   for (const cf of contextFiles) {
     let text = '';
-    try { text = fs.readFileSync(path.join(repo, cf), 'utf8'); } catch { continue; }
+    try { text = readText(repo, cf); } catch { continue; }
     text.split(/\r?\n/).forEach((line, idx) => {
       for (const m of line.matchAll(/\[anchor:\s*([^\]]+)\]/g)) {
-        const pattern = m[1].trim().replace(/^\.\//, '');
-        if (/[<>]/.test(pattern)) continue; // template placeholder such as <path>
-        anchors.push({ file: cf, line: idx + 1, text: line.trim().slice(0, 140), pattern, re: globToRegex(pattern) });
+        for (const { pattern, re } of anchorPatterns(repo, m[1])) {
+          anchors.push({ file: cf, line: idx + 1, text: line.trim().slice(0, 140), pattern, re });
+        }
       }
     });
   }
@@ -148,9 +181,13 @@ function alwaysOn(repo, contextFiles) {
   for (const f of ['AGENTS.md', 'CLAUDE.md', '.github/copilot-instructions.md']) {
     try { const t = fs.readFileSync(path.join(repo, f), 'utf8'); items.push({ file: f, lines: t.split(/\r?\n/).length, tokens: Math.round(t.length / 4) }); } catch { /* absent */ }
   }
-  for (const f of contextFiles.filter(c => c.startsWith('.github/instructions/'))) {
-    const t = fs.readFileSync(path.join(repo, f), 'utf8');
-    if (/applyTo:\s*['"]?\*\*['"]?\s*$/m.test(frontmatter(t))) items.push({ file: f, lines: t.split(/\r?\n/).length, tokens: Math.round(t.length / 4) });
+  for (const f of contextFiles.filter(c => c.startsWith('.github/instructions/') || c.startsWith('.claude/rules/'))) {
+    let t = ''; try { t = readText(repo, f); } catch { continue; }
+    const fm = frontmatter(t);
+    const everywhere = f.startsWith('.claude/')
+      ? !/^paths:/m.test(fm)                                        // Claude rules without paths: load always
+      : /applyTo:\s*['"]?\*\*(\/\*(\.\*)?)?['"]?\s*$/m.test(fm);   // applyTo: '**', '**/*' or '**/*.*'
+    if (everywhere) items.push({ file: f, lines: t.split(/\r?\n/).length, tokens: Math.round(t.length / 4) });
   }
   return { items, tokens: items.reduce((s, i) => s + i.tokens, 0) };
 }
@@ -176,6 +213,11 @@ function analyse(repo, base) {
 function cmdCheck() {
   const repo = resolveRepo({});
   const base = opt('--base');
+  if (base && git(repo, ['rev-parse', '--verify', '--quiet', base + '^{commit}']) === null) {
+    console.log(`Context check: --base "${base}" is not a branch or commit here. Try "git fetch", or use origin/main, origin/master or origin/develop.`);
+    process.exitCode = 2;
+    return;
+  }
   const a = analyse(repo, base);
   const errors = [], warnings = [];
   for (const b of a.broken) errors.push(`${b.file}:${b.line}  anchor points at a file that does not exist: ${b.pattern}`);
@@ -184,7 +226,7 @@ function cmdCheck() {
   else if (a.agentsMd.lines > MAX_AGENTS_LINES) warnings.push(`AGENTS.md has ${a.agentsMd.lines} lines (budget ${MAX_AGENTS_LINES}). Move detail into docs/context/ or a skill.`);
   if (a.agents.tokens > ALWAYS_ON_TOKENS) warnings.push(`Always-on context is about ${a.agents.tokens} tokens (budget ${ALWAYS_ON_TOKENS}): ${a.agents.items.map(i => i.file).join(', ')}.`);
 
-  console.log(`Context check: ${path.basename(repo)}${base ? ` (changes since ${base})` : ''}`);
+  console.log(`Context check: ${path.basename(repo)}${base ? ` (changes since ${base})` : ''}${STAGED ? ' (staged for commit)' : ''}`);
   console.log(`  ${a.ctx.contextFiles.length} context files, ${a.ctx.anchors.length} anchors, always-on ≈ ${a.agents.tokens} tokens`);
   errors.forEach(e => console.log('  ERROR  ' + e));
   warnings.forEach(w => console.log('  WARN   ' + w));
@@ -293,38 +335,67 @@ function repoOfFile(abs) {
   return top ? path.resolve(top.trim()) : null;
 }
 
+// Files the agent edited in this chat session, remembered between hook calls (in the temp folder,
+// never in the repo) so the stop hook judges the agent's own edits, not the developer's.
+function sessionFile(input) {
+  const id = String(input.session_id || input.sessionId || 'no-session');
+  return path.join(os.tmpdir(), 'context-tools-session-' + require('crypto').createHash('sha1').update(id).digest('hex') + '.json');
+}
+function loadTouched(input) { try { return JSON.parse(fs.readFileSync(sessionFile(input), 'utf8')); } catch { return []; } }
+function saveTouched(input, list) { try { fs.writeFileSync(sessionFile(input), JSON.stringify(list)); } catch { /* ignore */ } }
+
 function hookPostEdit(input) {
   if (!looksLikeEdit(input.tool_name || input.toolName)) return;
   const sessionRepo = resolveRepo(input);
   const contexts = new Map(); // repo -> anchors, read once per repo
   const notes = [];
+  const touched = loadTouched(input);
   for (const p of editedPaths(input)) {
     const abs = path.isAbsolute(p) ? p : path.join(sessionRepo, p);
     const repo = repoOfFile(abs) || sessionRepo;
     const rel = toPosix(path.relative(repo, abs));
-    if (rel.startsWith('..') || isContextFile(rel)) continue;
+    if (rel.startsWith('..')) continue;
+    if (!touched.some(x => x.repo === repo && x.rel === rel)) touched.push({ repo, rel });
+    if (isContextFile(rel)) continue;
     if (!contexts.has(repo)) contexts.set(repo, readContext(repo, listFiles(repo)));
     const label = repo === sessionRepo ? rel : `${path.basename(repo)}/${rel}`;
     for (const a of contexts.get(repo).anchors.filter(x => x.re.test(rel))) {
       notes.push(`${label} is referenced by ${repo === sessionRepo ? '' : path.basename(repo) + '/'}${a.file}:${a.line} ("${a.text}").`);
     }
   }
+  saveTouched(input, touched.slice(-500));
   if (notes.length) addContext('PostToolUse', notes.slice(0, 5).join('\n') + '\nIf this edit changed what that line describes, update the line in the same change; otherwise no action is needed.');
 }
 
 function hookStop(input) {
-  const repo = resolveRepo(input);
-  const a = analyse(repo);
-  if (!a.broken.length && !a.stale.length) return;
-  const key = (input.session_id || input.sessionId || 'session') + '|' + [...a.broken, ...a.stale].map(x => x.file + ':' + x.line).join(',');
-  const marker = path.join(os.tmpdir(), 'context-tools-' + require('crypto').createHash('sha1').update(repo + key).digest('hex'));
-  if (input.stop_hook_active || fs.existsSync(marker)) return; // never block twice: the agent cannot loop
+  if (input.stop_hook_active) return;            // never block twice in a row: the agent cannot loop
+  const touched = loadTouched(input);
+  if (!touched.length) return;                   // the agent edited nothing: nothing to check
+  const items = [];
+  const repos = [...new Set(touched.map(x => x.repo))];
+  const sessionRepo = resolveRepo(input);
+  for (const repo of repos) {
+    const mine = new Set(touched.filter(x => x.repo === repo).map(x => x.rel));
+    const files = listFiles(repo);
+    const ctx = readContext(repo, files);
+    const label = f => repo === sessionRepo ? f : `${path.basename(repo)}/${f}`;
+    for (const a of ctx.anchors) {
+      if (!files.some(f => a.re.test(f))) {
+        // broken: report it when the agent touched its context file or (likely) moved/deleted its target
+        if (mine.has(a.file) || [...mine].some(r => a.re.test(r))) items.push(`- BROKEN ${label(a.file)}:${a.line} anchors ${a.pattern}, which no longer exists.`);
+        continue;
+      }
+      if (mine.has(a.file)) continue;            // the agent already revisited this context file
+      const hit = [...mine].find(r => !isContextFile(r) && a.re.test(r));
+      if (hit) items.push(`- CHECK ${label(a.file)}:${a.line} ("${a.text.slice(0, 80)}") is anchored to ${label(hit)}, which you edited.`);
+    }
+  }
+  if (!items.length) return;
+  const marker = sessionFile(input) + '.stopped-' + require('crypto').createHash('sha1').update(items.join('|')).digest('hex').slice(0, 12);
+  if (fs.existsSync(marker)) return;             // same list already shown in this session
   try { fs.writeFileSync(marker, String(Date.now())); } catch { /* ignore */ }
-  const items = [
-    ...a.broken.map(b => `- BROKEN ${b.file}:${b.line} anchors ${b.pattern}, which no longer exists.`),
-    ...a.stale.map(s => `- CHECK ${s.file}:${s.line} is anchored to ${s.hit}, which changed; the context file did not.`),
-  ].slice(0, 10);
-  emit({ decision: 'block', reason: 'Context check before finishing:\n' + items.join('\n') + '\nFix BROKEN anchors. For CHECK items, update the line only if its meaning changed. This check runs once.' });
+  emit({ decision: 'block', reason: 'Context check before finishing (files you edited in this session):\n' + items.slice(0, 10).join('\n') +
+    '\nFix BROKEN anchors. For CHECK items, update the line only if its meaning changed, otherwise say it is still true. This check runs once.' });
 }
 
 function hookGuard(input) {
@@ -351,6 +422,6 @@ else if (hooks[command]) {
   }
   process.exitCode = 0; // a hook must never break the agent
 } else {
-  console.log('Usage: node context-tools.cjs check [--base <ref>] [--strict] | status | session-start | post-edit | stop | guard');
+  console.log('Usage: node context-tools.cjs check [--base <ref>] [--staged] [--strict] | status | session-start | post-edit | stop | guard');
   process.exitCode = command ? 2 : 0;
 }

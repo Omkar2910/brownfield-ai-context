@@ -46,6 +46,8 @@ Use the templates in `references/`:
   under ~50 lines. See `references/instructions-examples.md`.
 - `docs/context/architecture.md` (modules, request flow, integrations, why odd things are the way they are)
   and `docs/context/known-traps.md` (numbered list, each trap with its reason).
+  Do not write a deep page for every area now. Area pages (`docs/context/<area>.md`) are added later,
+  when a real story needed one (`/story-finish` step 6 offers it), so they start out verified.
 - `CLAUDE.md` containing only the line `@AGENTS.md` (so Claude-based tools read the same file).
 - The lines `references/repo-types.md` requires for this kind of repo (how it connects to the other
   micro-frontends and services). Link to the product context hub instead of copying its content.

@@ -10,3 +10,9 @@ coverage/
 **/generated-sources/
 # src/app/api/        (example: a generated API client folder)
 *.min.js
+# AI tooling and story records: not part of the application, and they skew the most-connected list
+.github/
+.claude/
+.githooks/
+openspec/
+docs/stories/

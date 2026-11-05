@@ -24,7 +24,9 @@ Read this file first. Open the files under "Where to look" only when the task ne
   run `graphify affected "<ClassName>"` to see what depends on it.
 - Product-wide context (system map, platform rules, API contracts), if the product has a hub:
   ../product-context/ — open it in the same VS Code window for work that crosses repos.
+- Area pages for complex flows (added as stories need them): docs/context/<area>.md
 - Current behaviour specs: openspec/specs/
+- Past stories (openspec/changes/archive/, docs/stories/): history only; do not read unless asked.
 - Story workflow: /story-to-change → /opsx-propose → review → /opsx-apply → /story-finish → /opsx-archive
 
 ## Definition of done for agent work

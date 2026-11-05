@@ -16,7 +16,7 @@ If a product context hub exists (usually `../product-context/`), link to it inst
 
 ## Micro-frontend remote
 - What it exposes (module or routes) and the exact name/path the shell uses. Renaming breaks the shell
-  at runtime. [anchor: the federation config file]
+  at runtime. [anchor: <federation config file, e.g. federation.config.js>]
 - Which backend services it calls and where their clients come from (generated client folder; never
   edit by hand). Link the service contracts in the hub.
 - How it talks to other micro-frontends (shared event bus or URL), and the events it sends or listens to.

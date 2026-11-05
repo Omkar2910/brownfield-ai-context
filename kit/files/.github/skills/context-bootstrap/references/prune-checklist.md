@@ -11,7 +11,8 @@ Keep a line only if every answer is "yes".
 
 Always delete:
 - Directory trees and file listings
-- Dependency and version lists (the build file is the source of truth)
+- Dependency and version lists (the build file is the source of truth). Exception: a micro-frontend
+  shell's shared dependency versions, which every remote must match (see repo-types.md)
 - Generic advice ("write clean code", "add tests", "follow best practices")
 - Text copied from platform docs (link to it instead)
 

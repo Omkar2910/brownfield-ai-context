@@ -47,6 +47,6 @@ docs/research/      playbook, FAQ, explainer, research update, sources
 
 ## Status
 
-Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 20 on Linux; written for Windows, macOS and Linux. Copilot hooks
+Kit 1.4.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 20 on Linux; written for Windows, macOS and Linux. Copilot hooks
 and agent plugins are preview features in VS Code; the git hook and the context check work without them.
 Last updated November 2026. MIT licence.

@@ -29,6 +29,7 @@ const repoDir = name => path.join(reposDir, name);
 const cloned = name => fs.existsSync(path.join(repoDir(name), '.git'));
 const deps = r => [...(r.calls || []), ...(r.uses || [])];
 const TYPE_LABEL = { 'mfe-shell': 'Micro-frontend shell', 'mfe-remote': 'Micro-frontend', service: 'Backend service', library: 'Shared library' };
+const TYPE_PLURAL = { 'mfe-shell': 'Micro-frontend shells', 'mfe-remote': 'Micro-frontends', service: 'Backend services', library: 'Shared libraries' };
 
 function select(keys) {
   if (keys.includes('all')) return repos.map(r => r.name);
@@ -53,7 +54,7 @@ function cmdMap() {
   for (const type of ['mfe-shell', 'mfe-remote', 'service', 'library']) {
     const list = repos.filter(r => r.type === type);
     if (!list.length) continue;
-    lines.push(`## ${TYPE_LABEL[type]}s`, '', '| Repo | What it does | Owner | Exposes / API | Depends on |', '| --- | --- | --- | --- | --- |');
+    lines.push(`## ${TYPE_PLURAL[type]}`, '', '| Repo | What it does | Owner | Exposes / API | Depends on |', '| --- | --- | --- | --- | --- |');
     for (const r of list) {
       const exp = r.type === 'service' ? `\`${r.api || ''}\`` : (r.exposes || []).join('; ') || (r.loads ? `loads ${r.loads.join(', ')}` : '');
       lines.push(`| ${r.name} | ${r.description || ''} | ${r.owner || ''} | ${exp} | ${deps(r).join(', ') || '—'} |`);
@@ -85,6 +86,7 @@ function cmdMap() {
 function cmdWorkspace() {
   if (!words.length) { console.log('Usage: hub.mjs workspace <area|repo>... [--no-deps] [--name <file-name>]'); process.exitCode = 2; return; }
   let names = select(words);
+  if (!names.length) { console.log('No repos matched. Check the names and areas in catalog.json.'); process.exitCode = 2; return; }
   // Add direct dependencies, except platform repos (used by almost everything): name them to include them.
   const isPlatform = n => (byName.get(n).areas || []).includes('platform');
   const related = [...new Set(names.flatMap(n => deps(byName.get(n))))].filter(n => byName.has(n) && !names.includes(n));
@@ -110,6 +112,7 @@ function cmdWorkspace() {
 // ---------------------------------------------------------------- impact
 function cmdImpact() {
   const name = words[0];
+  if (!name) { console.log('Usage: hub.mjs impact <repo>'); process.exitCode = 2; return; }
   if (!byName.has(name)) { console.log(`Unknown repo: ${name}`); process.exitCode = 2; return; }
   const direct = dependents(name);
   const second = [...new Set(direct.flatMap(dependents))].filter(n => n !== name && !direct.includes(n));

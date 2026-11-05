@@ -28,7 +28,8 @@ just less well.
 | 11. Check | Tests, test-plan rows all passing, impact of changes, spec and design coverage, context freshness | `/story-finish` + `/opsx-verify` + Graphify `affected` + `context-tools check` | Core |
 | 12. Pull request | Description drafted; created by you or by the agent with approval | `/story-finish`, Azure DevOps MCP *(optional)*, PR template | Core |
 | 13. CI | Context check on the PR (warnings first, blocking later) | Azure Pipelines template | Later |
-| 14. After merge | Spec record updated; code map refreshed automatically | `/opsx-archive` + git hooks | Core |
+| 14. Archive | Spec record updated as the PR's last commit; code map refreshed automatically | `/opsx-archive` + git hooks | Core |
+| 14b. Keep what the story taught | Area page in `docs/context/` when understanding the area took a lot of tracing | `/story-finish` step 6 | When it applies |
 | 15. Learn | Agent mistakes and repeated review comments become rules | `/context-learn` | Core |
 | **Every sprint / quarter** | | | |
 | 16. Upkeep | Digest, prune, review against the code map | `context-steward` agent | Core |
@@ -178,7 +179,7 @@ Note: `graphify hook install` writes to `.git/hooks`, which git ignores once the
 | --- | --- |
 | **Typo, config tweak, one-line fix** | Just ask the agent. Context loads automatically. |
 | **Bug fix** | Ask the agent to find the cause with `query_graph`, check `known-traps.md`, and run `graphify affected` on what it plans to change. Fix, add a regression test, `/context-learn` if the bug came from a missing rule. |
-| **Small change (under a day)** | `/story-to-change` → approve its short plan → build → `/story-finish`. OpenSpec optional. |
+| **Small change (under a day)** | `/story-to-change` (sizes it) → an OpenSpec change with a Lite technical design, or for a tiny fix just a failing test and the fix → `/story-finish`. |
 | **Story (1–5 days)** | Full workflow in Section 1, with OpenSpec. This is the one to demo. |
 | **Story across UI and backend** | Open both repos in one VS Code window. Backend first. One OpenSpec change per repo with the same id. The API contract is the hand-off between them. |
 | **Story across several micro-frontends and services** | `/cross-repo-story` from the product context hub; `hub.mjs workspace` for the window; producers first, shell last ([MULTI-REPO.md](MULTI-REPO.md)). |

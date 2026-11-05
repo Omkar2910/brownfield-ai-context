@@ -178,7 +178,7 @@ covers all four with five parts:</p>
                                               │            /opsx-verify, context check, PR text
                                        pull request        (you, or the agent with your approval)
                                               │
-                                       /opsx-archive       after merge: specs updated,
+                                       /opsx-archive       PR approved: specs updated,
                                        /context-learn      code map refreshed by git hooks,
                                                            mistakes turned into rules
 </code></pre></div>
@@ -369,7 +369,7 @@ Open <code>graphify-out/graph.html</code> in a browser to see your code as a pic
 <p>In agent mode, type:</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>/context-bootstrap
 </code></pre></div>
-<p>The agent reads your build files, code, docs and the code map's list of central classes, asks you four questions (what do new joiners get
+<p>The agent reads your build files, code, docs and the code map's list of central classes, asks you five questions (what do new joiners get
 wrong, which platform rules apply, what looks wrong but is deliberate, what must never be edited), then
 writes <code>AGENTS.md</code>, two to four scoped rule files and two pages in <code>docs/context/</code>.</p>
 <p><strong>Your job is to review and cut.</strong> For every line ask: <em>would someone find this in a minute by
@@ -472,7 +472,8 @@ each <code>AGENTS.md</code> as the same 2–3 short lines. With more services, m
   <code>AGENTS.md</code>, skills and hooks only at that parent level and misses the ones inside each repo.</li>
 <li><strong>Do not</strong> copy both into one repo just for the agent.</li>
 <li>In a two-folder window the skills and <code>/opsx-*</code> commands may appear twice (one per repo). They are the
-  same files, so either works. The agent hooks follow edits into either repo; the git hooks and the
+  same files, so either works. The after-edit and before-finishing hooks follow the agent's edits into
+  either repo; the session-start note covers the repo the chat started in. The git hooks and the
   context check run separately in each repo when you commit there.</li>
 </ul>
 <p><strong>Running a cross-service story with OpenSpec:</strong> make one change per repo with the same id.
@@ -536,7 +537,31 @@ it in as you go — the numbers in it are what make the demo convincing.</p>
 <p><strong>Check:</strong> the agent's summary matches the story; the 3–8 files it lists are the right ones (it finds
 them with the code map, and runs <code>graphify affected</code> to list what depends on them); its open
 questions are real. Answer them (ask your BA or tech lead if needed).
-<strong>Result:</strong> <code>openspec/changes/&lt;change-id&gt;/context.md</code>
+It also <strong>sizes the story</strong> and recommends a path. You decide:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Size</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tiny: one or two files, no API, data or permission change</td>
+<td>No change folder. Failing test, fix, <code>/story-finish</code>.</td>
+</tr>
+<tr>
+<td>Small: one repo, one layer or a small slice</td>
+<td>An OpenSpec change; the technical design is the short "Lite" form.</td>
+</tr>
+<tr>
+<td>Normal: several layers, an API or data change, or two repos</td>
+<td>An OpenSpec change in each repo that changes, backend first.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Result:</strong> for small and normal stories, the change folder is created and the pack is saved as
+<code>openspec/changes/&lt;change-id&gt;/context.md</code>.
 <strong>Write down:</strong> did it find the right files? What did it miss?</p>
 <p>Optionally, before proposing, explore the risky part:</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>/opsx-explore How does &lt;the area&gt; work today and where would &lt;the change&gt; fit?
@@ -545,7 +570,8 @@ questions are real. Answer them (ask your BA or tech lead if needed).
 <p><strong>Type:</strong></p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>/opsx-propose &lt;change-id&gt;   (use openspec/changes/&lt;change-id&gt;/context.md)
 </code></pre></div>
-<p><strong>Check — this is the most important step in the whole workflow:</strong>
+<p>It says the change already exists (<code>/story-to-change</code> created it): choose <strong>continue</strong>.
+<strong>Check — this is the most important step in the whole workflow:</strong>
 - <code>proposal.md</code>: is the scope right? Anything out of scope that crept in?
 - <code>specs/.../spec.md</code>: are the requirements and scenarios what the story really means? Missing edge cases (permissions, empty data, large data, errors)?
 - <code>design.md</code> (the technical design): does it follow your codebase's patterns? Are the API examples, data changes and rollback right?
@@ -572,12 +598,17 @@ are your <code>#agent-miss</code> notes. For anything that would trip up the age
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>/opsx-verify &lt;change-id&gt;
 /story-finish &lt;change-id&gt;
 </code></pre></div>
-<p><code>/opsx-verify</code> checks the code against the requirements, scenarios and <code>design.md</code>. <code>/story-finish</code> runs the tests,
+<p>(<code>/story-finish</code> uses the verify report you just made; it does not ask for it again.)
+<code>/opsx-verify</code> checks the code against the requirements, scenarios and <code>design.md</code>. <code>/story-finish</code> runs the tests,
 checks every test-plan row names a test that exists and passes,
 refreshes the code map and runs <code>graphify affected</code> on every class you changed (so you can confirm each
 dependent is tested), runs the context check, fixes out-of-date context lines with you, and drafts the
-PR description.
-<strong>Check:</strong> any requirement marked not covered; any context line it wants to change.</p>
+PR description. It also asks whether this story taught you something about an area worth keeping: if
+understanding the area took a lot of tracing and there is no page for it yet, it offers to save an
+<strong>area page</strong> in <code>docs/context/</code> from the verified parts of <code>design.md</code> (see
+<a href="context.html#7-how-much-context-is-enough">CONTEXT-GUIDE.md</a>).
+<strong>Check:</strong> any requirement marked not covered; any context line it wants to change; whether the area
+page (if offered) is worth keeping.</p>
 <h3 id="phase-5-pull-request">Phase 5 — Pull request</h3>
 <p>Two options:</p>
 <ul>
@@ -587,11 +618,14 @@ PR description.
   command; read each one. For the PR itself the agent needs the Azure DevOps MCP server (or the <code>az repos pr create</code> command if the Azure CLI is installed). <strong>Do not turn on auto-approve for git or PR commands.</strong></li>
 </ul>
 <p><strong>Write down:</strong> review comments received, and how many were about things the spec or context should have caught.</p>
-<h3 id="phase-6-after-the-merge-10-minutes">Phase 6 — After the merge (10 minutes)</h3>
+<h3 id="phase-6-archive-as-the-last-commit-of-the-pr-10-minutes">Phase 6 — Archive, as the last commit of the PR (10 minutes)</h3>
+<p>When reviewers have approved the PR:</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>/opsx-archive &lt;change-id&gt;
 </code></pre></div>
 <p>This merges the spec changes into <code>openspec/specs/</code> (the record of what the system now does) and moves
-the change to <code>openspec/changes/archive/</code>. Commit it. The story's technical design and test plan stay
+the change to <code>openspec/changes/archive/</code>. Commit and push it to the same PR, so the specs change together
+with the code and you don't need a second PR to a protected main branch. (Teams that prefer to archive
+after merge can; it just means one more small PR.) The story's technical design and test plan stay
 there (<code>openspec/changes/archive/&lt;date&gt;-&lt;change-id&gt;/design.md</code> and <code>test-plan.md</code>); link them from the
 work item or copy them to your wiki if your process asks for that.
 At the end of the sprint, select the <strong>context-steward</strong> agent and type <code>sprint-digest</code>.</p>
@@ -707,10 +741,23 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 </tr>
 <tr>
 <td>Several services per story</td>
-<td>Add a shared <code>system-context</code> repo for contracts and platform rules (see <code>demo-kit/</code> and <code>docs/research/playbook.md</code>).</td>
+<td>Use a product context hub for contracts and platform rules (<a href="multi-repo.html">MULTI-REPO.md</a>).</td>
 </tr>
 </tbody>
 </table></div>
+<p><strong>Before rolling it out to other teams, two safety steps:</strong>
+- <strong>Protect the files that run commands.</strong> Agent hooks and git hooks run on every developer's machine,
+  and MCP configs start programs. Make a named person review any change to them: a <code>CODEOWNERS</code> entry
+  (example below), or in Azure Repos a branch policy with required reviewers for these paths.
+- <strong>Pin the tool versions you tested</strong>, and upgrade on purpose: for example
+  <code>npm install -g @fission-ai/openspec@1.16.0</code> and <code>pip install "graphifyy[mcp]==0.9.100"</code>, and a fixed
+  version instead of <code>-y @azure-devops/mcp</code> in MCP configs. After an OpenSpec upgrade, re-run the kit with
+  <code>--upgrade</code> so the story workflow follows OpenSpec's own changes.</p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code>/.github/hooks/   @your-team-lead
+/.githooks/       @your-team-lead
+/.vscode/mcp.json @your-team-lead
+/.mcp.json        @your-team-lead
+</code></pre></div>
 <hr />
 <h2 id="8-when-something-goes-wrong">8. When something goes wrong</h2>
 <div class="tablebox"><table>
@@ -740,6 +787,14 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 <tr>
 <td>Commit refused by the pre-commit hook</td>
 <td>A context line points at a file that moved or was deleted. Fix the line (or run <code>/context-refresh</code>). Emergency: <code>git commit --no-verify</code>.</td>
+</tr>
+<tr>
+<td><code>check --base</code> says the base does not exist</td>
+<td>Run <code>git fetch</code>, then use the branch your PR targets, for example <code>origin/main</code> or <code>origin/develop</code>.</td>
+</tr>
+<tr>
+<td>The agent is asked to re-check context lines before finishing</td>
+<td>It edited code that a context line points at. It should update the line only if the meaning changed; otherwise say it is still true. It is asked once per session, and only about its own edits.</td>
 </tr>
 <tr>
 <td>Proposal is too big or vague</td>

@@ -101,8 +101,9 @@ Each repo records its kit version in `.github/ai-kit.json`. When the kit improve
 ```bash
 node brownfield-ai-context/kit/install.mjs ../reports-mfe --upgrade
 ```
-This replaces only the kit's own files (skills, steward agent, hook script and config, git hooks). It
-never touches `AGENTS.md`, instructions, `docs/context/` or your PR template. Commit the result in a
+This replaces only the kit's own files (skills, steward agent, hook script and config, git hooks, and
+`openspec/schemas/story-tdd/schema.yaml`). It never touches `AGENTS.md`, instructions, `docs/context/`,
+your PR template or the story workflow's templates. Commit the result in a
 small PR. Later, an agent plugin or APM package can do this centrally (see [TOOLBOX.md](TOOLBOX.md)).
 
 ---

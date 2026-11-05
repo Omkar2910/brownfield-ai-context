@@ -213,7 +213,7 @@ you write, so every unnecessary rule is work they will do.</p>
 <li><strong>Is it only about the current task?</strong>
    → task context: the chat, or a task note (a story context pack). Never a permanent file.</li>
 <li><strong>Is it shared by several repos</strong> (platform rules, API contracts)?
-   → one shared place (organization instructions or a shared <code>system-context</code> repo), linked from each repo.</li>
+   → one shared place (organization instructions or the product context hub, see <a href="multi-repo.html">MULTI-REPO.md</a>), linked from each repo.</li>
 </ol>
 <hr />
 <h2 id="4-creating-context-for-an-existing-repo">4. Creating context for an existing repo</h2>
@@ -510,7 +510,7 @@ with four layers, from fully automatic to occasional.</p>
 </tr>
 <tr>
 <td><code>docs/context/</code> pages</td>
-<td>No hard limit, but only loaded when needed</td>
+<td>Only loaded when needed; an area page under about 150 lines</td>
 </tr>
 </tbody>
 </table></div>
@@ -520,6 +520,26 @@ other; lines describe things a search finds quickly.
 joiners ask people about the same trap.</p>
 <p>To know for sure, keep three to five past tasks with known-good results and re-run them in a fresh chat
 when you change the context. Keep the change only if results are the same or better.</p>
+<h3 id="deep-context-area-pages-added-when-a-story-needs-one">Deep context: area pages, added when a story needs one</h3>
+<p>Some areas need more than a line in <code>AGENTS.md</code>: a flow that crosses UI, API, service and database, or
+domain rules such as an Excel export format. For those, write an <strong>area page</strong>
+(<code>docs/context/&lt;area&gt;.md</code>): the flow as numbered steps with anchors, the rules the code enforces, data,
+edge cases, traps, the tests to run, and an "Unverified" section. The template is in the
+<code>story-finish</code> skill's references.</p>
+<p><strong>When:</strong> not up front, and not for every area. Write one when a real story needed a lot of tracing to
+understand an area (many files read, a wrong first guess, a flow across several layers), the area has no
+page yet, and it will be changed again. <code>/story-finish</code> asks this question at the end of each story and
+offers to turn the story's verified <code>design.md</code> sections into the page.</p>
+<p><strong>Why not generate deep docs for the whole codebase at once:</strong>
+- Files that load on every request and were written by AI made agents slightly worse and about 20% more
+  expensive in the largest study so far (ETH Zurich, 138 repositories).
+- Models get worse as their input grows, even on easy tasks ("context rot", Chroma Research).
+- The project with the strongest results from deep docs (the "Codified Context" case study) wrote them in
+  response to observed failures, kept them on demand, and still found stale docs were its main failure.
+- Every generated line needs a person to check it. A page written at the end of a story has just been
+  checked by the story's own tests and review.</p>
+<p><strong>Exception:</strong> before a large story in an undocumented area, run <code>/opsx-explore</code> on it and ask the agent to
+save the result as an area page, then check it like any other context change.</p>
 <hr />
 <h2 id="8-several-repos-ui-backend">8. Several repos (UI + backend)</h2>
 <ul>
@@ -587,7 +607,7 @@ not required; without it, skip the OpenSpec steps and everything above still wor
 <p><strong>Creating context (once per repo)</strong>
 - [ ] Harvest: build files, CI, README, review comments, incidents, code comments
 - [ ] Build the Graphify code map
-- [ ] <code>/context-bootstrap</code>, answer the four questions
+- [ ] <code>/context-bootstrap</code>, answer the five questions
 - [ ] Prune with the six properties; <code>AGENTS.md</code> about 100 lines
 - [ ] Anchors on code-dependent lines
 - [ ] Try two past tasks in a fresh chat

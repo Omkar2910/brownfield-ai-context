@@ -67,7 +67,14 @@ node .github/hooks/scripts/context-tools.cjs status                     # summar
 node .github/hooks/scripts/context-tools.cjs check                      # errors and warnings now
 node .github/hooks/scripts/context-tools.cjs check --base origin/main   # include changes since main
 node .github/hooks/scripts/context-tools.cjs check --strict             # warnings fail too (for CI later)
+node .github/hooks/scripts/context-tools.cjs check --staged             # only what is about to be committed (pre-commit uses this)
 ```
+
+**Anchors.** End a context line with `[anchor: <path>]` when it depends on code. `<path>` can be a file,
+a folder (`src/main/resources/db/migration/`), a glob (`src/**/security/*.java`) or several of these
+separated by commas. Backticks, `#L12` or `:12` suffixes and Windows backslashes are accepted. Paths
+outside the repo (`../product-context/…`) are allowed but not checked. A `--base` that does not exist is
+an error (exit 2), not a silent pass.
 
 - **ERROR**: a `[anchor: …]` points at a file that no longer exists.
 - **WARN**: anchored code changed but the context file did not; `AGENTS.md` over 150 lines;
@@ -80,11 +87,28 @@ node .github/hooks/scripts/context-tools.cjs check --strict             # warnin
 | --- | --- | --- |
 | `session-start` | `sessionStart` | A 2–4 line context health note and active OpenSpec changes |
 | `post-edit` | `postToolUse` | "This file is referenced by AGENTS.md:12 (…)" when it edits anchored code |
-| `stop` | `agentStop` | Blocks once with a list of broken or stale anchors; never twice, so it cannot loop |
-| `guard` | `preToolUse` (steward runs only, not installed by default) | Refuses edits outside context files |
+| `stop` | `agentStop` | Only about files **the agent edited in this session** (recorded by `post-edit`, in every repo of a multi-root window): blocks once with broken anchors and context lines anchored to those files that it did not revisit. Silent when the agent edited nothing; your own edits never trigger it |
+| `guard` | `PreToolUse`, declared in the context-steward agent's own frontmatter | Refuses edits outside context files while the steward runs. Agent-scoped hooks are new in VS Code and Copilot; check once that it fires (ask the steward to edit a Java file) |
 
-The script reads no network, writes nothing in your repo, and exits quietly on any internal error so it
-cannot break an agent session. Read it before installing; it is about 300 lines.
+The script reads no network, writes nothing in your repo (the list of files the agent edited goes to the
+system temp folder), and exits quietly on any internal error so it cannot break an agent session. Read it
+before installing; it is about 430 lines.
+
+Claude Code: the installer writes command names as `/opsx:propose` (Claude Code's form), rule-file paths as
+`.claude/rules/`, and the steward's hook in Claude Code's format.
+
+## Area pages
+
+`story-finish/references/area-page.template.md` is the format for `docs/context/<area>.md`: a deep page
+for one complex area (flow with anchors, rules the code enforces, data, edge cases, traps, tests,
+unverified claims). `/story-finish` offers to write one when a story needed a lot of tracing to understand
+an area that has no page yet. `/context-bootstrap` deliberately does not write them up front.
+
+## Security
+
+Hook scripts and git hooks run on developers' machines, and MCP configs start programs. Have a named
+reviewer for `.github/hooks/`, `.githooks/`, `.vscode/mcp.json` and `.mcp.json` (CODEOWNERS or an Azure
+Repos branch policy), and pin the OpenSpec, Graphify and MCP server versions you tested.
 
 ## Removing it
 

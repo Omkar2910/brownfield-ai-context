@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url';
 
 const kitDir = path.dirname(fileURLToPath(import.meta.url));
 const filesDir = path.join(kitDir, 'files');
-const args = process.argv.slice(2);
+const args = process.argv.slice(2).flatMap(a => /^--[a-z-]+=/.test(a) ? a.split(/=(.*)/s).slice(0, 2) : [a]);
 const opt = n => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 const has = n => args.includes(n);
 const tool = opt('--tool') || 'copilot';
@@ -84,11 +84,17 @@ function destination(rel) {
   return rel;
 }
 function transform(rel, text) {
-  if (tool === 'copilot') return text;
+  if (tool === 'copilot' || rel.endsWith('.cjs')) return text; // the context tool is the same file for both tools
   let out = text
     .split('.github/hooks/scripts/context-tools.cjs').join('.claude/hooks/context-tools.cjs')
-    .split('.github/skills/').join('.claude/skills/');
-  if (rel.endsWith('context-steward.agent.md')) out = out.replace(/^tools: .*$/m, 'tools: Read, Grep, Glob, Edit, Write, Bash');
+    .split('.github/skills/').join('.claude/skills/')
+    .split('.github/instructions/').join('.claude/rules/')
+    .replace(/\/opsx-(propose|apply|verify|archive|explore|sync|update)\b/g, '/opsx:$1'); // Claude Code command names
+  if (rel.endsWith('context-steward.agent.md')) {
+    out = out.replace(/^tools: .*$/m, 'tools: Read, Grep, Glob, Edit, Write, Bash')
+      .replace(/^hooks:\n  PreToolUse:\n    - type: command\n      command: (.*)$/m,
+        'hooks:\n  PreToolUse:\n    - matcher: "Edit|Write|MultiEdit|NotebookEdit"\n      hooks:\n        - type: command\n          command: $1');
+  }
   if (rel.endsWith('context-bootstrap/SKILL.md')) {
     out = out.replace('# Context bootstrap', '# Context bootstrap\n\n> Claude Code: write scoped rule files to `.claude/rules/<name>.md` with a `paths:` list in the\n> frontmatter instead of `.github/instructions/*.instructions.md` with `applyTo`.');
   }
@@ -111,7 +117,8 @@ for (const src of walk(filesDir)) {
   const destRel = destination(rel);
   if (!destRel) continue;
   const dest = path.join(root, ...destRel.split('/'));
-  const text = transform(rel, fs.readFileSync(src, 'utf8'));
+  let text = transform(rel, fs.readFileSync(src, 'utf8'));
+  if (destRel.startsWith('.githooks/') || destRel.endsWith('.cjs')) text = text.replace(/\r\n/g, '\n'); // sh needs LF even if the kit was cloned with CRLF
   const exists = fs.existsSync(dest);
   if (exists) {
     if (!(upgrade && kitOwned(destRel))) { skipped.push(destRel); continue; }
@@ -171,7 +178,7 @@ if (has('--graphify')) {
 const osConfig = path.join(root, 'openspec', 'config.yaml');
 const snippet = fs.readFileSync(path.join(kitDir, 'snippets', 'openspec-config.yaml'), 'utf8');
 if (!fs.existsSync(path.join(root, 'openspec'))) {
-  notes.push('OpenSpec is not set up in this repo (optional). Everything else works without it. To add it later: run `openspec init --tools github-copilot`, then run this installer again to add the OpenSpec settings.');
+  notes.push(`OpenSpec is not set up in this repo (optional). Everything else works without it. To add it later: run \`openspec init --tools ${tool === 'claude' ? 'claude' : 'github-copilot'}\`, then run this installer again to add the OpenSpec settings and the story workflow.`);
 } else {
   const current = fs.existsSync(osConfig) ? fs.readFileSync(osConfig, 'utf8') : '';
   const keys = ['context', 'rules', 'operations'];
@@ -180,7 +187,18 @@ if (!fs.existsSync(path.join(root, 'openspec'))) {
     if (!dry) fs.writeFileSync(osConfig, current.replace(/\s*$/, current ? '\n\n' : '') + snippet);
     created.push('openspec/config.yaml (added context, rules, operations)');
   } else {
-    notes.push(`openspec/config.yaml already has: ${present.join(', ')}. Compare with kit/snippets/openspec-config.yaml and merge by hand.`);
+    if (!upgrade) notes.push(`openspec/config.yaml already has: ${present.join(', ')}. Compare with kit/snippets/openspec-config.yaml and merge by hand.`);
+    // Lines that kit versions before 1.4 appended and that are now known to be wrong: fix them on --upgrade.
+    const oldLines = [
+      ['  Read AGENTS.md and the files it lists under "Where to look" before writing any artifact.\n',
+       '  Read AGENTS.md first. Open the files it lists under "Where to look" only when this change needs them.\n'],
+      ['    - The last task is "Update AGENTS.md or docs/context if a command, convention, trap or contract changed"\n', ''],
+    ];
+    if (upgrade) {
+      let cfg = current; let fixed = 0;
+      for (const [o, n] of oldLines) if (cfg.includes(o)) { cfg = cfg.replace(o, n); fixed++; }
+      if (fixed) { if (!dry) fs.writeFileSync(osConfig, cfg); updated.push(`openspec/config.yaml (${fixed} outdated kit line(s) corrected)`); }
+    }
   }
 
   // 3b. Story workflow schema: technical design (TDD) + test plan + test-first tasks.
@@ -212,13 +230,24 @@ if (!fs.existsSync(path.join(root, 'openspec'))) {
 if (!has('--no-git-hook')) {
   const hooksPath = git(root, ['config', '--get', 'core.hooksPath']);
   const legacyHook = path.join(root, '.git', 'hooks', 'pre-commit');
+  const toolPath = tool === 'claude' ? '.claude/hooks' : '.github/hooks/scripts';
+  const checkLine = `node ${toolPath}/context-tools.cjs check --staged || exit 1`;
+  const hookDir = hooksPath && /(^|\/)\.husky(\/_)?\/?$/.test(hooksPath) ? '.husky' : hooksPath; // Husky v9 points at the generated .husky/_
+  const existing = (() => { try { return fs.readdirSync(path.join(root, '.git', 'hooks')).filter(f => !f.endsWith('.sample')); } catch { return []; } })();
   if (hooksPath && hooksPath !== '.githooks') {
-    notes.push(`This repo already uses git hooks from "${hooksPath}". Add this line to its pre-commit file:\n      node ${tool === 'claude' ? '.claude/hooks' : '.github/hooks/scripts'}/context-tools.cjs check || exit 1\n    and, to keep the Graphify code map fresh, this line to its post-commit and post-merge files:\n      sh .githooks/graph-refresh`);
-  } else if (!hooksPath && fs.existsSync(legacyHook)) {
-    notes.push('A pre-commit hook already exists in .git/hooks. Add this line to it:\n      node .github/hooks/scripts/context-tools.cjs check || exit 1\n    and "sh .githooks/graph-refresh" to post-commit and post-merge if you use Graphify.');
+    notes.push(`This repo already uses git hooks from "${hookDir}". Add this line to ${hookDir}/pre-commit:\n      ${checkLine}\n    and, to keep the Graphify code map fresh, this line to ${hookDir}/post-commit and ${hookDir}/post-merge:\n      sh .githooks/graph-refresh`);
+  } else if (!hooksPath && existing.length) {
+    notes.push(`This repo has its own git hooks in .git/hooks (${existing.join(', ')}), so the kit did not switch hook folders (that would turn them off). Add this line to .git/hooks/pre-commit:\n      ${checkLine}\n    and "sh .githooks/graph-refresh" to post-commit and post-merge if you use Graphify. Or copy your hooks into .githooks/ and run: git config core.hooksPath .githooks`);
   } else if (!hooksPath) {
     if (!dry) git(root, ['config', 'core.hooksPath', '.githooks']);
     created.push('git config core.hooksPath .githooks (this clone only; teammates run it once too)');
+  }
+  // Keep the shell hooks LF-only for everyone, including Windows clones with core.autocrlf.
+  const ga = path.join(root, '.gitattributes');
+  const gaText = fs.existsSync(ga) ? fs.readFileSync(ga, 'utf8') : '';
+  if (!/^\.githooks\/\*.*eol=lf/m.test(gaText)) {
+    if (!dry) fs.writeFileSync(ga, gaText.replace(/\s*$/, gaText ? '\n' : '') + '.githooks/* text eol=lf\n');
+    created.push('.gitattributes: .githooks/* text eol=lf');
   }
 }
 
@@ -232,19 +261,24 @@ if (previous !== kitVersion && (!previous || upgrade) && !dry) {
   fs.writeFileSync(stamp, JSON.stringify({ kit: 'brownfield-ai-context', version: kitVersion, tool, source: 'https://github.com/Omkar2910/brownfield-ai-context' }, null, 2) + '\n');
 }
 if (previous && previous !== kitVersion && !upgrade) notes.push(`This repo has kit ${previous}; this is ${kitVersion}. Run again with --upgrade to update the kit's own files.`);
+const recorded = dry ? null : (previous === kitVersion || !previous || upgrade) ? kitVersion : previous;
 
 // Report
-if (updated.length) { log('Updated to this kit version:'); updated.forEach(f => log('  ~ ' + f)); log(''); }
+if (updated.length) { log('Updated to this kit version (if your team had edited one of these, its old version is in git history: git diff):'); updated.forEach(f => log('  ~ ' + f)); log(''); }
 log('Added:');
 created.length ? created.forEach(f => log('  + ' + f)) : log('  (nothing)');
 if (skipped.length) { log(''); log('Already there, left unchanged:'); skipped.forEach(f => log('  = ' + f)); }
 if (notes.length) { log(''); log('Please check:'); notes.forEach(n => log('  ! ' + n)); }
 log('');
-log(`Kit version ${kitVersion} recorded in ${stampRel}.`);
+log(dry ? 'Dry run: nothing was changed.' : `Kit version ${recorded} recorded in ${stampRel}.`);
 log('');
 log('Next steps:');
-log('  1. Open the repo in VS Code. In Chat, run "Chat: Open Customizations" and confirm the skills,');
-log('     the context-steward agent and the hooks are listed.');
+if (tool === 'claude') {
+  log('  1. Start Claude Code in the repo and run /hooks and /agents to confirm the hooks and context-steward are listed.');
+} else {
+  log('  1. Open the repo in VS Code. In Chat, run "Chat: Open Customizations" and confirm the skills,');
+  log('     the context-steward agent and the hooks are listed.');
+}
 log('  2. In Agent mode, type /context-bootstrap and review what it writes.');
 log(`  3. Run: node ${tool === 'claude' ? '.claude/hooks' : '.github/hooks/scripts'}/context-tools.cjs check`);
 log('  4. Commit everything on a branch and open a pull request for review.');
@@ -256,5 +290,6 @@ if (has('--graphify')) {
   log('  pip install "graphifyy[mcp]"        (or: pipx / uv tool install "graphifyy[mcp]")');
   log('  graphify extract . --code-only');
   log('  graphify cluster-only . --no-label');
-  log('  Then reload VS Code and start the "graphify" server in the MCP view. The git hooks keep it fresh.');
+  log(tool === 'claude' ? '  Then restart Claude Code; /mcp should list "graphify". The git hooks keep it fresh.'
+    : '  Then reload VS Code and start the "graphify" server in the MCP view. The git hooks keep it fresh.');
 }

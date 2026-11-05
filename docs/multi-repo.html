@@ -226,8 +226,9 @@ almost everything uses), <code>exposes</code> (micro-frontends) or <code>api</co
 <p>Each repo records its kit version in <code>.github/ai-kit.json</code>. When the kit improves:</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs ../reports-mfe --upgrade
 </code></pre></div>
-<p>This replaces only the kit's own files (skills, steward agent, hook script and config, git hooks). It
-never touches <code>AGENTS.md</code>, instructions, <code>docs/context/</code> or your PR template. Commit the result in a
+<p>This replaces only the kit's own files (skills, steward agent, hook script and config, git hooks, and
+<code>openspec/schemas/story-tdd/schema.yaml</code>). It never touches <code>AGENTS.md</code>, instructions, <code>docs/context/</code>,
+your PR template or the story workflow's templates. Commit the result in a
 small PR. Later, an agent plugin or APM package can do this centrally (see <a href="toolbox.html">TOOLBOX.md</a>).</p>
 <hr />
 <h2 id="4-opening-the-right-repos-for-a-story">4. Opening the right repos for a story</h2>
