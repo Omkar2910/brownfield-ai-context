@@ -21,7 +21,7 @@ to merge by hand. OpenSpec is optional. If you use it, run `openspec init` first
 
 | Kit file | Installed to (Copilot) | Purpose |
 | --- | --- | --- |
-| `files/.github/skills/*` | `.github/skills/` | `context-bootstrap`, `context-refresh`, `context-learn`, `story-to-change`, `story-finish`, `onboard-me` |
+| `files/.github/skills/*` | `.github/skills/` | `context-bootstrap`, `context-baseline` (in-depth pages per dimension), `context-assess` (readiness score), `context-refresh`, `context-learn`, `story-to-change`, `story-finish`, `onboard-me` |
 | `files/.github/agents/context-steward.agent.md` | `.github/agents/` | Agent that edits context files only |
 | `files/.github/hooks/ai-context.json` | `.github/hooks/` | Copilot hooks: session start, after edit, before finishing |
 | `files/.github/hooks/scripts/context-tools.cjs` | `.github/hooks/scripts/` | The hooks and the `check` / `status` commands (Node 18+, no dependencies) |
@@ -68,7 +68,17 @@ node .github/hooks/scripts/context-tools.cjs check                      # errors
 node .github/hooks/scripts/context-tools.cjs check --base origin/main   # include changes since main
 node .github/hooks/scripts/context-tools.cjs check --strict             # warnings fail too (for CI later)
 node .github/hooks/scripts/context-tools.cjs check --staged             # only what is about to be committed (pre-commit uses this)
+node .github/hooks/scripts/context-tools.cjs readiness [--json]         # readiness score 0-100 over 12 dimensions
 ```
+
+**Readiness.** Reads the status line of each deep page
+(`> Dimension: data · Status: reviewed · Last verified: 2026-11-20 by A · Independent review: no`), its
+anchors and whether its anchored code changed since review, plus ratings from `/context-assess` in
+`docs/context/readiness.md`. Each rating is capped by the evidence (draft ≤ 2, unanchored, stale or old
+review ≤ 3, reviewed ≤ 4, independently reviewed = 5); provenance and freshness are measured. Weights and
+bands: `.github/context-readiness.json` (`{"dimensions":[{"id","label","weight"}…],"bands":[{"min","name"}…],"reviewMaxAgeDays":180}`).
+Anchors written as `repo-name:path` point into another repo: the repo's check skips them and the hub's
+`hub.mjs check` verifies them.
 
 **Anchors.** End a context line with `[anchor: <path>]` when it depends on code. `<path>` can be a file,
 a folder (`src/main/resources/db/migration/`), a glob (`src/**/security/*.java`) or several of these

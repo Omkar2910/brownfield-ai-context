@@ -24,3 +24,9 @@ It contains no application code.
 - `node scripts/hub.mjs workspace <area|repo>` — VS Code workspace for a story
 - `node scripts/hub.mjs status` — which repos are cloned and their context health
 - `node scripts/hub.mjs contracts` — which hub contract copies are out of date
+- `node scripts/hub.mjs check` — every `[anchor: repo:path]` here still resolves; lines whose code changed since review
+- `node scripts/hub.mjs readiness` — readiness score of this hub's context
+
+## Creating the product-level context
+Run the `hub-baseline` skill with the hub and the repos open in one window. Anchor every fact into a repo
+as `[anchor: <repo-name>:<path>]`. Pages start as drafts; owners review them and set "Last verified".

@@ -50,8 +50,12 @@ if (has('--create-hub')) {
     if (!dry) { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.copyFileSync(src, dest); }
     added++;
   }
+  // The hub uses the same context tool for its own readiness score.
+  const toolDest = path.join(hubDir, 'scripts', 'context-tools.cjs');
+  if (!fs.existsSync(toolDest)) { if (!dry) fs.copyFileSync(path.join(kitDir, 'files', '.github', 'hooks', 'scripts', 'context-tools.cjs'), toolDest); added++; } else kept++;
   console.log(`Product context hub at ${hubDir}: ${added} files added, ${kept} already there.`);
-  console.log('Next: edit catalog.json and context/platform/, run "node scripts/hub.mjs map", then git init / commit / push.');
+  console.log('Next: edit catalog.json, run "node scripts/hub.mjs map", clone the repos next to the hub, open them');
+  console.log('together with the hub in VS Code and run /hub-baseline. Then git init, commit and push to your hub repo.');
   process.exit(0);
 }
 
@@ -67,7 +71,7 @@ const root = path.resolve(repo);
 
 const created = [], skipped = [], notes = [], updated = [];
 // Files the kit owns: safe to replace on --upgrade. Everything a team writes or customises is not listed.
-const KIT_SKILLS = ['context-bootstrap', 'context-refresh', 'context-learn', 'story-to-change', 'story-finish', 'onboard-me'];
+const KIT_SKILLS = ['context-bootstrap', 'context-baseline', 'context-assess', 'context-refresh', 'context-learn', 'story-to-change', 'story-finish', 'onboard-me'];
 const kitOwned = rel => /^\.(github|claude)\/skills\/([^/]+)\//.test(rel) && KIT_SKILLS.includes(rel.split('/')[2])
   || /context-steward(\.agent)?\.md$/.test(rel) || /context-tools\.cjs$/.test(rel)
   || rel === '.github/hooks/ai-context.json' || rel.startsWith('.githooks/');

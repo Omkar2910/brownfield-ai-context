@@ -220,30 +220,72 @@ joiners ask people about the same trap.
 To know for sure, keep three to five past tasks with known-good results and re-run them in a fresh chat
 when you change the context. Keep the change only if results are the same or better.
 
-### Deep context: area pages, added when a story needs one
+### In-depth context: the baseline, area pages and the readiness score
 
-Some areas need more than a line in `AGENTS.md`: a flow that crosses UI, API, service and database, or
-domain rules such as an Excel export format. For those, write an **area page**
-(`docs/context/<area>.md`): the flow as numbered steps with anchors, the rules the code enforces, data,
-edge cases, traps, the tests to run, and an "Unverified" section. The template is in the
-`story-finish` skill's references.
+Teams and management often want a full reference of each service: architecture, business rules, data,
+API, dependencies, security, testing, operations and decisions, the brownfield equivalent of a
+greenfield project's constitution. That is compatible with the research above, as long as three rules hold:
 
-**When:** not up front, and not for every area. Write one when a real story needed a lot of tracing to
-understand an area (many files read, a wrong first guess, a flow across several layers), the area has no
-page yet, and it will be changed again. `/story-finish` asks this question at the end of each story and
-offers to turn the story's verified `design.md` sections into the page.
+1. **It is read when needed, never loaded on every request.** `AGENTS.md` stays under 150 lines and only
+   points to the pages ("Changing the export → docs/context/data.md"). The research warns against loading
+   long generated files every time, not against having them.
+2. **It only counts once a person has checked it.** AI drafts make two kinds of mistake most often:
+   leaving things out, and confident but wrong explanations of "why". Every page starts as a draft with
+   its unproven claims listed under "Unverified"; its owner reviews it against the code.
+3. **It is kept current by the same machinery as everything else**: anchors on every claim, the checks,
+   and each story's technical design listing the pages it makes out of date.
 
-**Why not generate deep docs for the whole codebase at once:**
+**The pages** (`/context-baseline` creates them in `docs/context/`, one per dimension):
+
+| Page | Dimension | Generated from code, or written |
+| --- | --- | --- |
+| `architecture.md` | Architecture | Written, anchored; most-connected parts from the code map |
+| `domain.md` (+ `screens.md` in UI repos) | Business/domain | Glossary and rules written; the behaviour record is `openspec/specs/`, updated by every archived story |
+| `data.md` | Data | Tables generated from migrations and entities; the "why" written |
+| `api.md` | API/integration | Endpoints generated from OpenAPI or controllers; conventions and odd behaviour written |
+| `dependencies.md` | Dependencies | Libraries from the build file; consumers from the product hub |
+| `security.md` | Security | Written, anchored to security config and permission checks |
+| `testing.md`, `operations.md` | Testing, Runtime/operations | Written, anchored to test folders, config and pipelines |
+| `decisions/*.md` | Decision history | One page per real decision, plus each story's design decisions in the OpenSpec archive |
+
+Each page starts with one status line the tools read:
+`> Dimension: data · Status: draft · Last verified: never · Independent review: no · Owner: reports-team`.
+After review it becomes `Status: reviewed · Last verified: 2026-11-20 by <name>`; when a second person who
+did not write it has checked it, `Independent review: yes`.
+
+**How a story keeps it current.** A story that changes the database, an API and a screen lists those pages
+in its design's "Context impact" table (`data.md`, `api.md`, `screens.md`). The agent updates them in the
+same PR; `/story-finish` checks every listed page was updated and that no anchored page was missed. Even if
+both are skipped, the anchors flag the lines whose code changed, and the readiness score drops until they
+are fixed.
+
+**Area pages** (`docs/context/areas/<area>.md`) are for one complex area in more depth than a dimension
+page holds: a flow across UI, API, service and database, or a format such as an Excel export. Write one
+when a real story needed a lot of tracing to understand the area; `/story-finish` offers it at the end of
+such a story, built from the story's checked `design.md`.
+
+**The readiness score.** `node .github/hooks/scripts/context-tools.cjs readiness` scores the repo from 0 to
+100 over 12 weighted dimensions (code understanding 15%; architecture, domain, data, API, dependencies and
+security 10% each; testing, operations, decisions, provenance and freshness 5% each). Each dimension is
+rated 0–5 (missing, fragmented, partial, usable, strong, verified):
+
+- The tool caps each rating at what the evidence supports: no page → 0, a draft → at most 2, unanchored
+  or stale or reviewed over 180 days ago → at most 3, reviewed → at most 4, independently reviewed → 5.
+- Provenance (the share of statements with an anchor) and freshness (broken anchors, code changed since
+  review, age of reviews) are measured, not rated.
+- `/context-assess` rates each dimension within its cap, with evidence, in `docs/context/readiness.md`.
+- Weights and band names can be changed in `.github/context-readiness.json`.
+
+The score measures the context, not the results. Read it next to the always-loaded size it prints (a high
+score with a bloated `AGENTS.md` is a warning sign) and next to the story log's outcomes.
+
+**Why not just generate everything and load it:**
 - Files that load on every request and were written by AI made agents slightly worse and about 20% more
   expensive in the largest study so far (ETH Zurich, 138 repositories).
 - Models get worse as their input grows, even on easy tasks ("context rot", Chroma Research).
-- The project with the strongest results from deep docs (the "Codified Context" case study) wrote them in
-  response to observed failures, kept them on demand, and still found stale docs were its main failure.
-- Every generated line needs a person to check it. A page written at the end of a story has just been
-  checked by the story's own tests and review.
-
-**Exception:** before a large story in an undocumented area, run `/opsx-explore` on it and ask the agent to
-save the result as an area page, then check it like any other context change.
+- The project with the strongest results from deep docs (the "Codified Context" case study) kept them on
+  demand and still found stale docs were its main failure. That is why every page is anchored and scored
+  for freshness.
 
 ---
 

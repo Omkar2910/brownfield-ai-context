@@ -78,6 +78,21 @@ node scripts/hub.mjs map
 git init && git add -A && git commit -m "Product context hub"   # then push to Azure Repos
 ```
 
+Then the product-level context (half a day, the tech lead with one developer per service):
+
+1. Clone the repos next to the hub (`node scripts/hub.mjs clone all --run`) and open them all with the hub
+   (`node scripts/hub.mjs workspace all`, then open the generated `.code-workspace`).
+2. Type `/hub-baseline`. It writes `context/architecture.md`, `context/glossary.md`, one
+   `context/flows/<flow>.md` per important end-to-end flow (with screen field → API field → column
+   mappings) and fills in `context/platform/`. Every fact is anchored into a repo as
+   `[anchor: report-service:src/main/java/**/ReportController.java]`.
+3. `node scripts/hub.mjs check` confirms every anchor resolves in the cloned repos;
+   `node scripts/hub.mjs readiness` scores the hub's own context.
+4. Owners review their pages and set `Status: reviewed · Last verified: <date> by <name>`. Commit and push.
+
+Per-repo detail (each service's data, API, screens, security) stays in that repo's `docs/context/`, made with
+`/context-baseline` there; the hub links to it instead of copying it.
+
 The catalog is the most valuable part. For each repo record: `type` (`mfe-shell`, `mfe-remote`,
 `service`, `library`), `owner`, `areas` (business areas such as `reports`; use `platform` for repos
 almost everything uses), `exposes` (micro-frontends) or `api` and `contract` (services), and `calls`,
@@ -184,6 +199,8 @@ dependency is added to the catalog in the same PR that introduces it.
 | A service API changes | `hub.mjs contracts --sync` after merge (or automate it in the service's pipeline) | Service team |
 | A platform rule changes | Edit `context/platform/`, announce it; repos only link to it | Platform / architecture team |
 | Weekly (5 min) | `hub.mjs status`: repos missing context, failing checks, missing code maps | Product tech lead |
+| Weekly (5 min) | `hub.mjs check` (after pulling the repos): hub lines whose code changed since review | Product tech lead |
+| A story changes a cross-repo flow or contract | Its design's "Context impact" lists the hub page; a linked PR in the hub updates it | Story author |
 | Each kit release | `install.mjs <repo> --upgrade` per repo | Each team |
 | Quarterly | `context-steward quarterly-review` in each repo; review the catalog for drift | Tech leads |
 
@@ -215,3 +232,5 @@ team; catalog and initiatives → product tech leads; `contracts/` → updated o
 | Context health of every repo | `node scripts/hub.mjs status` |
 | Clone what's missing | `node scripts/hub.mjs clone <area> --run` |
 | Contract copies up to date? | `node scripts/hub.mjs contracts [--sync]` |
+| Hub anchors still true in the repos? | `node scripts/hub.mjs check` |
+| Hub readiness score | `node scripts/hub.mjs readiness` |

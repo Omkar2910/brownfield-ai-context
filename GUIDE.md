@@ -313,6 +313,25 @@ root folder. Keep the root `AGENTS.md` short (shared rules and the map of folder
 `service/AGENTS.md` for each side, and give the scoped instruction files `applyTo` patterns such as
 `ui/**/*.ts` and `service/**/*.java`. One `openspec/`, one code map.
 
+### Step 6b — In-depth context and the readiness score (optional, about half a day per repo)
+
+When your team or management wants a full reference of the service (architecture, business rules, data,
+API, dependencies, security, testing, operations, decisions) and a readiness score:
+
+1. **Type `/context-baseline`.** It asks which flows matter most and who owns each page, then writes one
+   page at a time in `docs/context/`, every fact anchored, unproven claims under "Unverified". Check each
+   page as it appears.
+2. **Review.** Each page's owner reads it against the code, resolves the Unverified lines and changes its
+   status line to `Status: reviewed · Last verified: <date> by <name>`. Core pages first (architecture,
+   domain, data, API, dependencies, security).
+3. **Score it.** Type `/context-assess`. You get the 0–100 score, its band, and the three gaps that would
+   raise it most. Or run `node .github/hooks/scripts/context-tools.cjs readiness` any time.
+4. **Commit** through a normal PR. From then on, stories keep the pages current (Phase 2 and 4 below).
+
+These pages are never loaded on every request; `AGENTS.md` just points to them. See
+[CONTEXT-GUIDE.md](CONTEXT-GUIDE.md#in-depth-context-the-baseline-area-pages-and-the-readiness-score) for how
+the score works and why.
+
 ### Optional extras
 
 | Extra | Why | How |
@@ -370,7 +389,7 @@ It says the change already exists (`/story-to-change` created it): choose **cont
 **Check — this is the most important step in the whole workflow:**
 - `proposal.md`: is the scope right? Anything out of scope that crept in?
 - `specs/.../spec.md`: are the requirements and scenarios what the story really means? Missing edge cases (permissions, empty data, large data, errors)?
-- `design.md` (the technical design): does it follow your codebase's patterns? Are the API examples, data changes and rollback right?
+- `design.md` (the technical design): does it follow your codebase's patterns? Are the API examples, data changes and rollback right? Does its "Context impact" table list every context page the change makes out of date (data, API, screens, security…)?
 - `test-plan.md`: does every scenario and acceptance criterion have a named test? Are the denied, empty, large and failure cases there?
 - `tasks.md`: small, ordered steps, each group starting with its tests?
 

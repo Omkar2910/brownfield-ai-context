@@ -33,6 +33,10 @@
 ## Read only (no change)
 - <repo>: <file, linked> — <why it matters, e.g. shared DTO or an example to follow>
 
+## Connected but not open
+- <repo>: <how it connects, e.g. "calls GET /reports/{id}" or "loaded by the shell"> — <affected or not, and why>
+  (Source: <config or client file, linked> or `hub.mjs impact`)
+
 ## Open questions
 1. <question> — <who can answer>
 

@@ -209,6 +209,20 @@ cd ../product-context
 node scripts/hub.mjs map
 git init &amp;&amp; git add -A &amp;&amp; git commit -m &quot;Product context hub&quot;   # then push to Azure Repos
 </code></pre></div>
+<p>Then the product-level context (half a day, the tech lead with one developer per service):</p>
+<ol>
+<li>Clone the repos next to the hub (<code>node scripts/hub.mjs clone all --run</code>) and open them all with the hub
+   (<code>node scripts/hub.mjs workspace all</code>, then open the generated <code>.code-workspace</code>).</li>
+<li>Type <code>/hub-baseline</code>. It writes <code>context/architecture.md</code>, <code>context/glossary.md</code>, one
+   <code>context/flows/&lt;flow&gt;.md</code> per important end-to-end flow (with screen field → API field → column
+   mappings) and fills in <code>context/platform/</code>. Every fact is anchored into a repo as
+   <code>[anchor: report-service:src/main/java/**/ReportController.java]</code>.</li>
+<li><code>node scripts/hub.mjs check</code> confirms every anchor resolves in the cloned repos;
+   <code>node scripts/hub.mjs readiness</code> scores the hub's own context.</li>
+<li>Owners review their pages and set <code>Status: reviewed · Last verified: &lt;date&gt; by &lt;name&gt;</code>. Commit and push.</li>
+</ol>
+<p>Per-repo detail (each service's data, API, screens, security) stays in that repo's <code>docs/context/</code>, made with
+<code>/context-baseline</code> there; the hub links to it instead of copying it.</p>
 <p>The catalog is the most valuable part. For each repo record: <code>type</code> (<code>mfe-shell</code>, <code>mfe-remote</code>,
 <code>service</code>, <code>library</code>), <code>owner</code>, <code>areas</code> (business areas such as <code>reports</code>; use <code>platform</code> for repos
 almost everything uses), <code>exposes</code> (micro-frontends) or <code>api</code> and <code>contract</code> (services), and <code>calls</code>,
@@ -363,6 +377,16 @@ dependency is added to the catalog in the same PR that introduces it.</p>
 <td>Product tech lead</td>
 </tr>
 <tr>
+<td>Weekly (5 min)</td>
+<td><code>hub.mjs check</code> (after pulling the repos): hub lines whose code changed since review</td>
+<td>Product tech lead</td>
+</tr>
+<tr>
+<td>A story changes a cross-repo flow or contract</td>
+<td>Its design's "Context impact" lists the hub page; a linked PR in the hub updates it</td>
+<td>Story author</td>
+</tr>
+<tr>
 <td>Each kit release</td>
 <td><code>install.mjs &lt;repo&gt; --upgrade</code> per repo</td>
 <td>Each team</td>
@@ -430,6 +454,14 @@ team; catalog and initiatives → product tech leads; <code>contracts/</code> �
 <tr>
 <td>Contract copies up to date?</td>
 <td><code>node scripts/hub.mjs contracts [--sync]</code></td>
+</tr>
+<tr>
+<td>Hub anchors still true in the repos?</td>
+<td><code>node scripts/hub.mjs check</code></td>
+</tr>
+<tr>
+<td>Hub readiness score</td>
+<td><code>node scripts/hub.mjs readiness</code></td>
 </tr>
 </tbody>
 </table></div>

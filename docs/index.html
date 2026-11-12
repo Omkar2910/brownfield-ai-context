@@ -506,6 +506,23 @@ folder. The maps do not connect the Angular HTTP call to the Spring endpoint; th
 root folder. Keep the root <code>AGENTS.md</code> short (shared rules and the map of folders), add <code>ui/AGENTS.md</code> and
 <code>service/AGENTS.md</code> for each side, and give the scoped instruction files <code>applyTo</code> patterns such as
 <code>ui/**/*.ts</code> and <code>service/**/*.java</code>. One <code>openspec/</code>, one code map.</p>
+<h3 id="step-6b-in-depth-context-and-the-readiness-score-optional-about-half-a-day-per-repo">Step 6b — In-depth context and the readiness score (optional, about half a day per repo)</h3>
+<p>When your team or management wants a full reference of the service (architecture, business rules, data,
+API, dependencies, security, testing, operations, decisions) and a readiness score:</p>
+<ol>
+<li><strong>Type <code>/context-baseline</code>.</strong> It asks which flows matter most and who owns each page, then writes one
+   page at a time in <code>docs/context/</code>, every fact anchored, unproven claims under "Unverified". Check each
+   page as it appears.</li>
+<li><strong>Review.</strong> Each page's owner reads it against the code, resolves the Unverified lines and changes its
+   status line to <code>Status: reviewed · Last verified: &lt;date&gt; by &lt;name&gt;</code>. Core pages first (architecture,
+   domain, data, API, dependencies, security).</li>
+<li><strong>Score it.</strong> Type <code>/context-assess</code>. You get the 0–100 score, its band, and the three gaps that would
+   raise it most. Or run <code>node .github/hooks/scripts/context-tools.cjs readiness</code> any time.</li>
+<li><strong>Commit</strong> through a normal PR. From then on, stories keep the pages current (Phase 2 and 4 below).</li>
+</ol>
+<p>These pages are never loaded on every request; <code>AGENTS.md</code> just points to them. See
+<a href="context.html#in-depth-context-the-baseline-area-pages-and-the-readiness-score">CONTEXT-GUIDE.md</a> for how
+the score works and why.</p>
 <h3 id="optional-extras">Optional extras</h3>
 <div class="tablebox"><table>
 <thead>
@@ -590,7 +607,7 @@ It also <strong>sizes the story</strong> and recommends a path. You decide:</p>
 <strong>Check — this is the most important step in the whole workflow:</strong>
 - <code>proposal.md</code>: is the scope right? Anything out of scope that crept in?
 - <code>specs/.../spec.md</code>: are the requirements and scenarios what the story really means? Missing edge cases (permissions, empty data, large data, errors)?
-- <code>design.md</code> (the technical design): does it follow your codebase's patterns? Are the API examples, data changes and rollback right?
+- <code>design.md</code> (the technical design): does it follow your codebase's patterns? Are the API examples, data changes and rollback right? Does its "Context impact" table list every context page the change makes out of date (data, API, screens, security…)?
 - <code>test-plan.md</code>: does every scenario and acceptance criterion have a named test? Are the denied, empty, large and failure cases there?
 - <code>tasks.md</code>: small, ordered steps, each group starting with its tests?</p>
 <p>Edit the files directly or ask the agent to change them. <strong>Show the proposal and spec to your tech lead</strong>

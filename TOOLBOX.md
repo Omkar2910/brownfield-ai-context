@@ -17,6 +17,7 @@ just less well.
 | 1. Install | Skills, steward agent, hooks, checks added to the repo | Kit installer `kit/install.mjs --graphify` | Core |
 | 2. Map the code | Builds a local map of classes, calls and imports | **Graphify** (code-only, no API key) | Recommended |
 | 3. Create context | Lean `AGENTS.md`, scoped rules, `docs/context/`, guided by the code map | `/context-bootstrap` skill | Core |
+| 3b. In-depth reference and score | One reviewed page per dimension (architecture, domain, data, API, dependencies, security, testing, operations, decisions); readiness score 0–100 | `/context-baseline`, `/context-assess`, `context-tools readiness` | When the team or management needs it |
 | 4. Add the plan layer | `/opsx-*` commands for agreeing on stories | **OpenSpec** | Recommended for stories |
 | **Every story** | | | |
 | 5. Read the story | Work item text and acceptance criteria | Azure DevOps MCP server *(optional)*, or paste it | Optional |
@@ -44,7 +45,7 @@ just less well.
 | --- | --- | --- | --- |
 | **VS Code + GitHub Copilot (agent mode)** | The agent | Your editor | Any model; use your strongest for planning (step 8) |
 | **AGENTS.md + scoped instructions + docs/context** | Lasting context | Repo | Created by `/context-bootstrap` |
-| **Kit skills** | `context-bootstrap`, `story-to-change`, `story-finish`, `context-refresh`, `context-learn`, `onboard-me` | `.github/skills/` | Call by name; agents often skip skills they are not told to use |
+| **Kit skills** | `context-bootstrap`, `context-baseline`, `context-assess`, `story-to-change`, `story-finish`, `context-refresh`, `context-learn`, `onboard-me` | `.github/skills/` | Call by name; agents often skip skills they are not told to use |
 | **context-steward agent** | Maintains context files only | `.github/agents/` | Sprint and quarter upkeep |
 | **Agent hooks** | Session-start note, post-edit reminders, one check before finishing | `.github/hooks/` | Preview in VS Code; git hook and check cover the gap |
 | **Git hooks** | Block commits with broken context; refresh the code map | `.githooks/` | Work for every developer, with or without an agent |

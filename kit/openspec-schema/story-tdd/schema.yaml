@@ -1,5 +1,6 @@
 # Story workflow for brownfield services: proposal -> specs -> technical design (TDD) -> test plan -> tasks.
 # Made by the AI context kit from OpenSpec 1.16 "spec-driven" (proposal and specs steps unchanged).
+# Adapted from OpenSpec (MIT, Copyright (c) 2024 OpenSpec Contributors); licence in LICENSE-OpenSpec.txt next to this file.
 # The kit may replace THIS file on --upgrade. Customise the documents through templates/ and the
 # rules: block in openspec/config.yaml instead; those are never overwritten.
 name: story-tdd
@@ -209,6 +210,10 @@ artifacts:
       - Decisions: for each, the option chosen, the main alternative, and why.
       - Never invent a convention, rule or reason you did not see in the code or context
         files. Write "Unknown - ask <role>" under Open Questions instead.
+      - Context impact: list each context page this change makes out of date (docs/context/*.md
+        such as data.md, api.md, screens.md, security.md; AGENTS.md; rule files; area pages; the
+        product hub's pages for a cross-service flow or contract) and what changes in each. Find them
+        by checking which pages anchor the files you will change. Write "None" if nothing changes.
       - If an open question would change the specs, the approach or the tasks, ask the
         user now instead of guessing.
     requires:

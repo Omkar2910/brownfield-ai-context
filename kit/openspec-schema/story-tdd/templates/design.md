@@ -50,5 +50,13 @@
 ## Deployment and rollback
 <!-- Order of deployment across repos, config or feature flags, how to roll back. -->
 
+## Context impact
+<!-- Which context pages this change makes out of date, and what changes in each. /story-finish checks
+     every row was updated in this PR. "None" is a valid answer for a small change. -->
+| Page | What changes |
+| --- | --- |
+| <!-- e.g. docs/context/data.md --> | <!-- new column report.export_status --> |
+| <!-- e.g. product-context: context/flows/report-export.md (hub, separate PR) --> | |
+
 ## Open questions
 <!-- Only questions that do not change the specs, approach or tasks. -->

@@ -1,4 +1,5 @@
 # Platform rules: micro-frontends
+> Dimension: architecture · Status: draft · Last verified: never · Independent review: no · Owner: <platform team>
 
 > Template. Replace each rule with what is true in your platform, delete what does not apply, keep the reasons.
 > Each repo's AGENTS.md links here instead of copying these rules.

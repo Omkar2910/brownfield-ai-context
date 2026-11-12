@@ -1,4 +1,5 @@
 # Platform rules: authentication and authorization
+> Dimension: security · Status: draft · Last verified: never · Independent review: no · Owner: <platform team>
 
 > Template. Replace with your platform's real rules. Keep each rule short and give the reason.
 

@@ -13,6 +13,7 @@ that keep the context up to date.
 | Understand how to create, use and maintain context for any task, with or without OpenSpec | **[CONTEXT-GUIDE.md](CONTEXT-GUIDE.md)** (web page: [docs/context.html](docs/context.html)) |
 | See every tool (core, recommended, optional), Graphify in depth, and which workflow fits which task | **[TOOLBOX.md](TOOLBOX.md)** (web page: [docs/toolbox.html](docs/toolbox.html)) |
 | Set it up across many repos: micro-frontends, backend services, shared libraries | **[MULTI-REPO.md](MULTI-REPO.md)** (web page: [docs/multi-repo.html](docs/multi-repo.html)) |
+| Build an in-depth reference per repo and score context readiness | `/context-baseline`, `/context-assess` — see [CONTEXT-GUIDE.md](CONTEXT-GUIDE.md#in-depth-context-the-baseline-area-pages-and-the-readiness-score) |
 | Install the kit into my repo | `node kit/install.mjs <path-to-your-repo>` — details in [kit/README.md](kit/README.md) |
 | Track my first story and present the results | [templates/story-log.md](templates/story-log.md), [templates/presentation-outline.md](templates/presentation-outline.md) |
 | Try everything in a sandbox first | [demo-kit/](demo-kit/README.md) (made-up UI + backend services) |
@@ -47,6 +48,6 @@ docs/research/      playbook, FAQ, explainer, research update, sources
 
 ## Status
 
-Kit 1.4.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 20 on Linux; written for Windows, macOS and Linux. Copilot hooks
+Kit 1.5.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 20 on Linux; written for Windows, macOS and Linux. Copilot hooks
 and agent plugins are preview features in VS Code; the git hook and the context check work without them.
 Last updated November 2026. MIT licence.

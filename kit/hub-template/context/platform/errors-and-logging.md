@@ -1,4 +1,5 @@
 # Platform rules: errors and logging
+> Dimension: operations · Status: draft · Last verified: never · Independent review: no · Owner: <platform team>
 
 > Template. Replace with your platform's real rules.
 

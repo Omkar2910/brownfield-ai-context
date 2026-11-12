@@ -8,6 +8,9 @@
  *           Broken anchors (error), stale context and size budget (warnings). Exit 1 on errors, or on
  *           warnings with --strict. --staged checks what is about to be committed (used by pre-commit).
  *   status                                  Short summary: context files, anchors, always-on size.
+ *   readiness [--json]                      Context readiness score (0-100) over 12 dimensions, from the
+ *           deep pages' status headers, anchors, freshness and docs/context/readiness.md ratings.
+ *           Weights and bands: .github/context-readiness.json (optional).
  *
  * Agent hooks (read the event JSON on stdin, print one JSON object, never fail the agent):
  *   session-start   Adds a short "context health" note when a chat session starts.
@@ -146,6 +149,7 @@ function anchorPatterns(repo, raw) {
     p = p.trim().replace(/^[`'"]+|[`'"]+$/g, '').replace(/\\/g, '/').replace(/#.*$/, '').replace(/:\d+(-\d+)?$/, '').replace(/^\.\//, '').trim();
     if (!p || /[<>]/.test(p)) continue;                 // empty or a template placeholder such as <path>
     if (p.startsWith('../') || path.isAbsolute(p)) continue; // outside this repo (e.g. the product hub): not checked
+    if (/^[A-Za-z0-9_.-]{2,}:[^/\\]/.test(p)) continue;     // repo-name:path points into another repo: the hub checks it
     let glob = p;
     if (p.endsWith('/')) glob = p + '**';
     else if (!/[*?{]/.test(p)) { try { if (fs.statSync(path.join(repo, p)).isDirectory()) glob = p + '/**'; } catch { /* file or missing */ } }
@@ -408,10 +412,184 @@ function hookGuard(input) {
   else emit({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } });
 }
 
+// ---------------------------------------------------------------- readiness
+const READINESS_DEFAULT = {
+  dimensions: [
+    { id: 'code-understanding', label: 'Code understanding', weight: 15 },
+    { id: 'architecture', label: 'Architecture', weight: 10 },
+    { id: 'domain', label: 'Business/domain', weight: 10 },
+    { id: 'data', label: 'Data', weight: 10 },
+    { id: 'api', label: 'API/integration', weight: 10 },
+    { id: 'dependencies', label: 'Dependencies', weight: 10 },
+    { id: 'security', label: 'Security', weight: 10 },
+    { id: 'testing', label: 'Testing', weight: 5 },
+    { id: 'operations', label: 'Runtime/operations', weight: 5 },
+    { id: 'decisions', label: 'Decision history', weight: 5 },
+    { id: 'provenance', label: 'Provenance', weight: 5 },
+    { id: 'freshness', label: 'Freshness', weight: 5 },
+  ],
+  bands: [
+    { min: 0, name: 'Context poor' }, { min: 21, name: 'Context emerging' }, { min: 41, name: 'Discoverable' },
+    { min: 51, name: 'AI assisted' }, { min: 71, name: 'AI ready' }, { min: 86, name: 'Agent ready' },
+  ],
+  reviewMaxAgeDays: 180,
+};
+const MEASURED = new Set(['provenance', 'freshness']);
+const DAY = 864e5;
+
+function readinessConfig(repo) {
+  for (const f of ['.github/context-readiness.json', 'context-readiness.json']) {
+    try { return { ...READINESS_DEFAULT, ...JSON.parse(fs.readFileSync(path.join(repo, f), 'utf8')), source: f }; } catch { /* next */ }
+  }
+  return { ...READINESS_DEFAULT, source: 'default' };
+}
+
+// "> Dimension: data · Status: reviewed · Last verified: 2026-11-12 by A · Independent review: no"
+function pageHeader(text) {
+  const head = text.split(/\r?\n/).slice(0, 8).join('\n');
+  const dim = /Dimension:\s*([a-z-]+)/i.exec(head);
+  if (!dim) return null;
+  const status = (/Status:\s*([a-z]+)/i.exec(head) || [])[1] || 'draft';
+  const verified = (/Last verified:\s*(\d{4}-\d{2}-\d{2})/i.exec(head) || [])[1] || null;
+  const independent = /Independent review:\s*yes/i.test(head);
+  return { dimension: dim[1].toLowerCase(), status: status.toLowerCase(), verified, independent };
+}
+
+// Ratings written by /context-assess: | dimension | rating | evidence | gaps | independent |
+function assessedRatings(repo) {
+  const out = {};
+  let text = '';
+  for (const f of ['docs/context/readiness.md', 'context/readiness.md']) { try { text = fs.readFileSync(path.join(repo, f), 'utf8'); break; } catch { /* next */ } }
+  for (const line of text.split(/\r?\n/)) {
+    const cells = line.split('|').map(c => c.trim());
+    if (cells.length < 4) continue;
+    const id = (cells[1] || '').toLowerCase(), r = Number(cells[2]);
+    if (/^[a-z-]+$/.test(id) && cells[2] !== '' && r >= 0 && r <= 5) out[id] = { rating: Math.round(r), independent: /^yes/i.test(cells[cells.length - 2] || '') };
+  }
+  return out;
+}
+
+const changedSinceCache = new Map();
+function changedSince(repo, date) {
+  if (!changedSinceCache.has(date)) {
+    const log = git(repo, ['log', `--since=${date}T23:59:59`, '--name-only', '--format=']) || '';
+    changedSinceCache.set(date, new Set(log.split(/\r?\n/).filter(Boolean).map(toPosix)));
+  }
+  return changedSinceCache.get(date);
+}
+
+// Share of claim lines (bullets, numbered steps, table rows) that carry an anchor, directly or via a
+// "Source: [anchor: …]" line in the same section. Lines under "Unverified" are not claims.
+function anchoredShare(text) {
+  let claims = 0, anchored = 0, sectionSourced = false, unverified = false, prev = '';
+  for (const line of text.split(/\r?\n/)) {
+    if (/^#{1,6}\s/.test(line)) { sectionSourced = false; unverified = /unverified/i.test(line); prev = line; continue; }
+    if (/^\s*(Source|Sources):.*\[anchor:/i.test(line)) sectionSourced = true;
+    const isRow = /^\s*\|/.test(line) && !/^\s*\|\s*:?-{3}/.test(line);
+    const isHeaderRow = isRow && !/^\s*\|/.test(prev);
+    const isClaim = !unverified && !/^\s*>/.test(line) && !/<[^>]+>/.test(line) &&
+      (/^\s*([-*]|\d+\.)\s+\S/.test(line) || (isRow && !isHeaderRow));
+    if (isClaim) { claims++; if (/\[anchor:/.test(line) || sectionSourced) anchored++; }
+    prev = line;
+  }
+  return { claims, anchored };
+}
+
+function cmdReadiness() {
+  const repo = resolveRepo({});
+  const cfg = readinessConfig(repo);
+  const a = analyse(repo);
+  const now = Date.now();
+  const ratings = assessedRatings(repo);
+  const pages = [];
+  let claims = 0, anchoredClaims = 0;
+  for (const f of a.ctx.contextFiles) {
+    let text = ''; try { text = readText(repo, f); } catch { continue; }
+    const h = pageHeader(text);
+    if (f === 'AGENTS.md' || h) { const s = anchoredShare(text); claims += s.claims; anchoredClaims += s.anchored; }
+    if (!h) continue;
+    const anchors = a.ctx.anchors.filter(x => x.file === f);
+    const broken = a.broken.filter(x => x.file === f).length;
+    const age = h.verified ? Math.floor((now - Date.parse(h.verified)) / DAY) : null;
+    const since = h.verified ? changedSince(repo, h.verified) : null;
+    const stale = since ? anchors.filter(x => [...since].some(c => x.re.test(c))).length : 0;
+    let cap = 2;
+    if (h.status !== 'draft' && h.verified) cap = age > cfg.reviewMaxAgeDays ? 3 : (h.independent ? 5 : 4);
+    const anyAnchor = anchors.length || /\[anchor:/.test(text); // repo:path anchors (hub pages) count as traceable
+    if (!anyAnchor) cap = Math.min(cap, 3);
+    if (stale) cap = Math.min(cap, 3);
+    if (broken) cap = Math.min(cap, 2);
+    pages.push({ file: f, ...h, age, anchors: anchors.length, broken, stale, cap });
+  }
+  const specs = (() => { try { return fs.readdirSync(path.join(repo, 'openspec', 'specs'), { withFileTypes: true }).filter(d => d.isDirectory()).length; } catch { return 0; } })();
+  const archivedDesigns = (() => { try { return fs.readdirSync(path.join(repo, 'openspec', 'changes', 'archive')).filter(d => fs.existsSync(path.join(repo, 'openspec', 'changes', 'archive', d, 'design.md'))).length; } catch { return 0; } })();
+  const ruleFiles = a.ctx.contextFiles.filter(f => f.startsWith('.github/instructions/') || f.startsWith('.claude/rules/')).length;
+  const g = graphState(repo);
+
+  const rows = cfg.dimensions.map(d => {
+    const mine = pages.filter(p => p.dimension === d.id);
+    let cap = mine.length ? Math.max(...mine.map(p => p.cap)) : 0;
+    let evidence = mine.map(p => `${p.file} (${p.status}${p.verified ? ' ' + p.verified : ''})`);
+    let measured = null;
+    if (d.id === 'code-understanding') {
+      const agents = a.agentsMd;
+      cap = !agents ? 0 : (ruleFiles || g) ? 3 : 2;
+      if (agents && ruleFiles && g && !g.stale && a.ctx.anchors.some(x => x.file === 'AGENTS.md')) cap = 4;
+      if (agents && agents.lines > MAX_AGENTS_LINES) cap = Math.min(cap, 3);
+      if (cap === 4 && ratings[d.id] && ratings[d.id].independent) cap = 5;
+      evidence = [agents ? `AGENTS.md ${agents.lines} lines` : 'no AGENTS.md', `${ruleFiles} rule file(s)`, g ? (g.stale ? 'code map stale' : 'code map current') : 'no code map'];
+    }
+    if (d.id === 'domain' && specs) { cap = Math.max(cap, 3); evidence.push(`${specs} OpenSpec spec(s)`); }
+    if (d.id === 'decisions' && archivedDesigns) { cap = Math.max(cap, 2); evidence.push(`${archivedDesigns} archived design(s)`); }
+    if (d.id === 'provenance') {
+      const share = claims ? anchoredClaims / claims : 0;
+      measured = !claims ? 0 : share < 0.1 ? 1 : share < 0.25 ? 2 : share < 0.45 ? 3 : share < 0.65 ? 4 : 5;
+      evidence = [`${anchoredClaims} of ${claims} statements anchored (${Math.round(share * 100)}%)`];
+    }
+    if (d.id === 'freshness') {
+      const verified = pages.filter(p => p.verified);
+      const oldest = verified.length ? Math.max(...verified.map(p => p.age)) : null;
+      const staleAll = pages.reduce((n, p) => n + p.stale, 0);
+      measured = !a.ctx.contextFiles.length ? 0 : a.broken.length ? 1 : !verified.length ? 2 : (staleAll || oldest > 180) ? 3 : oldest > 90 ? 4 : 5;
+      evidence = [`${a.broken.length} broken anchor(s)`, `${staleAll} line(s) whose code changed since review`, verified.length ? `oldest review ${oldest} day(s) ago` : 'no page reviewed yet'];
+    }
+    const assessed = ratings[d.id] ? ratings[d.id].rating : null;
+    const rating = measured !== null ? measured : assessed !== null ? Math.min(assessed, cap) : Math.min(cap, 3);
+    const points = Math.round(rating / 5 * d.weight * 10) / 10;
+    return { id: d.id, label: d.label, weight: d.weight, cap: measured !== null ? null : cap, assessed, provisional: measured === null && assessed === null, rating, points, lost: d.weight - points, evidence };
+  });
+  const total = Math.round(rows.reduce((n, r) => n + r.points, 0));
+  const band = [...cfg.bands].reverse().find(b => total >= b.min) || cfg.bands[0];
+  const gaps = [...rows].sort((x, y) => y.lost - x.lost).filter(r => r.lost > 0).slice(0, 3).map(r => {
+    const how = r.id === 'provenance' ? 'add [anchor: …] to statements in the deep pages'
+      : r.id === 'freshness' ? 'fix broken anchors, run /context-refresh, re-review old pages'
+      : r.cap === 0 ? (r.id === 'code-understanding' ? 'run /context-bootstrap and build the code map' : 'no page yet: run /context-baseline')
+      : r.cap <= 2 ? 'page is a draft or has broken anchors: owner reviews it and sets Last verified'
+      : r.cap === 3 ? 'unanchored, stale or old review: add anchors, /context-refresh, re-review'
+      : r.cap === 4 ? 'independent review by a second person (needed for 5)'
+      : 'run /context-assess';
+    return { ...r, how };
+  });
+  const result = { repo: path.basename(repo), config: cfg.source, total, band: band.name, rows, gaps,
+    alwaysOnTokens: a.agents.tokens, alwaysOnBudget: ALWAYS_ON_TOKENS, pages };
+  if (flag('--json')) { console.log(JSON.stringify(result, null, 2)); return; }
+  console.log(`Context readiness: ${result.repo}  (weights: ${cfg.source})`);
+  console.log('');
+  console.log('| Dimension | Weight | Evidence | Cap | Rating | Points |');
+  console.log('| --- | --- | --- | --- | --- | --- |');
+  for (const r of rows) console.log(`| ${r.label} | ${r.weight}% | ${r.evidence.join('; ') || 'none'} | ${r.cap === null ? 'measured' : r.cap} | ${r.rating}${r.provisional ? '*' : ''} | ${r.points} |`);
+  console.log('');
+  console.log(`Total: ${total} / 100 · ${band.name}`);
+  if (rows.some(r => r.provisional)) console.log('* not assessed yet: provisional, at most 3 (run /context-assess)');
+  console.log(`Always-loaded context: ≈ ${a.agents.tokens} tokens (budget ${ALWAYS_ON_TOKENS}). A high score with a large always-loaded size is a warning sign.`);
+  if (gaps.length) { console.log('Biggest gaps:'); gaps.forEach(r => console.log(`  - ${r.label}: ${r.points} of ${r.weight} points. ${r.how}`)); }
+}
+
 // ---------------------------------------------------------------- main
 const hooks = { 'session-start': hookSessionStart, 'post-edit': hookPostEdit, stop: hookStop, guard: hookGuard };
 if (command === 'check') cmdCheck();
 else if (command === 'status') cmdStatus();
+else if (command === 'readiness') cmdReadiness();
 else if (hooks[command]) {
   try {
     const input = readStdin();
@@ -422,6 +600,6 @@ else if (hooks[command]) {
   }
   process.exitCode = 0; // a hook must never break the agent
 } else {
-  console.log('Usage: node context-tools.cjs check [--base <ref>] [--staged] [--strict] | status | session-start | post-edit | stop | guard');
+  console.log('Usage: node context-tools.cjs check [--base <ref>] [--staged] [--strict] | status | readiness [--json] | session-start | post-edit | stop | guard');
   process.exitCode = command ? 2 : 0;
 }

@@ -50,5 +50,11 @@
 ## Deployment and rollback
 <!-- Order of deployment across repos, config or feature flags, how to roll back. -->
 
+## Context impact
+<!-- Which context pages this change makes out of date (docs/context/*.md, AGENTS.md, rule files,
+     the product hub), and what changes in each. "None" is fine for a small change. -->
+| Page | What changes |
+| --- | --- |
+
 ## Open questions
 <!-- Only questions that do not change the specs, approach or tasks. -->

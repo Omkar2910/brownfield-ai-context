@@ -30,6 +30,12 @@ links the other PRs and says which must merge first.
    the branch this PR targets (run `git branch -r` if unsure; for example `origin/main` or
    `origin/develop`). If the check says the base does not exist, run `git fetch` and try again.
    For each finding, follow the `context-refresh` skill. Context edits go in this same PR.
+   Then open the "Context impact" table in `design.md` (or `technical-design.md`): confirm each listed
+   page was updated in this PR, and that each page whose anchored code changed is either listed or
+   still true. For a page in the product hub, draft its change and tell the user it needs a PR in the
+   hub repo, linked from this one. If the repo has a `docs/context/readiness.md`, a reviewed page you
+   changed keeps its "Last verified" only if a reviewer checks it in this PR; otherwise set it back to
+   `Status: draft` for the lines you rewrote.
 6. **Promote what this story taught (only if it applies).** Ask: did understanding an area take a lot of
    tracing (many files read, a flow across UI, API, service and database, or a wrong first guess), and
    does `docs/context/` have no page for it? If yes, and the area will be changed again, offer to turn

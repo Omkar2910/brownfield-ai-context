@@ -9,9 +9,13 @@ Goal: give the planning step exactly the context this story needs, in every repo
 nothing global. The user reads the result in the chat; files are only a copy for the next steps.
 
 ## Steps
-1. **See what is open.** List the repos in this window (each workspace folder that is a git repo; a
-   window can hold one UI and several services). For each, note in one line: has `openspec/`? has
-   `graphify-out/graph.json`? Do this before searching, so every repo gets the same treatment.
+1. **See what is open, and what the user asked for.** List the repos in this window (each workspace
+   folder that is a git repo; a window can hold one UI and several services). For each, note in one
+   line: has `openspec/`? has `graphify-out/graph.json`? A folder with `catalog.json` and
+   `scripts/hub.mjs` is the product context hub: note it, it is not a repo to change.
+   **Scope from the prompt:** if the user named repos ("in report-service and report-ui"), search only
+   those plus what they directly call. If they said they are not sure, or named none, search every
+   repo in the window. Never ask for scope up front; ask only in step 5 if the search leaves it unclear.
 2. **Get the story.** If an Azure DevOps or Jira tool is connected, read the work item (title,
    description, acceptance criteria, linked items). Otherwise ask the user to paste it.
    Restate it in 3–5 lines and list acceptance criteria as numbered checks (AC1, AC2…).
@@ -29,6 +33,10 @@ nothing global. The user reads the result in the chat; files are only a copy for
    - **Repos without one:** search for the endpoints, components, services and tables involved.
    - **Across repos:** match the UI's HTTP calls to the service's endpoints (path and method) to confirm
      which service each UI change depends on.
+   - **Connections outside the window:** note outgoing calls from a repo you will change to a service
+     that is not open (base URLs in config, HTTP or Feign clients, module federation remotes). If the
+     product hub is open, run `node <hub>/scripts/hub.mjs impact <repo>` for each repo you will change:
+     it lists the repos that call or load it, including ones that are not open.
    Keep 3–8 files per repo that matter, and the dependents that may need tests.
 4. **Collect relevant knowledge only,** from each repo that changes:
    - Current behaviour: specs in its `openspec/specs/` for the domains touched (if any).
@@ -42,8 +50,15 @@ nothing global. The user reads the result in the chat; files are only a copy for
    - **Small** (one repo, one layer or a small slice): one OpenSpec change; "Lite" technical design.
    - **Normal** (several layers, an API or data change, or more than one repo): one OpenSpec change
      **in each repo that changes**, all with the same change id.
-   Order the repos producers first: database and services before the UIs that call them. A repo that
-   is only read (for a contract or an example) gets no change.
+   Order the repos producers first: database and services before the UIs that call them. Put every repo
+   in one of three groups: **changes**, **read only** (needed for a contract or an example, gets no
+   change folder), **connected but not open** (calls or is called by a repo that changes).
+   **Ask one question only when it is unclear:** the story matches code in more than one candidate repo,
+   a repo you will change has a consumer or provider that is not open and the change touches that
+   contract, or the user said they are not sure. Ask it with the groups in front of the user, e.g.
+   "This changes report-service and report-ui. report-service is also called by admin-mfe, which isn't
+   open, and the export endpoint is changing. Include admin-mfe (add it to the window), or is it
+   unaffected?" Otherwise do not ask; carry on.
 6. **List open questions** for the product owner or tech lead (unclear rules, edge cases, data limits,
    permissions, which service owns a new field). Ask them now if the user is available.
 7. **Show the pack in the chat** using `references/story-pack.template.md`. Always in the chat, whether
