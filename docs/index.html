@@ -443,6 +443,22 @@ each <code>AGENTS.md</code> as the same 2–3 short lines. With more services, m
    <code>API contract: ../report-service/src/main/resources/openapi/report-api.yaml</code>.</p>
 </li>
 </ol>
+<p><strong>How a story runs across both repos, with OpenSpec:</strong></p>
+<ul>
+<li><strong>Set up OpenSpec in each repo</strong> that will change (<code>openspec init</code>, then the kit installer again in that
+  repo). Each repo has its own <code>openspec/</code> folder; nothing is shared between them.</li>
+<li><strong><code>/story-to-change</code> searches every repo in the window</strong>, using each repo's own code map, and shows the
+  pack in the chat: one section per repo, every file a clickable link, the order to plan them in, and open
+  questions.</li>
+<li><strong>It then creates one change per repo that changes, with the same change id</strong>, e.g.
+  <code>report-service/openspec/changes/wi1234-add-report-export/</code> and
+  <code>report-ui/openspec/changes/wi1234-add-report-export/</code>, each with its own <code>context.md</code>.</li>
+<li><strong>Plan and build the service first.</strong> Run <code>/opsx-propose wi1234-add-report-export</code> and say "in
+  report-service". After that plan is approved, run it again for the UI ("in report-ui"); the UI's design
+  points at the service's <code>design.md</code> for the API instead of copying it.</li>
+<li><strong>Each repo gets its own branch (same name), commits and PR.</strong> Link the two PRs, merge the service first,
+  and archive each change in its own PR.</li>
+</ul>
 <p><strong>How to open them:</strong></p>
 <div class="tablebox"><table>
 <thead>

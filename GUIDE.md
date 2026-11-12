@@ -263,6 +263,22 @@ to open them based on what the story touches.
    under "Where to look", point to it, for example
    `API contract: ../report-service/src/main/resources/openapi/report-api.yaml`.
 
+**How a story runs across both repos, with OpenSpec:**
+
+- **Set up OpenSpec in each repo** that will change (`openspec init`, then the kit installer again in that
+  repo). Each repo has its own `openspec/` folder; nothing is shared between them.
+- **`/story-to-change` searches every repo in the window**, using each repo's own code map, and shows the
+  pack in the chat: one section per repo, every file a clickable link, the order to plan them in, and open
+  questions.
+- **It then creates one change per repo that changes, with the same change id**, e.g.
+  `report-service/openspec/changes/wi1234-add-report-export/` and
+  `report-ui/openspec/changes/wi1234-add-report-export/`, each with its own `context.md`.
+- **Plan and build the service first.** Run `/opsx-propose wi1234-add-report-export` and say "in
+  report-service". After that plan is approved, run it again for the UI ("in report-ui"); the UI's design
+  points at the service's `design.md` for the API instead of copying it.
+- **Each repo gets its own branch (same name), commits and PR.** Link the two PRs, merge the service first,
+  and archive each change in its own PR.
+
 **How to open them:**
 
 | Story touches | Open | Why |

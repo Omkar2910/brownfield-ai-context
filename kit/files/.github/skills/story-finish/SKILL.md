@@ -7,6 +7,10 @@ description: Finish a story before opening a pull request - run tests, check the
 
 Goal: a pull request a reviewer can approve quickly, with specs, code and context in agreement.
 
+**Story across several repos:** run these steps once per repo that changed, producer first (services,
+then UIs). Each repo gets its own PR with its own change folder and context fixes. Each PR description
+links the other PRs and says which must merge first.
+
 ## Steps
 1. **Tasks.** If there is an OpenSpec change, open `openspec/changes/<change-id>/tasks.md`;
    otherwise use the plan agreed earlier in the conversation. List anything unfinished and ask the

@@ -195,6 +195,10 @@ artifacts:
         the classes involved and their dependents (`affected`), and list those dependents
         under Impact.
       - Read AGENTS.md "Where to look" and any docs/context page for the area.
+      - If context.md lists other repos in this story, this change covers only THIS repo. For an API
+        this repo calls, use the producing repo's change (its design.md) as the contract and link it;
+        do not restate or redesign it. For an API this repo provides, write the contract fully here,
+        because consumer repos will plan against it.
 
       Content rules:
       - Name real files, classes, endpoints, tables and components. Each "current state"
