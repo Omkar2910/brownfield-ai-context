@@ -15,6 +15,9 @@
 //                    openspec/schemas/story-tdd/schema.yaml) with this kit version. Never touches AGENTS.md,
 //                    instructions, docs/context, your PR template or the schema's templates.
 //   --keep-schema    with OpenSpec: install the story-tdd schema but do not make it the default
+//   --org <path>     copy the organisation context repo's rules/ into this repo (stamped, org-owned) and its
+//                    readiness weights; --upgrade re-syncs from the path recorded in ai-kit.json
+//   --create-org <path>  create an organisation context repo from kit/org-template
 //
 // Create a product context hub (shared repo for many micro-frontends and services):
 //   node kit/install.mjs --create-hub <path-for-new-hub-folder>
@@ -24,6 +27,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const kitDir = path.dirname(fileURLToPath(import.meta.url));
@@ -33,7 +37,7 @@ const opt = n => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : unde
 const has = n => args.includes(n);
 const tool = opt('--tool') || 'copilot';
 const dry = has('--dry-run');
-const target = args.find((a, i) => !a.startsWith('--') && !['--tool', '--create-hub'].includes(args[i - 1]));
+const target = args.find((a, i) => !a.startsWith('--') && !['--tool', '--create-hub', '--create-org', '--org'].includes(args[i - 1]));
 const upgrade = has('--upgrade');
 const kitVersion = fs.readFileSync(path.join(kitDir, 'VERSION'), 'utf8').trim();
 
@@ -59,8 +63,27 @@ if (has('--create-hub')) {
   process.exit(0);
 }
 
+// --create-org: copy the organisation context template into a new folder (never overwrites), then stop.
+if (has('--create-org')) {
+  const orgDir = path.resolve(opt('--create-org') || '');
+  if (!opt('--create-org')) { console.log('Usage: node kit/install.mjs --create-org <path-for-new-org-context-folder>'); process.exit(1); }
+  const tplDir = path.join(kitDir, 'org-template');
+  const walkAll = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walkAll(path.join(d, e.name)) : [path.join(d, e.name)]);
+  let added = 0, kept = 0;
+  for (const src of walkAll(tplDir)) {
+    const dest = path.join(orgDir, path.relative(tplDir, src));
+    if (fs.existsSync(dest)) { kept++; continue; }
+    if (!dry) { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.copyFileSync(src, dest); }
+    added++;
+  }
+  console.log(`Organisation context at ${orgDir}: ${added} files added, ${kept} already there.`);
+  console.log('Next: replace the <replace: …> parts in rules/ and context/, set kit.json, then git init, commit and push');
+  console.log('to your org context repo. Each team then runs: node kit/install.mjs <repo> --org <path-to-org-context>');
+  process.exit(0);
+}
+
 if (!target || has('--help') || !['copilot', 'claude'].includes(tool)) {
-  console.log('Usage: node kit/install.mjs <path-to-your-repo> [--tool copilot|claude] [--graphify] [--upgrade] [--keep-schema] [--dry-run] [--no-git-hook]\n       node kit/install.mjs --create-hub <path-for-new-hub-folder>');
+  console.log('Usage: node kit/install.mjs <path-to-your-repo> [--tool copilot|claude] [--graphify] [--org <org-context>] [--upgrade] [--keep-schema] [--dry-run] [--no-git-hook]\n       node kit/install.mjs --create-hub <path-for-new-hub-folder>\n       node kit/install.mjs --create-org <path-for-new-org-context-folder>');
   process.exit(target ? 1 : 0);
 }
 
@@ -255,14 +278,79 @@ if (!has('--no-git-hook')) {
   }
 }
 
-// Version stamp, so teams can see which kit each repo runs
+// Version stamp, so teams can see which kit each repo runs (and which org rules it carries)
 const stampRel = (tool === 'claude' ? '.claude' : '.github') + '/ai-kit.json';
 const stamp = path.join(root, ...stampRel.split('/'));
-let previous = null;
-try { previous = JSON.parse(fs.readFileSync(stamp, 'utf8')).version; } catch { /* first install */ }
-if (previous !== kitVersion && (!previous || upgrade) && !dry) {
+let previous = null, stampObj = null;
+try { stampObj = JSON.parse(fs.readFileSync(stamp, 'utf8')); previous = stampObj.version; } catch { /* first install */ }
+
+// 5. Organisation layer: copy the org repo's rules into this repo, stamped, so they reach every agent and CI.
+const sha1 = s => createHash('sha1').update(s).digest('hex').slice(0, 12);
+const orgArg = opt('--org') || (upgrade && stampObj && stampObj.org && stampObj.org.path ? path.resolve(root, stampObj.org.path) : null);
+let orgRecord = stampObj && stampObj.org ? stampObj.org : null;
+if (orgArg) {
+  const orgDir = path.resolve(orgArg);
+  const rulesDir = path.join(orgDir, 'rules');
+  if (!fs.existsSync(rulesDir)) {
+    notes.push(`--org: ${orgDir} has no rules/ folder. Create an org context repo with: node kit/install.mjs --create-org <path>`);
+  } else {
+    const orgName = path.basename(orgDir);
+    const commit = git(orgDir, ['rev-parse', '--short', 'HEAD']) || 'uncommitted';
+    const destBase = tool === 'claude' ? '.claude/rules/org' : '.github/instructions/org';
+    const marker = '<!-- Organisation rule from ';
+    const files = {};
+    for (const f of fs.readdirSync(rulesDir).filter(n => n.endsWith('.md')).sort()) {
+      const source = fs.readFileSync(path.join(rulesDir, f), 'utf8').replace(/\r\n/g, '\n');
+      let body = source;
+      if (tool === 'claude') { // Claude Code rules use paths: instead of applyTo:, and no paths means "always"
+        body = body.replace(/^applyTo:\s*['"]?([^'"\n]+)['"]?\s*$/m, (m, g) => g.trim() === '**' ? '' : `paths:\n  - "${g.trim()}"`).replace(/^---\n\n/, '---\n');
+      }
+      const line = `${marker}${orgName} @ ${commit}. Do not edit here: change it in the org context repo, then re-sync with install.mjs --org. -->\n`;
+      const fm = /^---\n[\s\S]*?\n---\n/.exec(body);
+      const out = fm ? fm[0] + line + body.slice(fm[0].length) : line + body;
+      const rel = `${destBase}/${f}`;
+      const dest = path.join(root, ...rel.split('/'));
+      const exists = fs.existsSync(dest);
+      if (!exists || fs.readFileSync(dest, 'utf8') !== out) {
+        if (!dry) { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, out); }
+        (exists ? updated : created).push(rel + ` (org rule, ${orgName} @ ${commit})`);
+      } else skipped.push(rel);
+      files[f] = { source: sha1(source), copy: sha1(out) };
+    }
+    // Rules removed from the org repo are removed here too (only files the sync wrote, recognised by the marker).
+    const destDir = path.join(root, ...destBase.split('/'));
+    if (fs.existsSync(destDir)) for (const f of fs.readdirSync(destDir)) {
+      if (files[f] || !f.endsWith('.md')) continue;
+      const p = path.join(destDir, f);
+      if (fs.readFileSync(p, 'utf8').includes(marker)) { if (!dry) fs.unlinkSync(p); updated.push(`${destBase}/${f} (removed: no longer in the org repo)`); }
+    }
+    // The org's readiness weights, unless the repo keeps its own.
+    const orgWeights = path.join(orgDir, 'context-readiness.json');
+    const repoWeights = path.join(root, '.github', 'context-readiness.json');
+    if (fs.existsSync(orgWeights)) {
+      const w = JSON.parse(fs.readFileSync(orgWeights, 'utf8'));
+      const own = fs.existsSync(repoWeights) && !JSON.parse(fs.readFileSync(repoWeights, 'utf8'))._source;
+      if (own) notes.push('.github/context-readiness.json is the repo\'s own; the org weights were not copied over it.');
+      else {
+        const text = JSON.stringify({ _source: `${orgName} @ ${commit}`, ...w }, null, 2) + '\n';
+        if (!fs.existsSync(repoWeights) || fs.readFileSync(repoWeights, 'utf8') !== text) {
+          if (!dry) { fs.mkdirSync(path.dirname(repoWeights), { recursive: true }); fs.writeFileSync(repoWeights, text); }
+          created.push(`.github/context-readiness.json (org readiness weights, ${orgName} @ ${commit})`);
+        }
+      }
+    }
+    orgRecord = { name: orgName, path: path.relative(root, orgDir).split(path.sep).join('/') || '.', commit, synced: new Date().toISOString().slice(0, 10), rulesDir: destBase, files };
+    const orgKit = (() => { try { return JSON.parse(fs.readFileSync(path.join(orgDir, 'kit.json'), 'utf8')); } catch { return null; } })();
+    if (orgKit && orgKit.kitVersion && orgKit.kitVersion !== kitVersion) notes.push(`The org asks for kit ${orgKit.kitVersion}; this kit is ${kitVersion}.`);
+  }
+}
+const writeVersion = previous !== kitVersion && (!previous || upgrade);
+const orgChanged = orgArg && orgRecord && JSON.stringify(orgRecord) !== JSON.stringify(stampObj && stampObj.org);
+if ((writeVersion || orgChanged) && !dry) {
   fs.mkdirSync(path.dirname(stamp), { recursive: true });
-  fs.writeFileSync(stamp, JSON.stringify({ kit: 'brownfield-ai-context', version: kitVersion, tool, source: 'https://github.com/Omkar2910/brownfield-ai-context' }, null, 2) + '\n');
+  const next = { kit: 'brownfield-ai-context', version: writeVersion ? kitVersion : previous || kitVersion, tool, source: 'https://github.com/Omkar2910/brownfield-ai-context' };
+  if (orgRecord) next.org = orgRecord;
+  fs.writeFileSync(stamp, JSON.stringify(next, null, 2) + '\n');
 }
 if (previous && previous !== kitVersion && !upgrade) notes.push(`This repo has kit ${previous}; this is ${kitVersion}. Run again with --upgrade to update the kit's own files.`);
 const recorded = dry ? null : (previous === kitVersion || !previous || upgrade) ? kitVersion : previous;

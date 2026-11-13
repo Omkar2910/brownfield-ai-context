@@ -74,6 +74,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
   .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
   nav.toc { display: none; }
 }
+img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
 </style>
 
 <div class="wrap">
@@ -98,7 +99,7 @@ footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line);
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>Many repos: micro-frontends and backend services</h1>
-      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a>
     </header>
     
 <p>How to set up and run AI-assisted work when a product is split across <strong>many separate repos</strong>:
@@ -201,6 +202,8 @@ micro-frontends share dependencies) are written <strong>once</strong> in the hub
 only a short summary line and the link.</p>
 <hr />
 <h2 id="3-setting-it-up">3. Setting it up</h2>
+<p>Above the product hubs there can be one organisation layer (rules every repo follows, synced into each repo);
+see <a href="org-level.html">ORG-LEVEL.md</a>.</p>
 <h3 id="once-per-product-about-an-hour-one-person">Once per product (about an hour, one person)</h3>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs --create-hub ../product-context
 cd ../product-context
@@ -465,7 +468,7 @@ team; catalog and initiatives → product tech leads; <code>contracts/</code> �
 </tr>
 </tbody>
 </table></div>
-    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a></footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a></footer>
   </main>
 </div>
 

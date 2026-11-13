@@ -228,6 +228,9 @@ function cmdCheck() {
   for (const s of a.stale) warnings.push(`${s.file}:${s.line}  anchored code changed (${s.hit}) but this context file did not — is the line still true?`);
   if (!a.agentsMd) warnings.push('No AGENTS.md at the repo root. Run the context-bootstrap skill to create one.');
   else if (a.agentsMd.lines > MAX_AGENTS_LINES) warnings.push(`AGENTS.md has ${a.agentsMd.lines} lines (budget ${MAX_AGENTS_LINES}). Move detail into docs/context/ or a skill.`);
+  const o = orgState(repo);
+  if (o && o.outdated.length) warnings.push(`Org rules are older than your local ${o.name} clone (${o.outdated.join(', ')}). Re-sync: node <kit>/kit/install.mjs . --org ${o.path}`);
+  if (o && o.editedHere.length) warnings.push(`Org rules edited in this repo (${o.editedHere.join(', ')}). Change them in the org context repo instead; the next sync replaces local edits.`);
   if (a.agents.tokens > ALWAYS_ON_TOKENS) warnings.push(`Always-on context is about ${a.agents.tokens} tokens (budget ${ALWAYS_ON_TOKENS}): ${a.agents.items.map(i => i.file).join(', ')}.`);
 
   console.log(`Context check: ${path.basename(repo)}${base ? ` (changes since ${base})` : ''}${STAGED ? ' (staged for commit)' : ''}`);
@@ -236,6 +239,40 @@ function cmdCheck() {
   warnings.forEach(w => console.log('  WARN   ' + w));
   console.log(`  Result: ${errors.length} error(s), ${warnings.length} warning(s)`);
   if (errors.length || (flag('--strict') && warnings.length)) process.exitCode = 1;
+}
+
+// ---------------------------------------------------------------- organisation layer
+// Rules synced from the org context repo by install.mjs --org; recorded in .github/ai-kit.json.
+const ORG_DIRS = ['.github/instructions/org/', '.claude/rules/org/'];
+const isOrgRule = rel => ORG_DIRS.some(d => rel.startsWith(d));
+function orgState(repo) {
+  let stamp = null;
+  for (const f of ['.github/ai-kit.json', '.claude/ai-kit.json']) { try { stamp = JSON.parse(fs.readFileSync(path.join(repo, f), 'utf8')); break; } catch { /* next */ } }
+  const org = stamp && stamp.org;
+  if (!org) return null;
+  const h = s => require('crypto').createHash('sha1').update(s).digest('hex').slice(0, 12);
+  const editedHere = [], outdated = [];
+  for (const [f, rec] of Object.entries(org.files || {})) {
+    try { if (h(fs.readFileSync(path.join(repo, org.rulesDir, f), 'utf8')) !== rec.copy) editedHere.push(f); } catch { editedHere.push(f + ' (missing)'); }
+  }
+  const orgDir = org.path ? path.resolve(repo, org.path) : null;
+  let clone = false;
+  if (orgDir && fs.existsSync(path.join(orgDir, 'rules'))) {
+    clone = true;
+    const now = fs.readdirSync(path.join(orgDir, 'rules')).filter(n => n.endsWith('.md'));
+    for (const f of now) {
+      const src = fs.readFileSync(path.join(orgDir, 'rules', f), 'utf8').replace(/\r\n/g, '\n');
+      if (!org.files[f] || h(src) !== org.files[f].source) outdated.push(f);
+    }
+    for (const f of Object.keys(org.files || {})) if (!now.includes(f)) outdated.push(f + ' (removed in org)');
+  }
+  return { ...org, count: Object.keys(org.files || {}).length, editedHere, outdated, clone };
+}
+function orgLine(o) {
+  if (!o) return null;
+  let s = `Org rules: ${o.count} file(s) from ${o.name} @ ${o.commit} (synced ${o.synced}).`;
+  if (o.outdated.length) s += ` Out of date with your local ${o.name} clone: ${o.outdated.join(', ')}.`;
+  return s;
 }
 
 function cmdStatus() {
@@ -250,6 +287,8 @@ function cmdStatus() {
   console.log(`  Active OpenSpec changes: ${active.length ? active.join(', ') : 'none'}`);
   const g = graphState(repo);
   console.log(`  Code map (Graphify): ${!g ? 'not built' : g.stale ? `stale (built ${g.built}, HEAD ${g.head}) — run: graphify update .` : `up to date${g.built ? ` (${g.built})` : ''}`}`);
+  const o = orgState(repo);
+  console.log(`  ${orgLine(o) || 'Org rules: none synced (install.mjs <repo> --org <org-context> adds them)'}`);
 }
 
 function activeChanges(repo) {
@@ -326,6 +365,8 @@ function hookSessionStart(input) {
   if (active.length) lines.push(`Active OpenSpec changes: ${active.join(', ')}.`);
   const gl = graphLine(repo);
   if (gl) lines.push(gl);
+  const ol = orgLine(orgState(repo));
+  if (ol) lines.push(ol);
   lines.push('Context files describe this code; when an edit changes what a context line says, the line is updated in the same change.');
   addContext('SessionStart', lines.join('\n'));
 }
@@ -360,6 +401,7 @@ function hookPostEdit(input) {
     const rel = toPosix(path.relative(repo, abs));
     if (rel.startsWith('..')) continue;
     if (!touched.some(x => x.repo === repo && x.rel === rel)) touched.push({ repo, rel });
+    if (isOrgRule(rel)) { notes.push(`${rel} is an organisation rule copied from the org context repo. Do not change it here: propose the change in the org context repo; the next sync would undo a local edit.`); continue; }
     if (isContextFile(rel)) continue;
     if (!contexts.has(repo)) contexts.set(repo, readContext(repo, listFiles(repo)));
     const label = repo === sessionRepo ? rel : `${path.basename(repo)}/${rel}`;
@@ -405,9 +447,12 @@ function hookStop(input) {
 function hookGuard(input) {
   if (!looksLikeEdit(input.tool_name || input.toolName)) return;
   const repo = resolveRepo(input);
-  const bad = editedPaths(input).map(p => relTo(repo, p)).filter(rel => !STEWARD_RES.some(r => r.test(rel)));
+  const bad = editedPaths(input).map(p => relTo(repo, p)).filter(rel => isOrgRule(rel) || !STEWARD_RES.some(r => r.test(rel)));
   if (!bad.length) return;
-  const reason = `context-steward may only edit context files; refused: ${bad.join(', ')}`;
+  const org = bad.filter(isOrgRule);
+  const reason = org.length && org.length === bad.length
+    ? `organisation rules change in the org context repo, not here; refused: ${org.join(', ')}`
+    : `context-steward may only edit context files (not organisation rules); refused: ${bad.join(', ')}`;
   if (format === 'copilot') emit({ permissionDecision: 'deny', permissionDecisionReason: reason });
   else emit({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } });
 }

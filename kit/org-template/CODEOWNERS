@@ -1,0 +1,4 @@
+# Changes to organisation rules need the architecture group's review.
+/rules/    @architecture-group
+/context/  @architecture-group
+/kit.json  @engineering-excellence

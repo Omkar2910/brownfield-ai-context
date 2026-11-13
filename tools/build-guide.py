@@ -22,9 +22,12 @@ PAGES = [
     ("CONTEXT-GUIDE.md", "context.html", "AI Context Guide", "Creating, using and maintaining context"),
     ("TOOLBOX.md", "toolbox.html", "Workflow Toolbox", "Workflow and toolbox"),
     ("MULTI-REPO.md", "multi-repo.html", "Many-Repo Setup", "Many repos"),
+    ("ORG-LEVEL.md", "org-level.html", "Organisation Level", "Organisation level"),
+    ("ARCHITECTURE.md", "architecture.html", "Kit Architecture", "Architecture"),
 ]
 TEMPLATE = (ROOT / "tools" / "guide-template.html").read_text(encoding="utf-8")
-LINKS = {"GUIDE.md": "index.html", "CONTEXT-GUIDE.md": "context.html", "TOOLBOX.md": "toolbox.html", "MULTI-REPO.md": "multi-repo.html"}
+LINKS = {"GUIDE.md": "index.html", "CONTEXT-GUIDE.md": "context.html", "TOOLBOX.md": "toolbox.html", "MULTI-REPO.md": "multi-repo.html",
+         "ORG-LEVEL.md": "org-level.html", "ARCHITECTURE.md": "architecture.html"}
 
 
 def build(src_name, out_name, page_title, other_label):
@@ -47,7 +50,8 @@ def build(src_name, out_name, page_title, other_label):
     # Links between the two guides point at the web versions; other repo links go up one level.
     for md_name, html_name in LINKS.items():
         body = body.replace(f'href="{md_name}', f'href="{html_name}')
-    body = body.replace('href="docs/', 'href="').replace('href="templates/', 'href="../templates/')
+    body = body.replace('href="docs/', 'href="').replace('src="docs/', 'src="').replace('href="templates/', 'href="../templates/')
+    body = body.replace('href="THIRD_PARTY_NOTICES.md', 'href="../THIRD_PARTY_NOTICES.md')
 
     nav = " ".join(f'<a class="other" href="{p[1]}">{p[3]} →</a>' for p in PAGES if p[1] != out_name)
     fragment = (TEMPLATE.replace("{{PAGE_TITLE}}", page_title).replace("{{TITLE}}", title)

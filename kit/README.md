@@ -12,6 +12,8 @@ node kit/install.mjs <path-to-your-repo> --graphify       # also connect the Gra
 node kit/install.mjs <path-to-your-repo> --upgrade        # replace the kit's own files with this version
 node kit/install.mjs <path-to-your-repo> --keep-schema    # with OpenSpec: don't switch to the story-tdd workflow
 node kit/install.mjs --create-hub ../product-context      # new product context hub (many repos, see MULTI-REPO.md)
+node kit/install.mjs --create-org ../org-context          # new organisation context repo (see ORG-LEVEL.md)
+node kit/install.mjs <path-to-your-repo> --org ../org-context   # copy the org's rules and readiness weights in, stamped
 ```
 
 The installer only adds files. Existing files are never overwritten; it lists them and tells you what
@@ -34,7 +36,9 @@ to merge by hand. OpenSpec is optional. If you use it, run `openspec init` first
 | `openspec-schema/story-tdd/` | `openspec/schemas/story-tdd/` + `schema: story-tdd` in `openspec/config.yaml` | Story workflow: proposal → specs → technical design (`design.md`) → `test-plan.md` → test-first tasks. `schema.yaml` is kit-owned; `templates/` are yours and never overwritten |
 | `optional/*` | not installed | Azure Pipelines check, Azure DevOps MCP config, Claude Code hook settings |
 | `hub-template/` | a new folder, with `--create-hub` | Product context hub: catalog, platform rules, contracts, initiatives, `cross-repo-story` skill, `scripts/hub.mjs` |
-| (generated) | `.github/ai-kit.json` | Which kit version this repo runs; `--upgrade` updates it |
+| `org-template/` | a new folder, with `--create-org` | Organisation context: org rules, shared platforms, AI usage policy, kit version, readiness weights |
+| `<org-context>/rules/*.instructions.md` | `.github/instructions/org/` (with `--org`) | Organisation rules, stamped with the org repo's commit; org-owned, replaced on every sync |
+| (generated) | `.github/ai-kit.json` | Which kit version this repo runs and which org rules it carries; `--upgrade` updates it and re-syncs org rules |
 
 `git config core.hooksPath` is stored per clone, so each teammate runs
 `git config core.hooksPath .githooks` once (or add it to your project's setup script).

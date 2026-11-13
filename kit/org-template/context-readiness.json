@@ -1,0 +1,21 @@
+{
+  "dimensions": [
+    { "id": "code-understanding", "label": "Code understanding", "weight": 15 },
+    { "id": "architecture", "label": "Architecture", "weight": 10 },
+    { "id": "domain", "label": "Business/domain", "weight": 10 },
+    { "id": "data", "label": "Data", "weight": 10 },
+    { "id": "api", "label": "API/integration", "weight": 10 },
+    { "id": "dependencies", "label": "Dependencies", "weight": 10 },
+    { "id": "security", "label": "Security", "weight": 10 },
+    { "id": "testing", "label": "Testing", "weight": 5 },
+    { "id": "operations", "label": "Runtime/operations", "weight": 5 },
+    { "id": "decisions", "label": "Decision history", "weight": 5 },
+    { "id": "provenance", "label": "Provenance", "weight": 5 },
+    { "id": "freshness", "label": "Freshness", "weight": 5 }
+  ],
+  "bands": [
+    { "min": 0, "name": "Context poor" }, { "min": 21, "name": "Context emerging" }, { "min": 41, "name": "Discoverable" },
+    { "min": 51, "name": "AI assisted" }, { "min": 71, "name": "AI ready" }, { "min": 86, "name": "Agent ready" }
+  ],
+  "reviewMaxAgeDays": 180
+}

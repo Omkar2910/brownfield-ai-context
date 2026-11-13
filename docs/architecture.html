@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+</head>
+<body>
+<title>Kit Architecture</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a working manual. Sticky section rail on wide screens, one reading column, tables and code scroll in their own boxes. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --ink: #16202c; --muted: #586779; --line: #d8dfe7;
+  --accent: #2b54d6; --accent-soft: #e7edfc; --code-bg: #edf1f6; --good: #1d7a4c;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+    --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+  --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 80px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.toc .label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc ul ul { display: none; }
+nav.toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible, nav.toc a.on { color: var(--ink); border-left-color: var(--accent); }
+main { min-width: 0; }
+header.top { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-size: clamp(30px, 4.6vw, 44px); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--display); font-size: 27px; line-height: 1.2; margin: 48px 0 12px; padding-top: 8px; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { font-family: var(--display); font-size: 20px; margin: 30px 0 8px; scroll-margin-top: 16px; }
+p, li { max-width: 70ch; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 700; }
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin: 14px 0; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+td code { white-space: nowrap; }
+.code { position: relative; margin: 12px 0; }
+.code pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13.5px; line-height: 1.5; }
+.code pre code { background: none; padding: 0; font-size: inherit; }
+.copy { position: absolute; top: 8px; right: 8px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.copy:hover { color: var(--ink); border-color: var(--accent); }
+li.task { list-style: none; margin-left: -1.3em; }
+li.task input { accent-color: var(--good); margin-right: 6px; }
+h3 + p strong:first-child { color: var(--accent); }
+.other { display: inline-block; margin: 12px 20px 0 0; font-weight: 600; text-decoration: none; }
+.other:hover { text-decoration: underline; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+@media (max-width: 920px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { display: none; }
+}
+img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Sections">
+    <p class="label">Sections</p>
+    <div class="toc">
+<ul>
+<li><a href="#summary">Summary</a></li>
+<li><a href="#at-a-glance">At a glance</a></li>
+<li><a href="#components">Components</a></li>
+<li><a href="#knowledge-model">Knowledge model</a></li>
+<li><a href="#when-each-part-runs">When each part runs</a></li>
+<li><a href="#story-workflow">Story workflow</a></li>
+<li><a href="#many-repos">Many repos</a></li>
+<li><a href="#organisation-level">Organisation level</a></li>
+<li><a href="#keeping-context-current">Keeping context current</a></li>
+<li><a href="#installation-upgrades-and-ownership">Installation, upgrades and ownership</a></li>
+<li><a href="#security-and-data-boundaries">Security and data boundaries</a></li>
+<li><a href="#where-it-came-from">Where it came from</a></li>
+<li><a href="#limits-and-what-is-not-proven-yet">Limits and what is not proven yet</a></li>
+</ul>
+</div>
+
+  </nav>
+  <main>
+    <header class="top">
+      <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
+      <h1>AI Context Kit: Architecture</h1>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a>
+    </header>
+    
+<p>Kit 1.6.0 · November 2026. For management, architects and anyone evaluating the kit. How to set it up is
+in <a href="index.html">GUIDE.md</a>; how to roll it out across an organisation is in <a href="org-level.html">ORG-LEVEL.md</a>.</p>
+<h2 id="summary">Summary</h2>
+<p>The AI Context Kit (MIT licence) is a set of plain files installed into each repo that gives AI coding
+agents (GitHub Copilot in VS Code, or Claude Code) correct, current knowledge of an existing system, and
+makes every story follow plan → approve → test-first build → review. It contains no server and no database:
+just text files, eight skills, one agent, one 600-line checking script, git hooks and an installer, plus two
+optional open-source tools (OpenSpec for the story workflow, Graphify for the code map).</p>
+<p>Four principles shape every part of it:</p>
+<ol>
+<li><strong>Little always-loaded, the rest on demand.</strong> One short file is read on every request; detail is read only
+   when the task needs it.</li>
+<li><strong>Generate what code can tell you; write only what it can't.</strong> Tables of columns, endpoints and
+   dependencies come from code. People write rules, traps and the "why".</li>
+<li><strong>Every fact is traceable.</strong> Each statement about code carries an anchor pointing at the file it
+   describes, so the kit can tell when it may have gone wrong.</li>
+<li><strong>People approve; machines check.</strong> A developer approves the plan and the pull request. Hooks and checks
+   catch out-of-date knowledge automatically.</li>
+</ol>
+<h2 id="at-a-glance">At a glance</h2>
+<p><img alt="People direct the agent; the kit gives it knowledge and checks its work" src="images/architecture-at-a-glance.png" /></p>
+<p>The agent is the only part that writes code. It follows the skills and reads the knowledge it needs, and the
+checks warn it (and block commits) when knowledge and code disagree. OpenSpec and Graphify are optional; the
+core is plain files and one script.</p>
+<h2 id="components">Components</h2>
+<p><strong>Kit-owned</strong> files are replaced by <code>--upgrade</code>; <strong>team-owned</strong> files are never touched again by the kit;
+<strong>org-owned</strong> files are replaced by each sync from the organisation context repo.</p>
+<h3 id="knowledge-what-the-agent-reads">Knowledge (what the agent reads)</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Installed at</th>
+<th>What it does</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AGENTS.md</code></td>
+<td>Repo root</td>
+<td>One-page always-read file: commands, top rules, traps, "where to look" index. Under 150 lines.</td>
+<td>Team</td>
+</tr>
+<tr>
+<td>Rule files</td>
+<td><code>.github/instructions/*.instructions.md</code></td>
+<td>Short rules for one kind of file, loaded only when the agent touches matching files (<code>applyTo</code>)</td>
+<td>Team</td>
+</tr>
+<tr>
+<td>Organisation rules</td>
+<td><code>.github/instructions/org/</code></td>
+<td>The org's rules, copied in and stamped by <code>install.mjs --org</code></td>
+<td>Org</td>
+</tr>
+<tr>
+<td>Dimension pages</td>
+<td><code>docs/context/architecture.md</code>, <code>domain.md</code>, <code>screens.md</code>, <code>data.md</code>, <code>api.md</code>, <code>dependencies.md</code>, <code>security.md</code>, <code>testing.md</code>, <code>operations.md</code></td>
+<td>In-depth reference, one page per readiness dimension, read on demand</td>
+<td>Team</td>
+</tr>
+<tr>
+<td>Decision pages</td>
+<td><code>docs/context/decisions/</code></td>
+<td>Why things are the way they are</td>
+<td>Team</td>
+</tr>
+<tr>
+<td>Area pages</td>
+<td><code>docs/context/areas/</code></td>
+<td>Deep pages for one complex flow or format, added after a story needed one</td>
+<td>Team</td>
+</tr>
+<tr>
+<td>Known traps</td>
+<td><code>docs/context/known-traps.md</code></td>
+<td>Things that look wrong but are deliberate</td>
+<td>Team</td>
+</tr>
+<tr>
+<td>Readiness ratings</td>
+<td><code>docs/context/readiness.md</code></td>
+<td>Latest 0–5 rating per dimension, with evidence</td>
+<td>Team</td>
+</tr>
+<tr>
+<td>Behaviour specs</td>
+<td><code>openspec/specs/</code></td>
+<td>What the system must do, as requirements and scenarios; grows as stories are archived</td>
+<td>Team (via stories)</td>
+</tr>
+<tr>
+<td>Code map</td>
+<td><code>graphify-out/</code> (not committed)</td>
+<td>Searchable map of which class calls which, rebuilt locally after every commit</td>
+<td>Generated</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="instructions-skills-and-agent">Instructions (skills and agent)</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>When used</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/context-bootstrap</code></td>
+<td>Once per repo</td>
+<td>Drafts <code>AGENTS.md</code>, rule files, architecture and traps from five questions and the code</td>
+</tr>
+<tr>
+<td><code>/context-baseline</code></td>
+<td>Once per repo, refreshed per page</td>
+<td>Writes the in-depth dimension pages, anchored, with Unverified lists</td>
+</tr>
+<tr>
+<td><code>/context-assess</code></td>
+<td>After review, then each sprint or quarter</td>
+<td>Rates each dimension 0–5 within evidence caps; produces the readiness score</td>
+</tr>
+<tr>
+<td><code>/story-to-change</code></td>
+<td>Start of each story</td>
+<td>Reads the story, searches every repo in the window, groups repos, sizes the story, creates one change per repo</td>
+</tr>
+<tr>
+<td><code>/story-finish</code></td>
+<td>End of each story</td>
+<td>Tests, test plan, impact, context check, Context impact table, area page offer, PR description</td>
+</tr>
+<tr>
+<td><code>/context-refresh</code></td>
+<td>When checks flag stale lines</td>
+<td>Fixes only the flagged knowledge lines</td>
+</tr>
+<tr>
+<td><code>/context-learn</code></td>
+<td>When the agent was corrected</td>
+<td>Turns the correction into a permanent rule</td>
+</tr>
+<tr>
+<td><code>/onboard-me</code></td>
+<td>A new joiner's first day</td>
+<td>30-minute guided tour from the same knowledge</td>
+</tr>
+<tr>
+<td>Context-steward agent</td>
+<td>Monthly or on request</td>
+<td>A restricted agent that may only edit knowledge files; a guard hook blocks code and org-rule edits</td>
+</tr>
+<tr>
+<td><code>/hub-baseline</code> (in the product hub)</td>
+<td>Once per product</td>
+<td>Writes system architecture, end-to-end flows, glossary and platform rules, anchored into the repos</td>
+</tr>
+</tbody>
+</table></div>
+<p>All skills are kit-owned and installed in <code>.github/skills/</code> (or <code>.claude/skills/</code>).</p>
+<h3 id="automatic-checks">Automatic checks</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Installed at</th>
+<th>When it runs</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Context tool</td>
+<td><code>.github/hooks/scripts/context-tools.cjs</code> (600 lines, no dependencies)</td>
+<td>Called by every check below</td>
+<td>Reads anchors and status lines; commands <code>status</code>, <code>check</code>, <code>readiness</code> and four hook commands</td>
+</tr>
+<tr>
+<td>Agent hooks</td>
+<td><code>.github/hooks/ai-context.json</code></td>
+<td>Chat start, after each edit, before the agent finishes</td>
+<td>Health note; "this file is described by line 12"; one request to re-check lines the agent's own edits touched</td>
+</tr>
+<tr>
+<td>Git hooks</td>
+<td><code>.githooks/pre-commit</code>, <code>post-commit</code>, <code>post-merge</code>, <code>post-checkout</code></td>
+<td>Commit, merge, branch switch</td>
+<td>Refuse commits with broken anchors; rebuild the code map in the background</td>
+</tr>
+<tr>
+<td>PR template</td>
+<td><code>.azuredevops/pull_request_template.md</code></td>
+<td>Every pull request</td>
+<td>Checklist: design reviewed, test plan passing, knowledge updated</td>
+</tr>
+<tr>
+<td>Pipeline check (optional)</td>
+<td><code>kit/optional/azure-pipelines-context-check.yml</code></td>
+<td>Every pull request</td>
+<td>Runs the context check in CI</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="workflow-and-tooling">Workflow and tooling</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Installed at</th>
+<th>What it does</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Story workflow</td>
+<td><code>openspec/schemas/story-tdd/</code></td>
+<td>Adds a technical design document, a test plan and test-first tasks to every OpenSpec change</td>
+<td>Kit (schema), team (templates)</td>
+</tr>
+<tr>
+<td>OpenSpec settings</td>
+<td><code>openspec/config.yaml</code></td>
+<td>Points OpenSpec at the context and adds rules, including your own TDD skill</td>
+<td>Team</td>
+</tr>
+<tr>
+<td>Code map connection</td>
+<td><code>.vscode/mcp.json</code>, <code>.graphifyignore</code></td>
+<td>Lets the agent query Graphify; keeps kit and story files out of the map</td>
+<td>Team</td>
+</tr>
+<tr>
+<td>Version stamp</td>
+<td><code>.github/ai-kit.json</code></td>
+<td>Which kit version and which org rules this repo runs</td>
+<td>Kit</td>
+</tr>
+<tr>
+<td>Installer</td>
+<td><code>kit/install.mjs</code></td>
+<td>Installs, upgrades, syncs org rules, creates hubs and org repos; never overwrites team files</td>
+<td>Kit repo only</td>
+</tr>
+<tr>
+<td>Product hub template</td>
+<td><code>kit/hub-template/</code></td>
+<td>Catalogue, platform rules, flows, contracts, <code>/hub-baseline</code>, <code>hub.mjs</code></td>
+<td>Created once per product</td>
+</tr>
+<tr>
+<td>Org template</td>
+<td><code>kit/org-template/</code></td>
+<td>Org rules, shared platforms, AI usage policy, kit version, readiness weights</td>
+<td>Created once per organisation</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="knowledge-model">Knowledge model</h2>
+<p>Knowledge is sorted by <strong>when the agent needs it</strong>, so the cost of each request stays small no matter how
+much the team documents.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Loaded</th>
+<th>Holds</th>
+<th>Size limit</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Always</td>
+<td>Every request</td>
+<td><code>AGENTS.md</code>, org rules with <code>applyTo: '**'</code></td>
+<td>150 lines, about 2,000 tokens in total</td>
+<td>Everything here costs on every request; long always-loaded files made agents worse in studies</td>
+</tr>
+<tr>
+<td>Per file type</td>
+<td>When the agent touches matching files</td>
+<td>Rule files with <code>applyTo</code></td>
+<td>30–60 lines each</td>
+<td>The right rule at the right moment</td>
+</tr>
+<tr>
+<td>On demand</td>
+<td>When the task needs it (pointed to from <code>AGENTS.md</code>)</td>
+<td>Dimension pages, area pages, decisions, traps, specs</td>
+<td>60–250 lines a page</td>
+<td>Depth without carrying it on every request</td>
+</tr>
+<tr>
+<td>Generated</td>
+<td>Queried, never loaded whole</td>
+<td>Code map; generated tables inside pages</td>
+<td>None</td>
+<td>Rebuilt from code, so it cannot go stale</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Anchors.</strong> Any statement that depends on code ends with an anchor, for example
+<code>- Exports are capped at 50,000 rows [anchor: src/main/java/**/ReportExportService.java]</code>. An anchor can be
+a file, a folder, a glob or several of these. In the product hub, anchors name the repo:
+<code>[anchor: report-service:src/.../ReportController.java]</code>. The checks use anchors three ways:</p>
+<ul>
+<li><strong>Broken:</strong> the anchored file no longer exists, so the line is certainly wrong. Commits are refused.</li>
+<li><strong>Stale:</strong> the anchored file changed but the line didn't, so the line may be wrong. Flagged for a look.</li>
+<li><strong>Provenance:</strong> the share of statements with anchors is part of the readiness score.</li>
+</ul>
+<p><strong>Status line.</strong> Each in-depth page starts with one line the tools read:
+<code>&gt; Dimension: data · Status: reviewed · Last verified: 2026-11-20 by &lt;name&gt; · Independent review: no · Owner: reports-team</code>.
+A page starts as <code>draft</code>; its owner reviews it against the code and sets <code>reviewed</code> with a date; a second
+person who didn't write it can set <code>Independent review: yes</code>.</p>
+<p><strong>The dimension pages</strong> follow the 12-dimension readiness framework:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Weight</th>
+<th>Where it lives</th>
+<th>Generated or written</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Code understanding</td>
+<td>15%</td>
+<td><code>AGENTS.md</code>, rule files, code map</td>
+<td>Written; code map generated</td>
+</tr>
+<tr>
+<td>Architecture</td>
+<td>10%</td>
+<td><code>architecture.md</code></td>
+<td>Written; most-connected parts from the code map</td>
+</tr>
+<tr>
+<td>Business/domain</td>
+<td>10%</td>
+<td><code>domain.md</code>, <code>screens.md</code>, <code>openspec/specs/</code></td>
+<td>Written; specs grow with each story</td>
+</tr>
+<tr>
+<td>Data</td>
+<td>10%</td>
+<td><code>data.md</code></td>
+<td>Tables generated from migrations and entities</td>
+</tr>
+<tr>
+<td>API/integration</td>
+<td>10%</td>
+<td><code>api.md</code></td>
+<td>Endpoints generated from OpenAPI or controllers</td>
+</tr>
+<tr>
+<td>Dependencies</td>
+<td>10%</td>
+<td><code>dependencies.md</code>, hub catalogue</td>
+<td>Generated from build files and the catalogue</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>10%</td>
+<td><code>security.md</code></td>
+<td>Written, anchored to security config</td>
+</tr>
+<tr>
+<td>Testing</td>
+<td>5%</td>
+<td><code>testing.md</code>, each story's test plan</td>
+<td>Written</td>
+</tr>
+<tr>
+<td>Runtime/operations</td>
+<td>5%</td>
+<td><code>operations.md</code></td>
+<td>Written, anchored to config and pipelines</td>
+</tr>
+<tr>
+<td>Decision history</td>
+<td>5%</td>
+<td><code>decisions/</code>, archived designs</td>
+<td>Written per decision</td>
+</tr>
+<tr>
+<td>Provenance</td>
+<td>5%</td>
+<td>All pages</td>
+<td>Measured: share of statements anchored</td>
+</tr>
+<tr>
+<td>Freshness</td>
+<td>5%</td>
+<td>All pages</td>
+<td>Measured: broken anchors, code changed since review, review age</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="when-each-part-runs">When each part runs</h2>
+<p><img alt="The kit checks knowledge at seven moments, from chat start to archive" src="images/architecture-when-it-runs.png" /></p>
+<p>The agent hooks (the first three moments) work inside the chat and only ever add a note or ask once. The
+commit check is the one hard stop, and it only blocks knowledge that points at a file that no longer exists.
+Every check calls the same context tool, so a rule is defined once.</p>
+<h2 id="story-workflow">Story workflow</h2>
+<p><img alt="People approve the plan and the code; the agent does the rest" src="images/story-flow.png" /></p>
+<p>Each story that changes behaviour gets a folder per repo it changes, <code>openspec/changes/&lt;change-id&gt;/</code>, with six
+documents created in a fixed order. Each needs the ones before it, so the agent cannot write tasks before the
+design and test plan exist.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Order</th>
+<th>Document</th>
+<th>Holds</th>
+<th>Created by</th>
+<th>Needs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td><code>context.md</code></td>
+<td>The story pack: acceptance criteria, files per repo, rules, open questions</td>
+<td><code>/story-to-change</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>proposal.md</code></td>
+<td>Why, what changes, acceptance criteria</td>
+<td><code>/opsx-propose</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>specs/&lt;capability&gt;/spec.md</code></td>
+<td>Required behaviour as requirements and when/then scenarios</td>
+<td><code>/opsx-propose</code></td>
+<td>proposal</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>design.md</code></td>
+<td>Technical design document: changes per layer, API and data changes, security, decisions, risks, rollback, Context impact</td>
+<td><code>/opsx-propose</code> (or your own TDD skill)</td>
+<td>proposal</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>test-plan.md</code></td>
+<td>Each scenario and acceptance criterion mapped to a named test, plus extra cases and regression</td>
+<td><code>/opsx-propose</code></td>
+<td>specs, design</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>tasks.md</code></td>
+<td>Ordered tasks, tests first in each slice</td>
+<td><code>/opsx-propose</code></td>
+<td>specs, design, test plan</td>
+</tr>
+</tbody>
+</table></div>
+<p>After approval, <code>/opsx-apply</code> works through the tasks, <code>/opsx-verify</code> checks the code against specs and
+design, and <code>/story-finish</code> checks the test plan and the Context impact table. <code>/opsx-archive</code> then merges the
+specs into <code>openspec/specs/</code>, the permanent record. Tiny fixes skip the folder: failing test, fix, finish.
+The workflow is a kit-made variant of OpenSpec's built-in one: the proposal and specs steps are OpenSpec's
+own, the design, test plan and tasks steps were written for the kit.</p>
+<h2 id="many-repos">Many repos</h2>
+<p><img alt="Each repo keeps its own kit; the hub holds what spans them" src="images/architecture-many-repos.png" /></p>
+<ul>
+<li><strong>Each repo installs the kit and owns its knowledge.</strong> Its rules and pages are reviewed in its own PRs,
+  because they change with its code.</li>
+<li><strong>One story, one change per repo that changes, same change id.</strong> <code>/story-to-change</code> searches every repo in
+  the window using each repo's own code map, and sorts repos into <em>changes</em>, <em>read only</em> and <em>connected but
+  not open</em>. Producers are planned and built first (services, then UIs); each repo gets its own branch and
+  PR, linked to each other.</li>
+<li><strong>The product hub is optional, one per product.</strong> A small repo holding only what spans repos and changes
+  slowly: the catalogue of who calls whom, system architecture, end-to-end flows with screen → API → column
+  mapping, glossary, platform rules and cross-service decisions. Its anchors name the repo and
+  <code>hub.mjs check</code> verifies them against the cloned repos.</li>
+<li><strong>Incoming callers are the hard case.</strong> A repo can see what it calls, not who calls it. With the hub open,
+  <code>/story-to-change</code> runs <code>hub.mjs impact</code> to list repos that call or load the ones being changed, including
+  repos not in the window.</li>
+</ul>
+<h2 id="organisation-level">Organisation level</h2>
+<p>The kit has five layers of context. Each holds only what is true at its level, has one owner, and reaches the
+agent in the way that suits how often it changes. Details and rollout: <a href="org-level.html">ORG-LEVEL.md</a>.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Holds</th>
+<th>Lives in</th>
+<th>Owner</th>
+<th>How it reaches the agent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Organisation</td>
+<td>Rules every repo must follow (secrets, personal data, identity and permission services, API error format, AI usage), shared platforms, readiness weights, kit version</td>
+<td>One org context repo (<code>--create-org</code>)</td>
+<td>Architecture / engineering excellence group</td>
+<td>Rule files copied into each repo by <code>install.mjs --org</code>, stamped with the org repo's commit</td>
+</tr>
+<tr>
+<td>2. Product</td>
+<td>Catalogue of repos, system architecture, end-to-end flows, glossary, product platform rules</td>
+<td>One hub per product (<code>--create-hub</code>)</td>
+<td>Product tech leads</td>
+<td>Opened as a folder in the story's VS Code window; read on demand</td>
+</tr>
+<tr>
+<td>3. Repo</td>
+<td><code>AGENTS.md</code>, rule files, in-depth pages, specs, code map</td>
+<td>Each repo</td>
+<td>The team that owns the repo</td>
+<td>Loaded by the agent (always, per file type, or on demand)</td>
+</tr>
+<tr>
+<td>4. Story</td>
+<td>Proposal, specs, technical design, test plan, tasks</td>
+<td><code>openspec/changes/&lt;id&gt;/</code> in each repo it changes</td>
+<td>The developer, approved by a reviewer</td>
+<td>Read during that story; merged into specs on archive</td>
+</tr>
+<tr>
+<td>5. Personal</td>
+<td>Each developer's own preferences</td>
+<td>Their VS Code profile</td>
+<td>The developer</td>
+<td>Loaded only for them; never holds team rules</td>
+</tr>
+</tbody>
+</table></div>
+<p>Organisation rules are copied rather than linked because GitHub's organisation-level instructions require
+GitHub-hosted repos on Copilot Business or Enterprise and don't apply to local editor sessions, and VS Code's
+extra-folder settings are per machine. A copy works for every developer, every agent and the pipeline, and
+changes to it are visible in pull requests. The kit keeps copies current: each copied rule carries a stamp,
+<code>context-tools check</code> warns when a copy is older than the local org clone or was edited in the repo, the
+agent is told not to edit org rules and the steward is blocked from it, and <code>--upgrade</code> re-syncs.</p>
+<h2 id="keeping-context-current">Keeping context current</h2>
+<p>Knowledge changes in the same pull request as the code it describes, and five safety nets catch what people
+miss. Each later net exists because the earlier ones can be skipped.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Net</th>
+<th>Trigger</th>
+<th>What it catches</th>
+<th>Who acts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Context impact</td>
+<td>Writing the technical design</td>
+<td>The design lists every page the change makes out of date (e.g. <code>data.md</code>, <code>api.md</code>, <code>screens.md</code>, a hub flow)</td>
+<td>Agent, approved by the developer</td>
+</tr>
+<tr>
+<td>2. After-edit hook</td>
+<td>Each agent edit</td>
+<td>"This file is described by <code>data.md</code> line 14"</td>
+<td>Agent</td>
+</tr>
+<tr>
+<td>3. Before-finish hook</td>
+<td>Agent says it is done</td>
+<td>Lines anchored to files it edited that it didn't revisit (asked once)</td>
+<td>Agent</td>
+</tr>
+<tr>
+<td>4. Commit check</td>
+<td>Each commit</td>
+<td>Broken anchors: commit refused</td>
+<td>Developer</td>
+</tr>
+<tr>
+<td>5. Story finish</td>
+<td>End of story</td>
+<td>Every Context impact row updated; stale anchors since main; PR lists context changes</td>
+<td>Agent + reviewer</td>
+</tr>
+</tbody>
+</table></div>
+<p>Behind these, a monthly steward run and the weekly hub check catch drift that slipped through, and
+<code>/context-learn</code> turns every agent correction into a rule.</p>
+<p><strong>Readiness score.</strong> <code>context-tools.cjs readiness</code> turns the knowledge model into a 0–100 score on the 12
+dimensions. Each dimension is rated 0–5, but the tool caps every rating at what the evidence supports, so the
+score cannot be raised by writing more:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Evidence for the dimension</th>
+<th>Highest rating allowed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No page</td>
+<td>0</td>
+</tr>
+<tr>
+<td>Draft, or broken anchors in the page</td>
+<td>2</td>
+</tr>
+<tr>
+<td>No anchors, code changed since review, or reviewed over 180 days ago</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Reviewed by its owner</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Also reviewed by a second person</td>
+<td>5</td>
+</tr>
+</tbody>
+</table></div>
+<p>Provenance and freshness are measured directly. <code>/context-assess</code> rates each dimension within its cap with
+evidence; the tool computes the weighted total, the band and the three biggest gaps. Weights and band names
+come from the organisation (<code>.github/context-readiness.json</code>, synced from the org repo). The report always
+prints the always-loaded size next to the score, because a high score with a bloated <code>AGENTS.md</code> would mean
+worse agent results, not better. <code>hub.mjs status</code> shows every repo's score and the product average.</p>
+<h2 id="installation-upgrades-and-ownership">Installation, upgrades and ownership</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>node kit/install.mjs &lt;repo&gt;</code></td>
+<td>Adds the kit files for Copilot. Never overwrites an existing file; lists what to merge by hand. Running it twice changes nothing.</td>
+</tr>
+<tr>
+<td><code>… --graphify</code></td>
+<td>Also connects the code map and keeps its output out of git</td>
+</tr>
+<tr>
+<td><code>… --tool claude</code></td>
+<td>Same kit in Claude Code's format (<code>.claude/</code>, <code>/opsx:</code> command names)</td>
+</tr>
+<tr>
+<td><code>… --org &lt;org-context&gt;</code></td>
+<td>Copies the organisation's rules and readiness weights into the repo, stamped</td>
+</tr>
+<tr>
+<td><code>… --upgrade</code></td>
+<td>Replaces kit-owned files with this version and re-syncs org rules; team files untouched</td>
+</tr>
+<tr>
+<td><code>… --keep-schema</code></td>
+<td>With OpenSpec: installs the story workflow but doesn't make it the default</td>
+</tr>
+<tr>
+<td><code>… --dry-run</code></td>
+<td>Shows everything it would do; changes nothing</td>
+</tr>
+<tr>
+<td><code>node kit/install.mjs --create-hub &lt;folder&gt;</code></td>
+<td>Creates a product context hub</td>
+</tr>
+<tr>
+<td><code>node kit/install.mjs --create-org &lt;folder&gt;</code></td>
+<td>Creates an organisation context repo</td>
+</tr>
+</tbody>
+</table></div>
+<p>Beyond copying files, the installer sets the repo's git hooks folder (or, if the repo already has its own
+hooks, prints the one line to add so they keep working), writes <code>.gitattributes</code> so hook scripts keep Unix
+line endings on Windows, adds the kit's OpenSpec settings and makes the story workflow the default for new
+changes, and records the kit version and org sync in <code>.github/ai-kit.json</code>. Removal is deleting the added
+folders and one git setting.</p>
+<h2 id="security-and-data-boundaries">Security and data boundaries</h2>
+<p>The kit adds no new place where code or data goes. The only component that sends code anywhere is the AI
+agent itself, under the organisation's existing Copilot (or Claude) licence and policies.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Network access</th>
+<th>Writes to</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Context tool, hooks, git hooks</td>
+<td>None</td>
+<td>Nothing in the repo; a small list of edited files in the system temp folder</td>
+<td>Exits quietly on any internal error so it cannot break a session</td>
+</tr>
+<tr>
+<td>Installer</td>
+<td>None</td>
+<td>Only the target repo, only new files (plus kit- and org-owned files on upgrade or sync)</td>
+<td><code>--dry-run</code> previews everything</td>
+</tr>
+<tr>
+<td>Graphify (optional)</td>
+<td>None for <code>--code-only</code></td>
+<td><code>graphify-out/</code> locally, not committed</td>
+<td>Builds the map from code structure without an AI model</td>
+</tr>
+<tr>
+<td>OpenSpec (optional)</td>
+<td>None for its commands</td>
+<td><code>openspec/</code> in the repo</td>
+<td>The agent writes the documents; OpenSpec structures and validates them</td>
+</tr>
+<tr>
+<td>Hub script</td>
+<td>None (<code>clone --run</code> uses your own git remotes)</td>
+<td>The hub folder</td>
+<td>Reads sibling repos with <code>git</code></td>
+</tr>
+<tr>
+<td>Azure DevOps MCP (optional, off by default)</td>
+<td>Your Azure DevOps organisation</td>
+<td>Work items and PRs, only when asked</td>
+<td>Check company policy before enabling</td>
+</tr>
+</tbody>
+</table></div>
+<p>Controls the kit relies on: people approve the plan and the pull request (the agent never pushes or merges
+unless a developer explicitly asks); files that run commands (<code>.github/hooks/</code>, <code>.githooks/</code>,
+<code>.vscode/mcp.json</code>, <code>.mcp.json</code>) get a named reviewer through CODEOWNERS or an Azure Repos branch policy; tool
+versions are pinned to the tested ones; and the steward agent can edit only knowledge files.</p>
+<h2 id="where-it-came-from">Where it came from</h2>
+<p>The kit is our own design and code, built with an AI assistant in October–November 2026: research first,
+then the kit, tested on sample Java and Angular repos with OpenSpec 1.16 and Graphify 0.9.100, then reviewed
+cold by an independent AI reviewer before version 1.4.0. No existing kit was copied. It follows public file
+formats, uses two open-source tools, and takes its design choices from published research. One part reuses
+another project's text: the story workflow's proposal and specs steps are OpenSpec's own wording (MIT
+licence; credited in <a href="../THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>, and the licence ships with the file).</p>
+<h3 id="formats-and-platforms-it-follows">Formats and platforms it follows</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Source</th>
+<th>What the kit takes from it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AGENTS.md convention</td>
+<td>The always-read file's name and role</td>
+</tr>
+<tr>
+<td><a href="https://code.visualstudio.com/docs/agent-customization/hooks">VS Code: hooks</a>, <a href="https://docs.github.com/en/copilot/reference/hooks-reference">GitHub Copilot hooks reference</a></td>
+<td>Hook file format and events</td>
+</tr>
+<tr>
+<td><a href="https://code.visualstudio.com/docs/agents/reference/custom-agent-file-reference.md">VS Code: custom agent file reference</a></td>
+<td>The steward agent's format, tool limits and its agent-scoped guard hook</td>
+</tr>
+<tr>
+<td><a href="https://code.visualstudio.com/docs/agents/reference/custom-instructions-reference.md">VS Code: custom instructions reference</a>, <a href="https://code.visualstudio.com/docs/agent-customization/agent-skills.md">agent skills</a></td>
+<td>Rule files with <code>applyTo</code>, <code>SKILL.md</code> skills, where VS Code looks for them</td>
+</tr>
+<tr>
+<td><a href="https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/configure-custom-instructions/add-organization-instructions">GitHub: organisation custom instructions</a></td>
+<td>Why org rules are synced into repos instead (GitHub-hosted, Business/Enterprise, not local sessions)</td>
+</tr>
+<tr>
+<td><a href="https://code.visualstudio.com/docs/copilot/customization/agent-plugins">VS Code: agent plugins</a></td>
+<td>Considered for distribution; deferred until Azure DevOps support is confirmed</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="tools-it-uses-installed-separately-not-included">Tools it uses (installed separately, not included)</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Licence</th>
+<th>Role</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OpenSpec 1.16</td>
+<td>MIT</td>
+<td>Story workflow engine; the kit adds its own workflow schema</td>
+<td><a href="https://openspec.dev/docs/team-workflow">OpenSpec on a team</a>, <a href="https://openspec.dev/docs/stores">stores</a></td>
+</tr>
+<tr>
+<td>Graphify 0.9.100</td>
+<td>Apache-2.0</td>
+<td>Code map built locally from code structure</td>
+<td><a href="https://graphify.com/blog/shared-codebase-context-for-teams.md">Shared codebase context for teams</a>, <a href="https://graphify.com/blog/multi-repo-code-graph.md">multi-repo code graph</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="research-behind-the-design-choices">Research behind the design choices</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Finding</th>
+<th>Design choice it drove</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AI-written files loaded on every request lowered success slightly and raised cost about 20% (ETH Zurich, 138 repos)</td>
+<td>Short always-loaded file; detail on demand; people review drafts</td>
+<td><a href="https://the-decoder.com/context-files-for-coding-agents-often-dont-help-and-may-even-hurt-performance/">The Decoder</a></td>
+</tr>
+<tr>
+<td>Models get worse as input grows, even on easy tasks</td>
+<td>Size budgets and the always-loaded size in every report</td>
+<td><a href="https://research.trychroma.com/context-rot">Chroma Research: context rot</a></td>
+</tr>
+<tr>
+<td>Deep agent docs worked in a 108,000-line codebase, kept on demand; stale docs were the main failure</td>
+<td>On-demand pages, anchors, freshness checks</td>
+<td><a href="https://arxiv.org/html/2602.20478">Codified Context (arXiv 2602.20478)</a></td>
+</tr>
+<tr>
+<td>Real teams grow context files in small additions over time</td>
+<td>Area pages added as stories need them; updates in the same PR</td>
+<td><a href="https://arxiv.org/html/2511.12884v1">Agent READMEs (arXiv 2511.12884)</a></td>
+</tr>
+<tr>
+<td>Agents followed a simple rule about 65% of the time whatever the file length, less as sessions grow</td>
+<td>Hooks that re-surface rules mid-session; important rules also enforced by checks</td>
+<td><a href="https://arxiv.org/pdf/2605.10039">Instruction adherence (arXiv 2605.10039)</a></td>
+</tr>
+<tr>
+<td>Agents rarely follow links from one doc to another</td>
+<td>Hooks point the agent at the page for the file it is editing</td>
+<td><a href="https://arxiv.org/pdf/2608.20195">How coding agents read documentation (arXiv 2608.20195)</a></td>
+</tr>
+<tr>
+<td>Most common errors in AI-written docs: omissions and confident wrong "why"</td>
+<td>Unverified sections; draft pages capped in the score</td>
+<td><a href="https://codex.danielvaughan.com/2026/06/07/agent-generated-documentation-quality-trust-codex-cli-verification-patterns/">Agent-generated documentation quality</a></td>
+</tr>
+<tr>
+<td>Using tests as the target improved repository-level code generation by about 9.5 points</td>
+<td>Test plan and test-first tasks</td>
+<td><a href="https://arxiv.org/abs/2509.24148v2">TENET (arXiv 2509.24148)</a></td>
+</tr>
+<tr>
+<td>Teams at scale generate cross-repo maps from code instead of keeping them by hand</td>
+<td>Generated system map; hub anchors checked against the repos</td>
+<td><a href="https://dev.to/danielwe/ai-coding-agents-need-cross-repo-context-the-teams-running-them-at-scale-are-already-building-it-ek0">Cross-repo context for agents</a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="similar-work-and-how-the-kit-differs">Similar work, and how the kit differs</h3>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Work</th>
+<th>Overlap</th>
+<th>Difference</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://docs.swimm.io/new-to-swimm/benefits-of-code-coupled-documentation">Swimm</a></td>
+<td>Docs tied to code and flagged when code changes (same idea as anchors)</td>
+<td>Commercial, built for people; the kit's anchors are a simple open version aimed at agents</td>
+</tr>
+<tr>
+<td><a href="https://docs.github.com/en/copilot/concepts/agents/copilot-memory">Copilot Memory</a></td>
+<td>Repository facts checked against code citations</td>
+<td>Built into GitHub (needs GitHub-hosted repos); learned facts rather than a team-reviewed set</td>
+</tr>
+<tr>
+<td><a href="https://littlebearapps.com/builds/contextdocs/">ContextDocs</a></td>
+<td>Generates context files and blocks commits when they are stale</td>
+<td>Claude Code only; no story workflow, multi-repo support or code anchors</td>
+</tr>
+<tr>
+<td><a href="https://www.claudepluginhub.com/plugins/msiccdev-ai-context-kit">ai-context-kit plugin</a></td>
+<td>Skills for writing and keeping AGENTS.md files consistent</td>
+<td>No hooks or commit checks</td>
+</tr>
+<tr>
+<td><a href="https://github.com/bitovi/ai-enablement-prompts">Bitovi instruction-generation</a></td>
+<td>Generates a full codebase analysis in one run</td>
+<td>One-off and loaded on every request; the kit keeps it short, reviewed and current</td>
+</tr>
+<tr>
+<td><a href="https://seylox.github.io/2026/03/05/blog-agents-meta-repo-pattern.html">Meta-repo pattern</a>, Backstage software catalogue</td>
+<td>A central place describing many repos</td>
+<td>The product hub follows the same idea, with anchors checked against the repos</td>
+</tr>
+</tbody>
+</table></div>
+<p>What is specific to this kit is the combination, aimed at Copilot in VS Code on brownfield Java and Angular
+systems: small reviewed knowledge with anchors, one tool checking it in chat, at commit and before a PR, the
+story workflow with a technical design and test plan, multi-repo and organisation layers, and an
+evidence-capped readiness score.</p>
+<h2 id="limits-and-what-is-not-proven-yet">Limits and what is not proven yet</h2>
+<p>Everything above was tested on sample repos on Linux. Still open:</p>
+<ul>
+<li><strong>The benefit itself.</strong> No measured gain yet on our code. The pilot story records premium requests, files
+  read before the first edit, review rounds and rework, with and without the kit.</li>
+<li><strong>Hooks in a live Copilot chat on our laptops,</strong> including the steward's agent-scoped guard (a new VS Code
+  feature).</li>
+<li><strong>Windows corporate laptops.</strong> Written for Windows; not yet run there.</li>
+<li><strong>Skill behaviour varies.</strong> Skills are instructions, not code; the agent can skip a step. The checks exist
+  to catch that, and the story log shows how often it happens.</li>
+<li><strong>Incoming callers across repos</strong> are visible only through the product hub's catalogue, which is
+  hand-written today; a generator for it is a planned improvement.</li>
+<li><strong>Staleness is per file, per day.</strong> A change to an anchored file flags every line anchored to it; a change
+  on the same day as a review is not counted.</li>
+<li><strong>The readiness score measures context, not outcomes.</strong> Read it with the always-loaded size and the story log.</li>
+</ul>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a></footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('button.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.parentElement.querySelector('pre');
+      var reset = function (t) { btn.textContent = t; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+      var select = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); reset('Selected');
+      };
+      try { navigator.clipboard.writeText(pre.innerText).then(function () { reset('Copied'); }, select); } catch (e) { select(); }
+    });
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var heads = links.map(function (a) { return document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1))); });
+  function mark() {
+    var y = window.scrollY + 120, idx = 0;
+    heads.forEach(function (h, i) { if (h && h.offsetTop <= y) idx = i; });
+    links.forEach(function (a, i) { a.classList.toggle('on', i === idx); });
+  }
+  window.addEventListener('scroll', mark, { passive: true }); mark();
+})();
+</script>
+
+</body>
+</html>

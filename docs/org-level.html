@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+</head>
+<body>
+<title>Organisation Level</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a working manual. Sticky section rail on wide screens, one reading column, tables and code scroll in their own boxes. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --ink: #16202c; --muted: #586779; --line: #d8dfe7;
+  --accent: #2b54d6; --accent-soft: #e7edfc; --code-bg: #edf1f6; --good: #1d7a4c;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+    --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+  --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 80px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.toc .label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc ul ul { display: none; }
+nav.toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible, nav.toc a.on { color: var(--ink); border-left-color: var(--accent); }
+main { min-width: 0; }
+header.top { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-size: clamp(30px, 4.6vw, 44px); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--display); font-size: 27px; line-height: 1.2; margin: 48px 0 12px; padding-top: 8px; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { font-family: var(--display); font-size: 20px; margin: 30px 0 8px; scroll-margin-top: 16px; }
+p, li { max-width: 70ch; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 700; }
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin: 14px 0; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+td code { white-space: nowrap; }
+.code { position: relative; margin: 12px 0; }
+.code pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13.5px; line-height: 1.5; }
+.code pre code { background: none; padding: 0; font-size: inherit; }
+.copy { position: absolute; top: 8px; right: 8px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.copy:hover { color: var(--ink); border-color: var(--accent); }
+li.task { list-style: none; margin-left: -1.3em; }
+li.task input { accent-color: var(--good); margin-right: 6px; }
+h3 + p strong:first-child { color: var(--accent); }
+.other { display: inline-block; margin: 12px 20px 0 0; font-weight: 600; text-decoration: none; }
+.other:hover { text-decoration: underline; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+@media (max-width: 920px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { display: none; }
+}
+img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Sections">
+    <p class="label">Sections</p>
+    <div class="toc">
+<ul>
+<li><a href="#1-the-layers">1. The layers</a></li>
+<li><a href="#2-how-organisation-rules-reach-every-repo">2. How organisation rules reach every repo</a></li>
+<li><a href="#3-setting-up-the-organisation-layer-once">3. Setting up the organisation layer (once)</a></li>
+<li><a href="#4-each-team-once-per-repo">4. Each team (once per repo)</a></li>
+<li><a href="#5-keeping-it-current">5. Keeping it current</a></li>
+<li><a href="#6-measuring-across-the-organisation">6. Measuring across the organisation</a></li>
+<li><a href="#7-rollout-plan">7. Rollout plan</a></li>
+</ul>
+</div>
+
+  </nav>
+  <main>
+    <header class="top">
+      <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
+      <h1>Organisation level: rolling the kit out across many products</h1>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="architecture.html">Architecture →</a>
+    </header>
+    
+<p>For architecture and engineering-excellence groups who want every team to use the kit the same way. How the
+layers fit together is in <a href="architecture.html#organisation-level">ARCHITECTURE.md</a>; this page is how to set it up
+and run it.</p>
+<h2 id="1-the-layers">1. The layers</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Holds</th>
+<th>Lives in</th>
+<th>Owner</th>
+<th>Changes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Organisation</strong></td>
+<td>The few rules every repo must follow; shared platforms; AI usage policy; kit version; readiness weights</td>
+<td>One <code>org-context</code> repo</td>
+<td>Architecture / engineering excellence</td>
+<td>Rarely; reviewed by the owners</td>
+</tr>
+<tr>
+<td><strong>Product</strong></td>
+<td>Catalogue of repos, system architecture, end-to-end flows, glossary, product-wide platform rules</td>
+<td>One <code>product-context</code> hub per product (<a href="multi-repo.html">MULTI-REPO.md</a>)</td>
+<td>Product tech leads</td>
+<td>When flows or contracts change</td>
+</tr>
+<tr>
+<td><strong>Repo</strong></td>
+<td><code>AGENTS.md</code>, rule files, in-depth pages, specs, code map</td>
+<td>Each repo</td>
+<td>The owning team</td>
+<td>With every PR that changes the code it describes</td>
+</tr>
+<tr>
+<td><strong>Story</strong></td>
+<td>Proposal, specs, technical design, test plan, tasks</td>
+<td><code>openspec/changes/&lt;id&gt;/</code></td>
+<td>Developer + reviewer</td>
+<td>Every story</td>
+</tr>
+<tr>
+<td><strong>Personal</strong></td>
+<td>A developer's own preferences</td>
+<td>Their VS Code profile</td>
+<td>The developer</td>
+<td>Any time; never team rules</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The rule for where something goes:</strong> put it at the lowest layer where it is true, and only once. A rule true
+for every repo goes in the org layer; a flow across one product's repos goes in that product's hub; a column's
+meaning goes in the repo that owns the table. Lower layers link to higher ones instead of copying them.</p>
+<p><strong>When layers disagree:</strong> VS Code loads every applicable file and defines no precedence, so contradictions are
+not resolved for you. Keep org rules to things that are never overridden (security, personal data, approved
+platforms). If a repo genuinely needs an exception, say so in its <code>AGENTS.md</code> with the reason and the approval,
+and raise it with the org owners.</p>
+<h2 id="2-how-organisation-rules-reach-every-repo">2. How organisation rules reach every repo</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Works with Azure DevOps repos?</th>
+<th>Reaches CI and every agent?</th>
+<th>Visible in PRs?</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GitHub organisation custom instructions</td>
+<td>No: needs GitHub-hosted repos on Copilot Business or Enterprise, and GitHub says they don't apply to local editor sessions</td>
+<td>No</td>
+<td>No</td>
+<td>Not usable for local VS Code work</td>
+</tr>
+<tr>
+<td>VS Code settings pointing at a shared folder (<code>chat.instructionsFilesLocations</code>, <code>chat.agentSkillsLocations</code>)</td>
+<td>Yes</td>
+<td>No: per machine; other agent tools don't inherit them; the skills setting is deprecated</td>
+<td>No</td>
+<td>Optional convenience only</td>
+</tr>
+<tr>
+<td>Personal skill folder (<code>~/.copilot/skills/</code>)</td>
+<td>Yes</td>
+<td>No: per machine</td>
+<td>No</td>
+<td>For personal skills, not team rules</td>
+</tr>
+<tr>
+<td><strong>Copy into each repo, stamped (<code>install.mjs --org</code>)</strong></td>
+<td><strong>Yes</strong></td>
+<td><strong>Yes</strong></td>
+<td><strong>Yes</strong></td>
+<td><strong>Recommended</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The copy is what the kit implements:</p>
+<ul>
+<li><code>install.mjs &lt;repo&gt; --org ../org-context</code> copies <code>org-context/rules/*.instructions.md</code> into
+  <code>.github/instructions/org/</code> (Claude Code: <code>.claude/rules/org/</code>, with <code>applyTo</code> converted to <code>paths</code>).</li>
+<li>Each copy carries a line naming its source: <code>Organisation rule from org-context @ 38f3122. Do not edit here</code>.</li>
+<li><code>.github/ai-kit.json</code> records the org repo's path and commit, and a fingerprint of each file.</li>
+<li>The org's <code>context-readiness.json</code> is copied to <code>.github/context-readiness.json</code>, so every repo is scored on
+  the same weights, unless the repo keeps its own.</li>
+<li><code>context-tools check</code> warns when the copies are older than the local clone of the org repo, or were edited
+  in the repo. The session-start note tells the agent which org rules it carries.</li>
+<li>The agent is told not to edit org rules, and the context-steward agent is blocked from editing them.</li>
+<li><code>install.mjs &lt;repo&gt; --upgrade</code> re-syncs from the recorded path: new rules are added, changed ones replaced,
+  withdrawn ones removed.</li>
+</ul>
+<h2 id="3-setting-up-the-organisation-layer-once">3. Setting up the organisation layer (once)</h2>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs --create-org ../org-context
+cd ../org-context
+# 1. Replace every &lt;replace: …&gt; in rules/ and context/ with your real platforms and policies.
+# 2. Set kit.json (kit version every repo should run) and context-readiness.json (weights, band names).
+# 3. List products and their hubs in products.json.
+git init &amp;&amp; git add -A &amp;&amp; git commit -m &quot;Organisation context&quot;   # push to a protected Azure Repos repo
+</code></pre></div>
+<p>What the template contains:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+<th>Size guide</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rules/org-engineering.instructions.md</code></td>
+<td><code>applyTo: '**'</code>: secrets, personal data, identity and permission services, denied-case tests, approved libraries, agents never push</td>
+<td>Under 40 lines: it loads in every repo on every request</td>
+</tr>
+<tr>
+<td><code>rules/org-api.instructions.md</code></td>
+<td>Scoped to service and UI code: error body, correlation id, versioning, dates</td>
+<td>10–30 lines</td>
+</tr>
+<tr>
+<td><code>context/platform.md</code></td>
+<td>Shared platforms (identity, permissions, logging, cloud): what each is for, how a repo uses it, owner</td>
+<td>On demand</td>
+</tr>
+<tr>
+<td><code>context/ai-usage.md</code></td>
+<td>Approved agents, models and MCP servers; what may be shared; agents never push</td>
+<td>On demand</td>
+</tr>
+<tr>
+<td><code>kit.json</code>, <code>context-readiness.json</code>, <code>products.json</code></td>
+<td>Kit version, scoring weights, product list</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>CODEOWNERS</code></td>
+<td>Who must review changes</td>
+<td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two rules for writing org rules:
+1. <strong>Keep them few.</strong> Research found agents follow even simple written rules only part of the time, and every
+   org line costs tokens in every repo. Ten clear rules beat fifty.
+2. <strong>Enforce what must never break.</strong> A rule like "never log personal data" should also be a check (a lint
+   rule, an architecture test, a pipeline scan). The written rule helps the agent; the check guarantees it.</p>
+<h2 id="4-each-team-once-per-repo">4. Each team (once per repo)</h2>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">git clone &lt;org-context-repo-url&gt; ../org-context            # next to your repos
+node brownfield-ai-context/kit/install.mjs &lt;repo&gt; --graphify --org ../org-context
+</code></pre></div>
+<p>Commit the result with the rest of the kit setup. From then on, <code>--upgrade</code> re-syncs.</p>
+<h2 id="5-keeping-it-current">5. Keeping it current</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>When</th>
+<th>What</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>An org rule changes</td>
+<td>PR in <code>org-context</code>, reviewed by the owners; announce it</td>
+<td>Architecture group</td>
+</tr>
+<tr>
+<td>After the org change merges</td>
+<td>Each team: <code>git pull</code> in their org clone, <code>install.mjs &lt;repo&gt; --upgrade</code>, commit</td>
+<td>Each team (or a scripted rollout PR per repo)</td>
+</tr>
+<tr>
+<td>Every PR</td>
+<td><code>context-tools check</code> warns if the repo's org copies are older than the local org clone</td>
+<td>Automatic</td>
+</tr>
+<tr>
+<td>A new kit version</td>
+<td>Change <code>kitVersion</code> in <code>kit.json</code>; teams run <code>--upgrade</code></td>
+<td>Engineering excellence</td>
+</tr>
+<tr>
+<td>Monthly</td>
+<td>Product tech leads run <code>hub.mjs status</code> and report each product's readiness average</td>
+<td>Product tech leads</td>
+</tr>
+<tr>
+<td>Quarterly</td>
+<td>Org owners review org rules: still true, still needed, enforced by a check where possible</td>
+<td>Architecture group</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="6-measuring-across-the-organisation">6. Measuring across the organisation</h2>
+<ul>
+<li><strong>Per repo:</strong> <code>context-tools readiness</code> gives the 0–100 score, with evidence caps.</li>
+<li><strong>Per product:</strong> <code>hub.mjs status</code> lists every repo's score and the product average.</li>
+<li><strong>Organisation:</strong> collect the product averages each month. Report them with the story log outcomes (rework,
+  review rounds, premium requests) from the pilot teams, never on their own: the score measures context, not
+  results.</li>
+</ul>
+<h2 id="7-rollout-plan">7. Rollout plan</h2>
+<ol>
+<li><strong>Pilot (now):</strong> one product, two repos, one sprint story, measured with the story log.</li>
+<li><strong>Second pilot:</strong> one more team, after the kit moves to an internal repository with a named owner.</li>
+<li><strong>Org layer:</strong> create <code>org-context</code> with the first ten rules; sync it into the pilot repos.</li>
+<li><strong>Product hubs:</strong> one per product that has three or more repos in regular use.</li>
+<li><strong>Wider rollout:</strong> teams adopt on their next story; the context check joins the PR pipeline as a warning
+   first, then a required check.</li>
+</ol>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="architecture.html">Architecture →</a></footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('button.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.parentElement.querySelector('pre');
+      var reset = function (t) { btn.textContent = t; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+      var select = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); reset('Selected');
+      };
+      try { navigator.clipboard.writeText(pre.innerText).then(function () { reset('Copied'); }, select); } catch (e) { select(); }
+    });
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var heads = links.map(function (a) { return document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1))); });
+  function mark() {
+    var y = window.scrollY + 120, idx = 0;
+    heads.forEach(function (h, i) { if (h && h.offsetTop <= y) idx = i; });
+    links.forEach(function (a, i) { a.classList.toggle('on', i === idx); });
+  }
+  window.addEventListener('scroll', mark, { passive: true }); mark();
+})();
+</script>
+
+</body>
+</html>

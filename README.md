@@ -12,6 +12,8 @@ that keep the context up to date.
 | Set it up and run a story, step by step, in plain English | **[GUIDE.md](GUIDE.md)** (web page: [docs/index.html](docs/index.html)) |
 | Understand how to create, use and maintain context for any task, with or without OpenSpec | **[CONTEXT-GUIDE.md](CONTEXT-GUIDE.md)** (web page: [docs/context.html](docs/context.html)) |
 | See every tool (core, recommended, optional), Graphify in depth, and which workflow fits which task | **[TOOLBOX.md](TOOLBOX.md)** (web page: [docs/toolbox.html](docs/toolbox.html)) |
+| See how the kit is built: components, layers, when each part runs, where it came from | **[ARCHITECTURE.md](ARCHITECTURE.md)** (web page: [docs/architecture.html](docs/architecture.html)) |
+| Roll it out across the organisation: org rules, product hubs, repos, measuring readiness | **[ORG-LEVEL.md](ORG-LEVEL.md)** (web page: [docs/org-level.html](docs/org-level.html)) |
 | Set it up across many repos: micro-frontends, backend services, shared libraries | **[MULTI-REPO.md](MULTI-REPO.md)** (web page: [docs/multi-repo.html](docs/multi-repo.html)) |
 | Build an in-depth reference per repo and score context readiness | `/context-baseline`, `/context-assess` — see [CONTEXT-GUIDE.md](CONTEXT-GUIDE.md#in-depth-context-the-baseline-area-pages-and-the-readiness-score) |
 | Install the kit into my repo | `node kit/install.mjs <path-to-your-repo>` — details in [kit/README.md](kit/README.md) |
@@ -39,6 +41,8 @@ GUIDE.md            setup + story workflow (start here)
 CONTEXT-GUIDE.md    creating, using and maintaining context (any task, OpenSpec optional)
 TOOLBOX.md          every tool by tier, Graphify in depth, workflow per task type, module rewrites
 MULTI-REPO.md       many micro-frontends + services: product context hub, workspaces, cross-repo stories
+ORG-LEVEL.md        organisation layer: org rules synced into every repo, rollout, measuring
+ARCHITECTURE.md     how the kit is built and why, with sources
 kit/                installer, the files it adds to each repo, and the product hub template
 templates/          story log and presentation outline
 demo-kit/           sandbox: two made-up services and a shared context repo
@@ -48,6 +52,6 @@ docs/research/      playbook, FAQ, explainer, research update, sources
 
 ## Status
 
-Kit 1.5.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 20 on Linux; written for Windows, macOS and Linux. Copilot hooks
+Kit 1.6.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 20 on Linux; written for Windows, macOS and Linux. Copilot hooks
 and agent plugins are preview features in VS Code; the git hook and the context check work without them.
 Last updated November 2026. MIT licence.

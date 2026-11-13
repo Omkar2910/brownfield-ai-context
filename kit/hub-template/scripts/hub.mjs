@@ -129,6 +129,7 @@ function cmdImpact() {
 
 // ---------------------------------------------------------------- status
 function cmdStatus() {
+  const scores = [];
   console.log(`Product: ${catalog.product}   (repos in ${reposDir})`);
   for (const r of repos) {
     const dir = repoDir(r.name);
@@ -142,8 +143,11 @@ function cmdStatus() {
     }
     const agents = fs.existsSync(path.join(dir, 'AGENTS.md')) ? 'AGENTS.md ✓' : 'no AGENTS.md';
     const graph = fs.existsSync(path.join(dir, 'graphify-out', 'graph.json')) ? 'code map ✓' : 'no code map';
-    console.log(`  ✓ ${r.name.padEnd(22)} ${agents.padEnd(14)} ${graph.padEnd(12)} ${result}`);
+    let score = '';
+    if (tool) { try { const j = JSON.parse(execFileSync('node', [tool, 'readiness', '--json', '--repo', dir], { encoding: 'utf8' })); score = `readiness ${j.total} (${j.band})`; scores.push(j.total); } catch { score = 'readiness n/a'; } }
+    console.log(`  ✓ ${r.name.padEnd(22)} ${agents.padEnd(14)} ${graph.padEnd(12)} ${score.padEnd(30)} ${result}`);
   }
+  if (scores.length) console.log(`Average readiness across ${scores.length} repo(s): ${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}`);
 }
 
 // ---------------------------------------------------------------- clone

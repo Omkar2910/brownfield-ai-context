@@ -68,6 +68,10 @@ only a short summary line and the link.
 
 ## 3. Setting it up
 
+Above the product hubs there can be one organisation layer (rules every repo follows, synced into each repo);
+see [ORG-LEVEL.md](ORG-LEVEL.md).
+
+
 ### Once per product (about an hour, one person)
 ```bash
 node brownfield-ai-context/kit/install.mjs --create-hub ../product-context

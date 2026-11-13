@@ -1,0 +1,5 @@
+{
+  "products": [
+    { "name": "<product>", "hub": "<git url of its product-context repo>", "owner": "<tech lead>", "repos": ["<repo-a>", "<repo-b>"] }
+  ]
+}
