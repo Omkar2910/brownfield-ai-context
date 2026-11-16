@@ -106,7 +106,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
       <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a>
     </header>
     
-<p>Kit 1.6.0 · November 2026. For management, architects and anyone evaluating the kit. How to set it up is
+<p>Kit 1.6.1 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
 in <a href="index.html">GUIDE.md</a>; how to roll it out across an organisation is in <a href="org-level.html">ORG-LEVEL.md</a>.</p>
 <h2 id="summary">Summary</h2>
 <p>The AI Context Kit (MIT licence) is a set of plain files installed into each repo that gives AI coding
@@ -846,10 +846,9 @@ unless a developer explicitly asks); files that run commands (<code>.github/hook
 <code>.vscode/mcp.json</code>, <code>.mcp.json</code>) get a named reviewer through CODEOWNERS or an Azure Repos branch policy; tool
 versions are pinned to the tested ones; and the steward agent can edit only knowledge files.</p>
 <h2 id="where-it-came-from">Where it came from</h2>
-<p>The kit is our own design and code, built with an AI assistant in October–November 2026: research first,
-then the kit, tested on sample Java and Angular repos with OpenSpec 1.16 and Graphify 0.9.100, then reviewed
-cold by an independent AI reviewer before version 1.4.0. No existing kit was copied. It follows public file
-formats, uses two open-source tools, and takes its design choices from published research. One part reuses
+<p>The kit is an original design, developed with AI assistance and tested on sample Java and Angular
+repositories with OpenSpec 1.16 and Graphify 0.9.100. It follows public file formats, uses two open-source
+tools, and takes its design choices from the published research below. One part reuses
 another project's text: the story workflow's proposal and specs steps are OpenSpec's own wording (MIT
 licence; credited in <a href="../THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>, and the licence ships with the file).</p>
 <h3 id="formats-and-platforms-it-follows">Formats and platforms it follows</h3>
@@ -1018,11 +1017,11 @@ evidence-capped readiness score.</p>
 <h2 id="limits-and-what-is-not-proven-yet">Limits and what is not proven yet</h2>
 <p>Everything above was tested on sample repos on Linux. Still open:</p>
 <ul>
-<li><strong>The benefit itself.</strong> No measured gain yet on our code. The pilot story records premium requests, files
-  read before the first edit, review rounds and rework, with and without the kit.</li>
-<li><strong>Hooks in a live Copilot chat on our laptops,</strong> including the steward's agent-scoped guard (a new VS Code
-  feature).</li>
-<li><strong>Windows corporate laptops.</strong> Written for Windows; not yet run there.</li>
+<li><strong>The benefit on your code.</strong> Measure it before scaling: the story log records premium requests, files read
+  before the first edit, review rounds and rework, with and without the kit.</li>
+<li><strong>Hooks in live Copilot chats,</strong> including the steward's agent-scoped guard (a new VS Code feature): check
+  them once in your own environment.</li>
+<li><strong>Windows.</strong> Written for Windows; tested on Linux.</li>
 <li><strong>Skill behaviour varies.</strong> Skills are instructions, not code; the agent can skip a step. The checks exist
   to catch that, and the story log shows how often it happens.</li>
 <li><strong>Incoming callers across repos</strong> are visible only through the product hub's catalogue, which is

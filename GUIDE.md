@@ -256,7 +256,7 @@ to open them based on what the story touches.
     | `openspec/` | Its own specs and changes | Its own specs and changes |
     | `graphify-out/` (not committed) | Map of the Java code | Map of the TypeScript code |
 
-    Platform rules that apply to both (login with Keycloak, permissions through CIAM, error format) go in
+    Platform rules that apply to both (login, permissions, error format) go in
     each `AGENTS.md` as the same 2–3 short lines. With more services, move them to one shared place
     (GitHub organization instructions or a shared repo, see `demo-kit/`).
 3. **The API contract is the link.** The service owns it (OpenAPI file or DTOs). In the UI's `AGENTS.md`,

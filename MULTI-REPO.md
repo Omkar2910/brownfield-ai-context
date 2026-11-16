@@ -60,7 +60,7 @@ Keep all clones **side by side in one folder**. The hub's scripts and the worksp
 | **Shared library** | Who uses it; how releases reach them; breaking changes are a cross-repo initiative |
 | **Every repo** | A "Where to look" line pointing at `../product-context/`; 2–3 lines of platform rules that apply to almost every task |
 
-Rules that apply everywhere (Keycloak for login, CIAM for permissions, one error format, how
+Rules that apply everywhere (the identity provider for login, the permission service, one error format, how
 micro-frontends share dependencies) are written **once** in the hub's `context/platform/`. Each repo has
 only a short summary line and the link.
 

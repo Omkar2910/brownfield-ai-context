@@ -5,7 +5,7 @@ description: Rate this repo's context readiness on the 12-dimension scale (0-100
 
 # Context assess
 
-Goal: an honest readiness score that management can trust, backed by evidence, and the three gaps
+Goal: an honest readiness score that the team and its leaders can trust, backed by evidence, and the three gaps
 that would raise it most.
 
 ## Rating scale (each dimension 0-5)

@@ -99,13 +99,13 @@ Commit the result with the rest of the kit setup. From then on, `--upgrade` re-s
 - **Per repo:** `context-tools readiness` gives the 0–100 score, with evidence caps.
 - **Per product:** `hub.mjs status` lists every repo's score and the product average.
 - **Organisation:** collect the product averages each month. Report them with the story log outcomes (rework,
-  review rounds, premium requests) from the pilot teams, never on their own: the score measures context, not
-  results.
+  review rounds, premium requests) from teams that track their stories, never on their own: the score measures
+  context, not results.
 
 ## 7. Rollout plan
 
-1. **Pilot (now):** one product, two repos, one sprint story, measured with the story log.
-2. **Second pilot:** one more team, after the kit moves to an internal repository with a named owner.
+1. **Pilot:** one product, two or three repos, a few real stories, measured with the story log.
+2. **Second pilot:** one more team, once the kit lives in an internal repository with a named owner.
 3. **Org layer:** create `org-context` with the first ten rules; sync it into the pilot repos.
 4. **Product hubs:** one per product that has three or more repos in regular use.
 5. **Wider rollout:** teams adopt on their next story; the context check joins the PR pipeline as a warning

@@ -1,6 +1,6 @@
 # FAQ
 
-Follow-up questions from the research, answered in short form. The explainer (`explainer.html`) has the visual version; `GUIDE.md` at the repo root has the setup steps.
+Common questions about the approach, answered in short form. `GUIDE.md` at the repo root has the setup steps; `ARCHITECTURE.md` explains how the parts fit.
 
 ## Where does Graphify help?
 

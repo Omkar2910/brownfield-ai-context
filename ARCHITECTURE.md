@@ -1,6 +1,6 @@
 # AI Context Kit: Architecture
 
-Kit 1.6.0 · November 2026. For management, architects and anyone evaluating the kit. How to set it up is
+Kit 1.6.1 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
 in [GUIDE.md](GUIDE.md); how to roll it out across an organisation is in [ORG-LEVEL.md](ORG-LEVEL.md).
 
 ## Summary
@@ -276,10 +276,9 @@ versions are pinned to the tested ones; and the steward agent can edit only know
 
 ## Where it came from
 
-The kit is our own design and code, built with an AI assistant in October–November 2026: research first,
-then the kit, tested on sample Java and Angular repos with OpenSpec 1.16 and Graphify 0.9.100, then reviewed
-cold by an independent AI reviewer before version 1.4.0. No existing kit was copied. It follows public file
-formats, uses two open-source tools, and takes its design choices from published research. One part reuses
+The kit is an original design, developed with AI assistance and tested on sample Java and Angular
+repositories with OpenSpec 1.16 and Graphify 0.9.100. It follows public file formats, uses two open-source
+tools, and takes its design choices from the published research below. One part reuses
 another project's text: the story workflow's proposal and specs steps are OpenSpec's own wording (MIT
 licence; credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and the licence ships with the file).
 
@@ -335,11 +334,11 @@ evidence-capped readiness score.
 
 Everything above was tested on sample repos on Linux. Still open:
 
-- **The benefit itself.** No measured gain yet on our code. The pilot story records premium requests, files
-  read before the first edit, review rounds and rework, with and without the kit.
-- **Hooks in a live Copilot chat on our laptops,** including the steward's agent-scoped guard (a new VS Code
-  feature).
-- **Windows corporate laptops.** Written for Windows; not yet run there.
+- **The benefit on your code.** Measure it before scaling: the story log records premium requests, files read
+  before the first edit, review rounds and rework, with and without the kit.
+- **Hooks in live Copilot chats,** including the steward's agent-scoped guard (a new VS Code feature): check
+  them once in your own environment.
+- **Windows.** Written for Windows; tested on Linux.
 - **Skill behaviour varies.** Skills are instructions, not code; the agent can skip a step. The checks exist
   to catch that, and the story log shows how often it happens.
 - **Incoming callers across repos** are visible only through the product hub's catalogue, which is

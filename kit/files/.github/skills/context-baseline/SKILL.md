@@ -12,7 +12,7 @@ can read and agents open only when a task needs it. It is never loaded on every 
 ## Before you start
 - `AGENTS.md` must exist (run `/context-bootstrap` first). The baseline adds depth; it does not replace it.
 - Build or refresh the code map if Graphify is installed: `graphify update .`
-- If an earlier analysis exists (a trainer's `.results/` folder, an old `context-store/`, wiki pages),
+- If older documentation exists (generated analysis files, earlier context documents, wiki pages),
   read it as a SOURCE, never copy it: every line you keep must be confirmed in today's code.
 
 ## Steps

@@ -4,7 +4,7 @@ Golden tasks are real past stories with a known-good merged diff. They answer "d
 change (or this generator skill) make agents better or worse?" with numbers instead of opinions.
 
 ## Use them for
-- Choosing between the trainer's context skill and an ad-hoc prompt (run both, compare).
+- Choosing between two ways of generating context, for example a context skill and a one-off prompt (run both, compare).
 - Any PR that changes AGENTS.md, scoped instructions, docs/context or a team skill.
 
 ## How to run (manual, ~30 min per variant)

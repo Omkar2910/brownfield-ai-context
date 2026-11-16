@@ -47,11 +47,11 @@ kit/                installer, the files it adds to each repo, and the product h
 templates/          story log and presentation outline
 demo-kit/           sandbox: two made-up services and a shared context repo
 docs/*.html         the guides as web pages
-docs/research/      playbook, FAQ, explainer, research update, sources
+docs/research/      playbook, FAQ, research update, sources
 ```
 
 ## Status
 
-Kit 1.6.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 20 on Linux; written for Windows, macOS and Linux. Copilot hooks
+Kit 1.6.1. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 20 on Linux; written for Windows, macOS and Linux. Copilot hooks
 and agent plugins are preview features in VS Code; the git hook and the context check work without them.
 Last updated November 2026. MIT licence.
