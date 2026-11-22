@@ -49,8 +49,8 @@ Keep all clones **side by side in one folder**. The hub's scripts and the worksp
 
 ### What each kind of repo says about the others
 
-`/context-bootstrap` asks what kind of repo it is working in and adds these (details in
-`kit/files/.github/skills/context-bootstrap/references/repo-types.md`):
+`/context-create` asks what kind of repo it is working in and adds these (details in
+`kit/files/.github/skills/context-create/references/repo-types.md`):
 
 | Repo type | Its AGENTS.md must say |
 | --- | --- |
@@ -86,16 +86,16 @@ Then the product-level context (half a day, the tech lead with one developer per
 
 1. Clone the repos next to the hub (`node scripts/hub.mjs clone all --run`) and open them all with the hub
    (`node scripts/hub.mjs workspace all`, then open the generated `.code-workspace`).
-2. Type `/hub-baseline`. It writes `context/architecture.md`, `context/glossary.md`, one
+2. Type `/hub-context`. It writes `context/architecture.md`, `context/glossary.md`, one
    `context/flows/<flow>.md` per important end-to-end flow (with screen field → API field → column
    mappings) and fills in `context/platform/`. Every fact is anchored into a repo as
    `[anchor: report-service:src/main/java/**/ReportController.java]`.
 3. `node scripts/hub.mjs check` confirms every anchor resolves in the cloned repos;
    `node scripts/hub.mjs readiness` scores the hub's own context.
-4. Owners review their pages and set `Status: reviewed · Last verified: <date> by <name>`. Commit and push.
+4. Owners review their pages: each sets `status: stable` and adds a line under `verified:` (`- { by: "human:<name>", at: "<date>" }`). Commit and push.
 
 Per-repo detail (each service's data, API, screens, security) stays in that repo's `docs/context/`, made with
-`/context-baseline` there; the hub links to it instead of copying it.
+`/context-create deep` there; the hub links to it instead of copying it.
 
 The catalog is the most valuable part. For each repo record: `type` (`mfe-shell`, `mfe-remote`,
 `service`, `library`), `owner`, `areas` (business areas such as `reports`; use `platform` for repos
@@ -105,7 +105,7 @@ almost everything uses), `exposes` (micro-frontends) or `api` and `contract` (se
 ### Once per repo (each team, on their own setup PR)
 ```bash
 node brownfield-ai-context/kit/install.mjs ../reports-mfe --graphify
-# then in VS Code: /context-bootstrap, build the code map, review, commit
+# then in VS Code: /context-create, build the code map, review, commit
 ```
 
 For many repos at once (PowerShell):
@@ -116,7 +116,7 @@ foreach ($r in "shell-app","reports-mfe","admin-mfe","report-service") {
 ```
 
 ### Keeping the kit the same everywhere
-Each repo records its kit version in `.github/ai-kit.json`. When the kit improves:
+Each repo records its kit version in `.ai-kit/kit.json`. When the kit improves:
 ```bash
 node brownfield-ai-context/kit/install.mjs ../reports-mfe --upgrade
 ```
@@ -164,7 +164,7 @@ With the hub in the window, its `cross-repo-story` skill is available alongside 
    `initiatives/<change-id>.md` with the repos **in order**:
    services and shared libraries → micro-frontend remotes → shell.
 2. **Review the initiative note** with the tech lead. This replaces many late surprises between teams.
-3. **Per repo, in that order:** the normal single-repo flow (`/story-to-change` → `/opsx-propose <change-id>`
+3. **Per repo, in that order:** the normal single-repo flow (`/story-start` → `/opsx-propose <change-id>`
    → review → `/opsx-apply` → `/story-finish`). Same change id in every repo. One PR per repo, each linking
    the initiative note.
 4. **After each service PR merges:** `node scripts/hub.mjs contracts --sync` in the hub and commit, so the

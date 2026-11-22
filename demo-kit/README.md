@@ -2,7 +2,8 @@
 
 > **Sandbox.** This folder is a self-contained practice setup with two made-up services. To set up your own
 > repository, follow `GUIDE.md` at the repo root and use `kit/install.mjs`. The sandbox uses an earlier
-> version of the same scripts (`context-hooks.cjs`, `check-context.sh`) in a shared `system-context` repo.
+> version of the same scripts (`context-hooks.cjs`, `check-context.sh`) in a shared `system-context` repo, and
+> skill names from kit 1.x (`story-to-change` is now `story-start`, `context-bootstrap` is `context-create`).
 > In VS Code Copilot, OpenSpec commands are spelled `/opsx-propose`, `/opsx-apply` (hyphen); the
 > `/opsx:propose` spelling below is Claude Code's.
 

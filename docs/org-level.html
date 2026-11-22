@@ -89,6 +89,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
 <li><a href="#5-keeping-it-current">5. Keeping it current</a></li>
 <li><a href="#6-measuring-across-the-organisation">6. Measuring across the organisation</a></li>
 <li><a href="#7-rollout-plan">7. Rollout plan</a></li>
+<li><a href="#8-plug-in-plug-out">8. Plug in, plug out</a></li>
 </ul>
 </div>
 
@@ -97,7 +98,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>Organisation level: rolling the kit out across many products</h1>
-      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="architecture.html">Architecture →</a>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a>
     </header>
     
 <p>For architecture and engineering-excellence groups who want every team to use the kit the same way. How the
@@ -204,10 +205,12 @@ and raise it with the org owners.</p>
 <p>The copy is what the kit implements:</p>
 <ul>
 <li><code>install.mjs &lt;repo&gt; --org ../org-context</code> copies <code>org-context/rules/*.instructions.md</code> into
-  <code>.github/instructions/org/</code> (Claude Code: <code>.claude/rules/org/</code>, with <code>applyTo</code> converted to <code>paths</code>).</li>
+  <code>.github/instructions/org/</code> (Claude Code: <code>.claude/rules/org/</code>, with <code>applyTo</code> converted to <code>paths</code>; both
+  when the repo is set up for both). Codex reads only <code>AGENTS.md</code> files, so for Codex the two or three org
+  rules that must never break also belong in each <code>AGENTS.md</code>, and the pull request check enforces the rest.</li>
 <li>Each copy carries a line naming its source: <code>Organisation rule from org-context @ 38f3122. Do not edit here</code>.</li>
-<li><code>.github/ai-kit.json</code> records the org repo's path and commit, and a fingerprint of each file.</li>
-<li>The org's <code>context-readiness.json</code> is copied to <code>.github/context-readiness.json</code>, so every repo is scored on
+<li><code>.ai-kit/kit.json</code> records the org repo's path and commit, and a fingerprint of each copy.</li>
+<li>The org's <code>context-readiness.json</code> is copied to <code>.ai-kit/readiness.json</code>, so every repo is scored on
   the same weights, unless the repo keeps its own.</li>
 <li><code>context-tools check</code> warns when the copies are older than the local clone of the org repo, or were edited
   in the repo. The session-start note tells the agent which org rules it carries.</li>
@@ -334,7 +337,73 @@ node brownfield-ai-context/kit/install.mjs &lt;repo&gt; --graphify --org ../org-
 <li><strong>Wider rollout:</strong> teams adopt on their next story; the context check joins the PR pipeline as a warning
    first, then a required check.</li>
 </ol>
-    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="architecture.html">Architecture →</a></footer>
+<h2 id="8-plug-in-plug-out">8. Plug in, plug out</h2>
+<p>Every part of the kit is a set of plain files with one owner, so each can be added or removed on its own.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Plug in</th>
+<th>Plug out</th>
+<th>What keeps working without it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The kit in a repo</td>
+<td><code>install.mjs &lt;repo&gt;</code></td>
+<td>Delete the kit folders, <code>git config --unset core.hooksPath</code></td>
+<td><code>AGENTS.md</code> and <code>docs/context/</code> stay useful to any agent</td>
+</tr>
+<tr>
+<td>One agent tool</td>
+<td><code>install.mjs &lt;repo&gt; --tool claude</code> (adds its folders)</td>
+<td>Delete that tool's folders (<code>.claude/</code>, <code>.agents/skills/</code> …)</td>
+<td>The other tools' folders, the git hook and the PR check</td>
+</tr>
+<tr>
+<td>Organisation rules</td>
+<td><code>install.mjs &lt;repo&gt; --org &lt;org-context&gt;</code></td>
+<td>Delete <code>org/</code> rule folders and the <code>org</code> entry in <code>.ai-kit/kit.json</code></td>
+<td>The repo's own rules</td>
+</tr>
+<tr>
+<td>Product hub</td>
+<td><code>install.mjs --create-hub</code>, clone it next to the repos</td>
+<td>Stop opening it in the window</td>
+<td>Each repo's own context; <code>repo:path</code> anchors are simply not checked</td>
+</tr>
+<tr>
+<td>Code map</td>
+<td><code>--graphify</code></td>
+<td>Remove the MCP entry and <code>graphify-out/</code></td>
+<td>Search; the skills fall back to it</td>
+</tr>
+<tr>
+<td>OpenSpec story workflow</td>
+<td><code>openspec init</code>, then the installer again</td>
+<td><code>--keep-schema</code>, or set <code>schema: spec-driven</code></td>
+<td><code>/story-start</code> writes the technical design and test plan to <code>docs/stories/</code></td>
+</tr>
+<tr>
+<td>Agent hooks</td>
+<td>Installed by default</td>
+<td>Delete <code>.github/hooks/ai-context.json</code> or the kit entries in <code>.claude/settings.json</code></td>
+<td>Git hook, PR check, the skills' final block</td>
+</tr>
+<tr>
+<td>MCP server</td>
+<td><code>--mcp</code></td>
+<td>Remove the <code>ai-context</code> entry from the MCP files</td>
+<td>The command line and hooks</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>New agent tools.</strong> The kit's knowledge lives in <code>AGENTS.md</code>, <code>docs/context/</code> and <code>openspec/</code>, which any
+agent can read; only the thin per-tool folders change. Adding support for a new tool means adding its
+folder mapping to the installer, not rewriting context. List the approved tools in
+<code>org-context/context/ai-usage.md</code>.</p>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a></footer>
   </main>
 </div>
 

@@ -24,10 +24,11 @@ PAGES = [
     ("MULTI-REPO.md", "multi-repo.html", "Many-Repo Setup", "Many repos"),
     ("ORG-LEVEL.md", "org-level.html", "Organisation Level", "Organisation level"),
     ("ARCHITECTURE.md", "architecture.html", "Kit Architecture", "Architecture"),
+    ("ROADMAP.md", "roadmap.html", "Kit Roadmap", "Roadmap"),
 ]
 TEMPLATE = (ROOT / "tools" / "guide-template.html").read_text(encoding="utf-8")
 LINKS = {"GUIDE.md": "index.html", "CONTEXT-GUIDE.md": "context.html", "TOOLBOX.md": "toolbox.html", "MULTI-REPO.md": "multi-repo.html",
-         "ORG-LEVEL.md": "org-level.html", "ARCHITECTURE.md": "architecture.html"}
+         "ORG-LEVEL.md": "org-level.html", "ARCHITECTURE.md": "architecture.html", "ROADMAP.md": "roadmap.html"}
 
 
 def build(src_name, out_name, page_title, other_label):
@@ -51,7 +52,8 @@ def build(src_name, out_name, page_title, other_label):
     for md_name, html_name in LINKS.items():
         body = body.replace(f'href="{md_name}', f'href="{html_name}')
     body = body.replace('href="docs/', 'href="').replace('src="docs/', 'src="').replace('href="templates/', 'href="../templates/')
-    body = body.replace('href="THIRD_PARTY_NOTICES.md', 'href="../THIRD_PARTY_NOTICES.md')
+    for other in ("THIRD_PARTY_NOTICES.md", "CHANGELOG.md", "README.md", "kit/", "demo-kit/", "tools/"):
+        body = body.replace(f'href="{other}', f'href="../{other}')
 
     nav = " ".join(f'<a class="other" href="{p[1]}">{p[3]} →</a>' for p in PAGES if p[1] != out_name)
     fragment = (TEMPLATE.replace("{{PAGE_TITLE}}", page_title).replace("{{TITLE}}", title)

@@ -34,5 +34,15 @@ SOFTWARE.
 
 ## Tools used but not included
 
-OpenSpec (MIT) and Graphify (Apache-2.0) are installed separately by each user; this repository
-contains configuration for them, not their code.
+OpenSpec (MIT), Graphify (Apache-2.0) and tbls (MIT) are installed separately by each user; this
+repository contains configuration for them, or reads their output files, not their code.
+
+## Formats and ideas followed (no code copied)
+
+- **Open Knowledge Format** (OKF v0.3, https://github.com/open-knowledge-format/open-knowledge-format):
+  the page frontmatter fields `type`, `status`, `verified` and `generated` follow its definitions.
+- **Elephant-Goldfish Model** (Google, Apache-2.0, https://github.com/google/elephant-goldfish-model): the
+  idea of a reviewer that starts with no memory of the design conversation. The `design-reviewer` agent
+  is the kit's own text.
+- **AGENTS.md**, **Agent Skills (`SKILL.md`)** and the **Model Context Protocol**: public formats the kit's
+  files and its MCP server follow.

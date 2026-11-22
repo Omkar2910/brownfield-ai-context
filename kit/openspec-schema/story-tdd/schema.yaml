@@ -243,7 +243,7 @@ artifacts:
       4. Test data and setup: fixtures, seed data, mocks or test containers, feature flags.
       5. Manual / QA checks: only what cannot reasonably be automated.
 
-      Follow the test conventions in AGENTS.md and .github/instructions/ (framework, naming,
+      Follow the test conventions in AGENTS.md and the rule files (.github/instructions/ or .claude/rules/; framework, naming,
       folder). Use the project's real test command. Keep it to what this story needs.
     requires:
       - specs

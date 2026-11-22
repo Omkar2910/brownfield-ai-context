@@ -72,7 +72,7 @@ Ask these questions in order. Stop at the first "yes".
 
 ## 4. Creating context for an existing repo
 
-Budget about two hours per repo, spread over a day. The kit's `/context-bootstrap` skill does steps
+Budget about two hours per repo, spread over a day. The kit's `/context-create` skill does steps
 2, 4 and 5 for you, but you own the result.
 
 ### Step 1 — Harvest what already exists (30 min)
@@ -93,7 +93,7 @@ The best rules are already written somewhere, just not for agents. Collect, don'
 most connected classes tell you what the architecture page must explain. See [TOOLBOX.md](TOOLBOX.md#3-graphify-in-depth).
 
 ### Step 2 — Draft with the agent (20 min)
-In agent mode: `/context-bootstrap`. It reads the code and build files and drafts `AGENTS.md`, two to four
+In agent mode: `/context-create`. It reads the code and build files and drafts `AGENTS.md`, two to four
 scoped rule files and `docs/context/architecture.md` and `known-traps.md`. Paste the harvest notes
 into the chat so it uses them.
 
@@ -118,7 +118,7 @@ Watch: did it follow the rules? Did it open the right files? Did it ask fewer qu
 didn't help, cut or reword it.
 
 ### Step 7 — Review and merge
-Run `node .github/hooks/scripts/context-tools.cjs check`, then open a pull request like any code change.
+Run `node .ai-kit/context-tools.cjs check`, then open a pull request like any code change.
 The tech lead reviews the context files; that review is the quality gate.
 
 ---
@@ -131,7 +131,7 @@ The point of good context is that you **stop re-typing the same instructions**. 
 | Task | What to do |
 | --- | --- |
 | **Small change or bug fix** | Just describe it. Add "check docs/context/known-traps.md first" if it touches a risky area, and "run graphify affected on what you change" if it touches shared code. |
-| **Bigger change or story** | `/story-to-change` gathers only the context the task needs (works with or without OpenSpec), then you agree a plan before coding. |
+| **Bigger change or story** | `/story-start` gathers only the context the task needs (works with or without OpenSpec), then you agree a plan before coding. |
 | **Unfamiliar area** | Ask the agent to explain the area first and list which rules apply, before any edits. |
 | **Code review** | "Review this diff against AGENTS.md and the instructions that apply. List violations with file and line." |
 | **Agent got something wrong** | Correct it, then `/context-learn <what went wrong>` so it is fixed for everyone (see Section 6). |
@@ -162,7 +162,7 @@ with four layers, from fully automatic to occasional.
 | Trigger | Action |
 | --- | --- |
 | You changed a command, convention, contract or integration | Update the context line **in the same pull request** (the PR template asks) |
-| The checks report a stale or broken line | `/context-refresh`: it updates, moves or deletes only the affected lines |
+| The checks report a stale or broken line | `/context-update`: it updates, moves or deletes only the affected lines |
 | The agent made a mistake a rule would have prevented | `/context-learn <what happened>`: it adds a short rule in the right place, with a reason and anchor |
 | A reviewer writes the same comment twice | Same: it becomes a rule |
 | An incident or production bug | Add a trap to `docs/context/known-traps.md` with the reason |
@@ -235,23 +235,78 @@ greenfield project's constitution. That is compatible with the research above, a
 3. **It is kept current by the same machinery as everything else**: anchors on every claim, the checks,
    and each story's technical design listing the pages it makes out of date.
 
-**The pages** (`/context-baseline` creates them in `docs/context/`, one per dimension):
+**The pages** (`/context-create deep` creates them in `docs/context/`, one per dimension):
 
 | Page | Dimension | Generated from code, or written |
 | --- | --- | --- |
 | `architecture.md` | Architecture | Written, anchored; most-connected parts from the code map |
 | `domain.md` (+ `screens.md` in UI repos) | Business/domain | Glossary and rules written; the behaviour record is `openspec/specs/`, updated by every archived story |
-| `data.md` | Data | Tables generated from migrations and entities; the "why" written |
+| `data.md` + `data/tables/*.md` | Data | Overview written; one page per table, its structure generated from a schema file, its meaning written |
 | `api.md` | API/integration | Endpoints generated from OpenAPI or controllers; conventions and odd behaviour written |
 | `dependencies.md` | Dependencies | Libraries from the build file; consumers from the product hub |
 | `security.md` | Security | Written, anchored to security config and permission checks |
 | `testing.md`, `operations.md` | Testing, Runtime/operations | Written, anchored to test folders, config and pipelines |
 | `decisions/*.md` | Decision history | One page per real decision, plus each story's design decisions in the OpenSpec archive |
 
-Each page starts with one status line the tools read:
-`> Dimension: data · Status: draft · Last verified: never · Independent review: no · Owner: reports-team`.
-After review it becomes `Status: reviewed · Last verified: 2026-11-20 by <name>`; when a second person who
-did not write it has checked it, `Independent review: yes`.
+Each page starts with a short frontmatter block the tools read:
+
+```yaml
+---
+type: Context Page
+status: draft
+dimension: data
+owner: "reports-team"
+verified: []
+---
+```
+
+After review it becomes `status: stable` with a line under `verified:`, for example
+`- { by: "human:asha", at: "2026-11-20" }`; when a second person who did not write it has checked it, they
+add their own line (an independent review). These fields follow the Open Knowledge Format (OKF v0.3), with
+`dimension` and `owner` as the kit's own keys, so tools that read OKF can read these pages. Pages written with kit 1.x used a one-line header instead; `context-tools.cjs migrate`
+converts them without an agent.
+
+**Where each dimension comes from, and where it lives.** The kit keeps the reviewed, anchored version in
+the repo, next to the code it describes, because that is the copy every agent and every pull request can
+see. Catalogues and code maps are sources and companions, not replacements:
+
+| Dimension | Sources | Kept in (the kit) | Companion tools, if your organisation has them |
+| --- | --- | --- | --- |
+| Code understanding | Code, build and pipeline files, the code map | `AGENTS.md`, rule files | Graphify (queried, never copied) |
+| Architecture | Code map, entry points, config, integration clients | `architecture.md`; product-wide in the hub | Graphify; architecture diagrams in the hub |
+| Business/domain | Code named after business concepts, specs, the team | `domain.md`, `screens.md`, `openspec/specs/` | A business glossary in a data catalogue, linked |
+| Data | Migrations, entities, query constants, a schema file | `data.md`, `data/tables/` | OpenMetadata, DataHub, Collibra, Purview or Alation for lineage, owners and classification, linked from table pages |
+| API/integration | OpenAPI files, controllers, DTOs, HTTP clients | `api.md`; contracts in the hub | An API catalogue, linked |
+| Dependencies | Build files, config, the hub catalogue | `dependencies.md`, hub `system-map.md` | Software catalogue (for example Backstage), linked |
+| Security | Security config, permission checks, logging | `security.md`, org rules | Security scanners: their rules belong in checks, not prose |
+| Testing, operations | Test folders, pipelines, config, runbooks | `testing.md`, `operations.md` | Observability tools, linked |
+| Decisions | Comments, commit messages, archived designs | `decisions/`, `openspec/changes/archive/` | — |
+
+A code map is the right tool for questions about code ("what calls this?"); it does not know what a column
+means or why a rule exists, so it cannot be the home for business, data or security knowledge. A data
+catalogue is the right home for lineage and ownership across systems; it does not travel with the code
+and agents in the editor rarely reach it. Link both from the pages rather than copying them.
+
+#### Data context from code and from the database
+
+The code shows how tables are used; the database shows what really exists, including columns and
+references no entity maps. The kit combines them:
+
+1. **From code (always):** migrations (Flyway, Liquibase or scripts), entities and repositories, and
+   query constants or native SQL, which show joins the entities do not.
+2. **From a schema file (when you can get one):** a person runs tbls once with a read-only user against a
+   development or QA database (`tbls out -t json -o docs/context/data/schema.json`, with the database
+   address in `TBLS_DSN`), then
+   `node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.json`. It writes one page per
+   table in `docs/context/data/tables/` (columns, keys, references, "looks like a reference but has no
+   foreign key", indexes, triggers) and an index. Later imports replace only the generated part; what
+   people wrote (meaning, rules, which code reads or writes the table) is kept.
+3. **From a data catalogue (if you have one):** link the table's catalogue entry; do not copy it.
+4. **A database MCP server** is optional and only for local or development databases with a read-only
+   user. Never point an agent at production.
+
+Write the "meaning" part first for the tables the main flows use. Twenty good table pages beat four
+hundred empty ones.
 
 **How a story keeps it current.** A story that changes the database, an API and a screen lists those pages
 in its design's "Context impact" table (`data.md`, `api.md`, `screens.md`). The agent updates them in the
@@ -264,17 +319,17 @@ page holds: a flow across UI, API, service and database, or a format such as an 
 when a real story needed a lot of tracing to understand the area; `/story-finish` offers it at the end of
 such a story, built from the story's checked `design.md`.
 
-**The readiness score.** `node .github/hooks/scripts/context-tools.cjs readiness` scores the repo from 0 to
+**The readiness score.** `node .ai-kit/context-tools.cjs readiness` scores the repo from 0 to
 100 over 12 weighted dimensions (code understanding 15%; architecture, domain, data, API, dependencies and
 security 10% each; testing, operations, decisions, provenance and freshness 5% each). Each dimension is
 rated 0–5 (missing, fragmented, partial, usable, strong, verified):
 
-- The tool caps each rating at what the evidence supports: no page → 0, a draft → at most 2, unanchored
-  or stale or reviewed over 180 days ago → at most 3, reviewed → at most 4, independently reviewed → 5.
+- The tool caps each rating at what the evidence supports: no page → 0, a draft → at most 2, generated,
+  unanchored, stale or reviewed over 180 days ago → at most 3, reviewed → at most 4, independently reviewed → 5.
 - Provenance (the share of statements with an anchor) and freshness (broken anchors, code changed since
   review, age of reviews) are measured, not rated.
 - `/context-assess` rates each dimension within its cap, with evidence, in `docs/context/readiness.md`.
-- Weights and band names can be changed in `.github/context-readiness.json`.
+- Weights and band names can be changed in `.ai-kit/readiness.json`.
 
 The score measures the context, not the results. Read it next to the always-loaded size it prints (a high
 score with a bloated `AGENTS.md` is a warning sign) and next to the story log's outcomes.
@@ -296,8 +351,8 @@ score with a bloated `AGENTS.md` is a warning sign) and next to the story log's 
   context and the agent sees both.
 - What crosses the boundary is the **contract**: the backend's API definition (OpenAPI or DTOs). Point
   the UI's context at it rather than describing the API in prose.
-- Platform rules (authentication, permissions, error format) live once, in organization instructions or a
-  shared repo, and each `AGENTS.md` links to them.
+- Platform rules (authentication, permissions, error format) live once, in the organisation context repo,
+  and are synced into each repo ([ORG-LEVEL.md](ORG-LEVEL.md)).
 - The `demo-kit/` folder shows this layout with two made-up services.
 
 ---
@@ -306,15 +361,20 @@ score with a bloated `AGENTS.md` is a warning sign) and next to the story log's 
 
 | Need | Kit piece |
 | --- | --- |
-| Create context | `/context-bootstrap` skill, templates, prune checklist |
-| Gather task context | `/story-to-change` skill (OpenSpec optional) |
-| Fix context after changes | `/context-refresh` skill |
+| Create context | `/context-create` skill, templates, prune checklist |
+| Gather task context | `/story-start` skill (OpenSpec optional) |
+| Create the in-depth pages | `/context-create deep`, page templates, `schema-import` for tables |
+| Fix context after changes, or after a kit upgrade | `/context-update` skill, `context-tools.cjs migrate` |
+| Score it | `/context-assess` skill, `context-tools.cjs readiness` |
+| Know which context covers a file | `context-tools.cjs pages-for <file>`, the after-edit hook, the MCP server |
+| See that the checks run | `context-tools.cjs doctor`, the final block of every skill |
 | Learn from mistakes | `/context-learn` skill |
 | Tour for new joiners | `/onboard-me` skill |
 | Sprint and quarter upkeep | `context-steward` agent |
-| Notice drift automatically | Agent hooks, git pre-commit hook, `context-tools.cjs check` |
+| Notice drift automatically | Agent hooks, git pre-commit hook, the pull request check (`context-tools.cjs ci`) |
 | Structure and impact without writing it down | Graphify code map (`--graphify`), refreshed by git hooks |
 | Same-PR rule | Pull request template |
+| A second opinion on the plan | `design-reviewer` agent (fresh eyes, read-only) |
 
 Install it with `node kit/install.mjs <your-repo>` (see [GUIDE.md](GUIDE.md), Section 3). OpenSpec is
 not required; without it, skip the OpenSpec steps and everything above still works.
@@ -326,7 +386,7 @@ not required; without it, skip the OpenSpec steps and everything above still wor
 **Creating context (once per repo)**
 - [ ] Harvest: build files, CI, README, review comments, incidents, code comments
 - [ ] Build the Graphify code map
-- [ ] `/context-bootstrap`, answer the five questions
+- [ ] `/context-create`, answer the five questions
 - [ ] Prune with the six properties; `AGENTS.md` about 100 lines
 - [ ] Anchors on code-dependent lines
 - [ ] Try two past tasks in a fresh chat

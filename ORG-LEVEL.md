@@ -35,10 +35,12 @@ and raise it with the org owners.
 The copy is what the kit implements:
 
 - `install.mjs <repo> --org ../org-context` copies `org-context/rules/*.instructions.md` into
-  `.github/instructions/org/` (Claude Code: `.claude/rules/org/`, with `applyTo` converted to `paths`).
+  `.github/instructions/org/` (Claude Code: `.claude/rules/org/`, with `applyTo` converted to `paths`; both
+  when the repo is set up for both). Codex reads only `AGENTS.md` files, so for Codex the two or three org
+  rules that must never break also belong in each `AGENTS.md`, and the pull request check enforces the rest.
 - Each copy carries a line naming its source: `Organisation rule from org-context @ 38f3122. Do not edit here`.
-- `.github/ai-kit.json` records the org repo's path and commit, and a fingerprint of each file.
-- The org's `context-readiness.json` is copied to `.github/context-readiness.json`, so every repo is scored on
+- `.ai-kit/kit.json` records the org repo's path and commit, and a fingerprint of each copy.
+- The org's `context-readiness.json` is copied to `.ai-kit/readiness.json`, so every repo is scored on
   the same weights, unless the repo keeps its own.
 - `context-tools check` warns when the copies are older than the local clone of the org repo, or were edited
   in the repo. The session-start note tells the agent which org rules it carries.
@@ -110,3 +112,23 @@ Commit the result with the rest of the kit setup. From then on, `--upgrade` re-s
 4. **Product hubs:** one per product that has three or more repos in regular use.
 5. **Wider rollout:** teams adopt on their next story; the context check joins the PR pipeline as a warning
    first, then a required check.
+
+## 8. Plug in, plug out
+
+Every part of the kit is a set of plain files with one owner, so each can be added or removed on its own.
+
+| Part | Plug in | Plug out | What keeps working without it |
+| --- | --- | --- | --- |
+| The kit in a repo | `install.mjs <repo>` | Delete the kit folders, `git config --unset core.hooksPath` | `AGENTS.md` and `docs/context/` stay useful to any agent |
+| One agent tool | `install.mjs <repo> --tool claude` (adds its folders) | Delete that tool's folders (`.claude/`, `.agents/skills/` …) | The other tools' folders, the git hook and the PR check |
+| Organisation rules | `install.mjs <repo> --org <org-context>` | Delete `org/` rule folders and the `org` entry in `.ai-kit/kit.json` | The repo's own rules |
+| Product hub | `install.mjs --create-hub`, clone it next to the repos | Stop opening it in the window | Each repo's own context; `repo:path` anchors are simply not checked |
+| Code map | `--graphify` | Remove the MCP entry and `graphify-out/` | Search; the skills fall back to it |
+| OpenSpec story workflow | `openspec init`, then the installer again | `--keep-schema`, or set `schema: spec-driven` | `/story-start` writes the technical design and test plan to `docs/stories/` |
+| Agent hooks | Installed by default | Delete `.github/hooks/ai-context.json` or the kit entries in `.claude/settings.json` | Git hook, PR check, the skills' final block |
+| MCP server | `--mcp` | Remove the `ai-context` entry from the MCP files | The command line and hooks |
+
+**New agent tools.** The kit's knowledge lives in `AGENTS.md`, `docs/context/` and `openspec/`, which any
+agent can read; only the thin per-tool folders change. Adding support for a new tool means adding its
+folder mapping to the installer, not rewriting context. List the approved tools in
+`org-context/context/ai-usage.md`.

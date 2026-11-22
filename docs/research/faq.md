@@ -8,7 +8,7 @@ Anywhere an agent would otherwise rediscover code structure by grepping. It is t
 
 1. **Creating context.** Run it first as inventory. Its report of central concepts and module clusters tells you what to write about, so you never paste directory trees into `AGENTS.md`.
 2. **Explore before propose.** During `/opsx:explore`, `graphify query "how does report filtering work"` or `graphify path ReportController ReportQueryService` replaces many file reads.
-3. **Story context packs.** The `story-to-change` skill uses it to pull only the code neighbourhood a story touches.
+3. **Story context packs.** The `story-start` skill uses it to pull only the code neighbourhood a story touches.
 4. **Impact checks.** Before changing a class or endpoint, see what depends on it inside the repo. `graphify serve` exposes the graph over MCP for a team.
 5. **Freshness.** Its post-commit hook or `--update` keeps structure current, so hand-written context only needs rules.
 6. **Onboarding.** `graph.html` gives new joiners a visual map.

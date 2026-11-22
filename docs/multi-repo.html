@@ -99,7 +99,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>Many repos: micro-frontends and backend services</h1>
-      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a>
     </header>
     
 <p>How to set up and run AI-assisted work when a product is split across <strong>many separate repos</strong>:
@@ -165,8 +165,8 @@ in the hub generates that window for you.</p>
 </code></pre></div>
 <p>Keep all clones <strong>side by side in one folder</strong>. The hub's scripts and the workspace files assume that.</p>
 <h3 id="what-each-kind-of-repo-says-about-the-others">What each kind of repo says about the others</h3>
-<p><code>/context-bootstrap</code> asks what kind of repo it is working in and adds these (details in
-<code>kit/files/.github/skills/context-bootstrap/references/repo-types.md</code>):</p>
+<p><code>/context-create</code> asks what kind of repo it is working in and adds these (details in
+<code>kit/files/.github/skills/context-create/references/repo-types.md</code>):</p>
 <div class="tablebox"><table>
 <thead>
 <tr>
@@ -216,23 +216,23 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m &quot;Product context hu
 <ol>
 <li>Clone the repos next to the hub (<code>node scripts/hub.mjs clone all --run</code>) and open them all with the hub
    (<code>node scripts/hub.mjs workspace all</code>, then open the generated <code>.code-workspace</code>).</li>
-<li>Type <code>/hub-baseline</code>. It writes <code>context/architecture.md</code>, <code>context/glossary.md</code>, one
+<li>Type <code>/hub-context</code>. It writes <code>context/architecture.md</code>, <code>context/glossary.md</code>, one
    <code>context/flows/&lt;flow&gt;.md</code> per important end-to-end flow (with screen field → API field → column
    mappings) and fills in <code>context/platform/</code>. Every fact is anchored into a repo as
    <code>[anchor: report-service:src/main/java/**/ReportController.java]</code>.</li>
 <li><code>node scripts/hub.mjs check</code> confirms every anchor resolves in the cloned repos;
    <code>node scripts/hub.mjs readiness</code> scores the hub's own context.</li>
-<li>Owners review their pages and set <code>Status: reviewed · Last verified: &lt;date&gt; by &lt;name&gt;</code>. Commit and push.</li>
+<li>Owners review their pages: each sets <code>status: stable</code> and adds a line under <code>verified:</code> (<code>- { by: "human:&lt;name&gt;", at: "&lt;date&gt;" }</code>). Commit and push.</li>
 </ol>
 <p>Per-repo detail (each service's data, API, screens, security) stays in that repo's <code>docs/context/</code>, made with
-<code>/context-baseline</code> there; the hub links to it instead of copying it.</p>
+<code>/context-create deep</code> there; the hub links to it instead of copying it.</p>
 <p>The catalog is the most valuable part. For each repo record: <code>type</code> (<code>mfe-shell</code>, <code>mfe-remote</code>,
 <code>service</code>, <code>library</code>), <code>owner</code>, <code>areas</code> (business areas such as <code>reports</code>; use <code>platform</code> for repos
 almost everything uses), <code>exposes</code> (micro-frontends) or <code>api</code> and <code>contract</code> (services), and <code>calls</code>,
 <code>uses</code>, <code>loads</code> (dependencies). See the example <code>catalog.json</code>.</p>
 <h3 id="once-per-repo-each-team-on-their-own-setup-pr">Once per repo (each team, on their own setup PR)</h3>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs ../reports-mfe --graphify
-# then in VS Code: /context-bootstrap, build the code map, review, commit
+# then in VS Code: /context-create, build the code map, review, commit
 </code></pre></div>
 <p>For many repos at once (PowerShell):</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-powershell">foreach ($r in &quot;shell-app&quot;,&quot;reports-mfe&quot;,&quot;admin-mfe&quot;,&quot;report-service&quot;) {
@@ -240,7 +240,7 @@ almost everything uses), <code>exposes</code> (micro-frontends) or <code>api</co
 }
 </code></pre></div>
 <h3 id="keeping-the-kit-the-same-everywhere">Keeping the kit the same everywhere</h3>
-<p>Each repo records its kit version in <code>.github/ai-kit.json</code>. When the kit improves:</p>
+<p>Each repo records its kit version in <code>.ai-kit/kit.json</code>. When the kit improves:</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs ../reports-mfe --upgrade
 </code></pre></div>
 <p>This replaces only the kit's own files (skills, steward agent, hook script and config, git hooks, and
@@ -297,7 +297,7 @@ window would hold more than five repos.</p>
    <code>initiatives/&lt;change-id&gt;.md</code> with the repos <strong>in order</strong>:
    services and shared libraries → micro-frontend remotes → shell.</li>
 <li><strong>Review the initiative note</strong> with the tech lead. This replaces many late surprises between teams.</li>
-<li><strong>Per repo, in that order:</strong> the normal single-repo flow (<code>/story-to-change</code> → <code>/opsx-propose &lt;change-id&gt;</code>
+<li><strong>Per repo, in that order:</strong> the normal single-repo flow (<code>/story-start</code> → <code>/opsx-propose &lt;change-id&gt;</code>
    → review → <code>/opsx-apply</code> → <code>/story-finish</code>). Same change id in every repo. One PR per repo, each linking
    the initiative note.</li>
 <li><strong>After each service PR merges:</strong> <code>node scripts/hub.mjs contracts --sync</code> in the hub and commit, so the
@@ -468,7 +468,7 @@ team; catalog and initiatives → product tech leads; <code>contracts/</code> �
 </tr>
 </tbody>
 </table></div>
-    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a></footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a></footer>
   </main>
 </div>
 

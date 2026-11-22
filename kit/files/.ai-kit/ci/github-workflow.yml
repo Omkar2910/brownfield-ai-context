@@ -1,0 +1,19 @@
+# AI context check for pull requests (GitHub Actions).
+# install.mjs --ci github copies this to .github/workflows/ai-context.yml. Make it a required check once
+# the team is used to it; add --strict to fail on warnings too.
+name: AI context check
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  context:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node .ai-kit/context-tools.cjs ci --base "origin/${{ github.base_ref }}"

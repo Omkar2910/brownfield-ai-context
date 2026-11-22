@@ -1,6 +1,13 @@
+---
+type: Area Guide
+status: draft
+dimension: architecture
+owner: "<team or person>"
+verified: []
+---
 # <Area name>: how it works
 
-Last verified: <date> by <name>, in story <id> · Owner: <team or person>
+Written in story <id>. Set `dimension` to the one this area serves most (architecture, domain or data).
 Behaviour (what it must do) lives in openspec/specs/<capability>/ — this page is how the code does it.
 
 ## Purpose

@@ -1,5 +1,5 @@
 {
-  "kitVersion": "1.6.1",
+  "kitVersion": "2.0.0",
   "install": { "graphify": true, "tool": "copilot" },
   "notes": "Teams run: node <kit>/kit/install.mjs <repo> --org <path-to-org-context>. Upgrade the kit org-wide by changing kitVersion here and announcing it."
 }

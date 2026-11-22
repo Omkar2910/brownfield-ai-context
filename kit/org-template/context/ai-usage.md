@@ -1,5 +1,11 @@
+---
+type: Context Page
+status: draft
+dimension: operations
+owner: "<engineering excellence>"
+verified: []
+---
 # Using AI coding agents
-> Dimension: operations · Status: draft · Last verified: never · Independent review: no · Owner: <engineering excellence>
 
 - Approved agents and models: <list>
 - Approved MCP servers and connectors: <list>; anything else needs approval.

@@ -1,0 +1,38 @@
+---
+name: context-update
+description: Bring AI-agent context up to date - after code changes, before archiving an OpenSpec change, when the context check reports broken or stale anchors, after a kit upgrade (page format) or after a migration (table pages). Changes only the lines whose facts changed. Use when asked to "update context", "refresh context", "fix stale anchors", "refresh the data pages" or "the kit was upgraded".
+---
+
+# Context update
+
+Goal: change only the context lines whose facts changed. Never rewrite context files wholesale.
+
+## Steps
+1. **Format first (no AI needed).** Run `node .ai-kit/context-tools.cjs migrate --dry-run`. If it lists
+   pages, run it without `--dry-run`: it converts pages to the current kit format and changes nothing
+   else. Mention it in the summary.
+2. **Code map.** If `graphify-out/graph.json` exists, run `graphify update .` (local, no API key). For a
+   moved or renamed class, `graphify query "<old name>"` helps find where it went.
+3. **Table pages.** If `docs/context/data/schema.json` exists and the user has a newer schema file (after a
+   migration), run `node .ai-kit/context-tools.cjs schema-import <schema.json>`: only the generated parts
+   change. Pages it lists as "no longer in the schema" need a decision from the user.
+4. **Find what is out of date.** Run `node .ai-kit/context-tools.cjs check --base origin/<main-branch>`
+   (ask for the branch if unsure; `main`, `master` and `develop` are common). ERROR: an anchor points at a
+   file that no longer exists. WARN: anchored code changed but the context file did not.
+   With `<page>` given (`/context-update data`), also list lines in that page whose anchored code changed
+   since its `verified` date (`git log --since=<date> -- <anchored paths>`).
+5. **Read the story, if there is one.** If the user names an OpenSpec change, read its `proposal.md` and
+   `design.md` ("Context impact" table first).
+6. **Decide each finding.** Open the anchored code and either update the line (the fact changed), move the
+   anchor (the code moved, the fact is the same), delete the line (no longer true or needed), or leave it
+   (still true; say so). Add a new line only if it passes the `context-create` skill's
+   `references/prune-checklist.md`.
+7. **Review state.** A reviewed page whose lines you rewrote goes back to `status: draft` unless a reviewer
+   checks it in this pull request and adds a `verified` line.
+8. Run the check again until there are no ERROR lines.
+
+## Finish
+End your reply with this block, filled in:
+- **What changed:** each edit as `file: old → new (reason)`, plus migrated pages and refreshed table pages.
+- **Checks:** `check` before and after (errors, warnings).
+- **Next:** commit the context edits in the same pull request as the code, and who should review them.

@@ -28,5 +28,5 @@ It contains no application code.
 - `node scripts/hub.mjs readiness` — readiness score of this hub's context
 
 ## Creating the product-level context
-Run the `hub-baseline` skill with the hub and the repos open in one window. Anchor every fact into a repo
-as `[anchor: <repo-name>:<path>]`. Pages start as drafts; owners review them and set "Last verified".
+Run the `hub-context` skill with the hub and the repos open in one window. Anchor every fact into a repo
+as `[anchor: <repo-name>:<path>]`. Pages start as drafts; owners review them, set `status: stable` and add a `verified` entry.

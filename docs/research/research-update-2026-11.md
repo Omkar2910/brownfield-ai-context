@@ -44,3 +44,16 @@ What changed since the first round of research (October 2026), and how it change
 - `graphify hook install` writes to `.git/hooks`, which is ignored when `core.hooksPath` is set; the kit's own
   `.githooks/post-*` hooks run `graphify update .` instead.
 - `merge-graphs` links code-level calls across repos (shared types); it does not link HTTP calls between services.
+
+## Late November 2026: what changed for kit 2.0
+
+| Source | Finding | What we changed |
+| --- | --- | --- |
+| [VS Code: hooks](https://code.visualstudio.com/docs/copilot/customization/hooks), [agent skills](https://code.visualstudio.com/docs/copilot/customization/agent-skills), [custom instructions](https://code.visualstudio.com/docs/copilot/customization/custom-instructions) | VS Code now runs several agent harnesses (Copilot, Claude, Codex) and an older "Local" one due for removal in February 2027. The Copilot harness reads `.github/hooks/*.json` and also `.claude/settings.json`; it reads skills only from `.github/skills/`. Hook output fields are not documented as user-visible; diagnostics are in the agent debug logs. | One neutral tool path (`.ai-kit/`); duplicate hook calls ignored; `doctor` and a hook log so people can see whether hooks run; every skill ends with a visible summary block |
+| [Codex: agent skills](https://learn.chatgpt.com/docs/build-skills) | Codex loads skills from `.agents/skills/` (repo and parents) and `~/.agents/skills/`, and reads `AGENTS.md` | `--tool codex` |
+| [Devin: AGENTS.md](https://docs.devin.ai/onboard-devin/agents-md) | Devin reads `AGENTS.md` before it codes | Confirms `AGENTS.md` as the portable core |
+| [Agentic AI Foundation overview](https://dev.to/digitalapplied/agentic-ai-foundation-open-source-agent-standards-gl8) | MCP and `AGENTS.md` sit under the Linux Foundation's Agentic AI Foundation, with all major vendors as members | The kit's knowledge stays in `AGENTS.md` and Markdown; the MCP server exposes the checks |
+| [SiliconANGLE: Blitzy and knowledge graphs](https://siliconangle.com/2026/09/28/knowledge-graphs-blitzy-coding-agents-codebase-context-neo4jgraphsummit/) | Autonomous platforms build their own private model of the codebase, with a human-approved plan before code | The kit's role at level 3: reviewed, repo-owned knowledge and a pull request check that apply to any executor ([ROADMAP.md](../../ROADMAP.md)) |
+| [OKF v0.3 (Google Cloud, Nov 19, 2026)](https://cloud.google.com/blog/products/data-analytics/introducing-okf-v0-3) | `type` is the only required key; `verified` is a list of `{by, at}` events, and only events at or after `generated.at` count; extension keys are allowed; the spec moved to its own GitHub organisation | Page frontmatter follows these fields; `migrate` converts 1.x pages |
+| [Google Open Source: Elephant-Goldfish Model](https://opensource.googleblog.com/2026/10/introducing-elephant-goldfish-model-plugin.html) | A long-running design session plus memoryless reviewer sessions that check the design before code | `design-reviewer` agent, called from `/story-start` |
+| [tbls JSON schema](https://github.com/k1LoW/tbls) | `tbls out -t json` writes tables, columns, constraints, indexes, triggers and relations in a documented JSON format | `schema-import` builds table pages from it |

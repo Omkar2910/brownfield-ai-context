@@ -1,7 +1,7 @@
 # --- added by the AI context kit: edit to fit this service, keep it short ---
 context: |
   Read AGENTS.md first. Open the files it lists under "Where to look" only when this change needs them.
-  Follow the rules in AGENTS.md and .github/instructions/ for every file you change.
+  Follow the rules in AGENTS.md and the rule files (.github/instructions/ or .claude/rules/) for every file you change.
   If the graphify tools are available, use them to find relevant code and its dependents before reading files.
   Keep artifacts short and concrete; prefer bullet points.
 
@@ -24,4 +24,4 @@ operations:
       - Run the tests named in AGENTS.md before marking a task complete
   archive:
     guidance:
-      - Before archiving, list any context lines (AGENTS.md, .github/instructions, docs/context) this change made out of date, and update them
+      - Before archiving, list any context lines (AGENTS.md, rule files, docs/context) this change made out of date, and update them

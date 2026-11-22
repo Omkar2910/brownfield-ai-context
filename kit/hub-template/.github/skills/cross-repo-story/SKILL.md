@@ -20,10 +20,16 @@ Goal: one agreed plan for the whole story, then a normal, small change in each r
 5. **Write the initiative note** `initiatives/<change-id>.md` from `initiatives/_template.md`: repos in
    order (services and libraries first, then micro-frontends, then the shell), the contract, platform
    items, impact. Use one change id for the whole story. Ask the user to review it with the tech lead.
-6. **Per repo, in order:** in that repo, follow the `story-to-change` skill and then `/opsx-propose <change-id>`
+6. **Per repo, in order:** in that repo, follow the `story-start` skill and then `/opsx-propose <change-id>`
    (OpenSpec creates the change in the repo whose folder the command runs in; say "create the change in
    <repo>"). Each repo's own AGENTS.md and rules apply. Do not change two repos in one step.
 7. **After each merge:** update the initiative table (PR link, status). After a service merge, run
    `node scripts/hub.mjs contracts --sync` in the hub and commit the updated contract copy.
 8. **Finish:** every repo's change archived, the catalog updated if a dependency was added or removed
    (then `node scripts/hub.mjs map`), the initiative marked done.
+
+## Finish
+End your reply with this block, filled in:
+- **What changed:** the initiative file and the change folders per repo, as links.
+- **Checks:** `hub.mjs impact` for each repo that changes, and consumers not open in the window.
+- **Next:** the exact next command per repo, producers first.

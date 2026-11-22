@@ -1,0 +1,30 @@
+# AI context check for pull requests (Azure Pipelines).
+# 1. Create a pipeline from this file (Pipelines > New pipeline > existing YAML > /.ai-kit/ci/azure-pipelines.yml).
+# 2. Add it as a build validation policy on your main branch. Start with strict: false (warnings only).
+# It runs the same check as the git hook, for every pull request, whoever (or whatever agent) wrote it.
+
+trigger: none
+pr:
+  branches:
+    include: ['*']
+
+parameters:
+  - name: strict
+    type: boolean
+    default: false
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+    fetchDepth: 0
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+  - script: |
+      TARGET="origin/${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}"
+      FLAGS="--base $TARGET"
+      if [ "${{ parameters.strict }}" = "True" ]; then FLAGS="$FLAGS --strict"; fi
+      node .ai-kit/context-tools.cjs ci $FLAGS
+    displayName: AI context check

@@ -15,14 +15,14 @@ The numbers here are what make a demo or presentation convincing.
 | Item | Value |
 | --- | --- |
 | Time to install OpenSpec + kit | |
-| Time for /context-bootstrap incl. review | |
+| Time for /context-create incl. review | |
 | AGENTS.md lines: draft → after pruning | |
 | Lines deleted as "findable by search" | |
 
 ## Phases
 | Phase | Time spent | Went well | Went wrong / corrected | Screenshot taken? |
 | --- | --- | --- | --- | --- |
-| 1. /story-to-change | | | | |
+| 1. /story-start | | | | |
 | 2. /opsx-propose + review | | | | |
 | 3. /opsx-apply | | | | |
 | 4. /opsx-verify + /story-finish | | | | |

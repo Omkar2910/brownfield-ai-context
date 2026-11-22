@@ -16,14 +16,14 @@ just less well.
 | **Once per repo** | | | |
 | 1. Install | Skills, steward agent, hooks, checks added to the repo | Kit installer `kit/install.mjs --graphify` | Core |
 | 2. Map the code | Builds a local map of classes, calls and imports | **Graphify** (code-only, no API key) | Recommended |
-| 3. Create context | Lean `AGENTS.md`, scoped rules, `docs/context/`, guided by the code map | `/context-bootstrap` skill | Core |
-| 3b. In-depth reference and score | One reviewed page per dimension (architecture, domain, data, API, dependencies, security, testing, operations, decisions); readiness score 0–100 | `/context-baseline`, `/context-assess`, `context-tools readiness` | When the team or management needs it |
+| 3. Create context | Lean `AGENTS.md`, scoped rules, `docs/context/`, guided by the code map | `/context-create` skill | Core |
+| 3b. In-depth reference and score | One reviewed page per dimension (architecture, domain, data, API, dependencies, security, testing, operations, decisions); readiness score 0–100 | `/context-create deep`, `/context-assess`, `context-tools readiness` | When the team or management needs it |
 | 4. Add the plan layer | `/opsx-*` commands for agreeing on stories | **OpenSpec** | Recommended for stories |
 | **Every story** | | | |
 | 5. Read the story | Work item text and acceptance criteria | Azure DevOps MCP server *(optional)*, or paste it | Optional |
-| 6. Gather task context | Relevant files, dependents, rules, traps — nothing else | `/story-to-change` + Graphify `query_graph` / `affected` | Core (+ Graphify) |
+| 6. Gather task context | Relevant files, dependents, rules, traps — nothing else | `/story-start` + Graphify `query_graph` / `affected` | Core (+ Graphify) |
 | 7. Explore risky parts | Understand the area before planning | `/opsx-explore` + Graphify `shortest_path` | Recommended |
-| 8. Agree the plan | Proposal, spec scenarios, technical design (TDD), test plan, test-first tasks — **reviewed by a person** | `/opsx-propose` with the kit's `story-tdd` schema (or the documents from `/story-to-change`) | Core |
+| 8. Agree the plan | Proposal, spec scenarios, technical design (TDD), test plan, test-first tasks — **reviewed by a person** | `/opsx-propose` with the kit's `story-tdd` schema (or the documents from `/story-start`) | Core |
 | 9. Build | Code in slices, tests first; hooks flag context lines that may now be wrong | `/opsx-apply` + agent hooks | Core |
 | 10. Test the UI | Click through the Angular screen the story changed | VS Code browser tools or Playwright MCP *(optional)* | Optional |
 | 11. Check | Tests, test-plan rows all passing, impact of changes, spec and design coverage, context freshness | `/story-finish` + `/opsx-verify` + Graphify `affected` + `context-tools check` | Core |
@@ -43,13 +43,15 @@ just less well.
 
 | Tool | What it does | Where | Notes |
 | --- | --- | --- | --- |
-| **VS Code + GitHub Copilot (agent mode)** | The agent | Your editor | Any model; use your strongest for planning (step 8) |
-| **AGENTS.md + scoped instructions + docs/context** | Lasting context | Repo | Created by `/context-bootstrap` |
-| **Kit skills** | `context-bootstrap`, `context-baseline`, `context-assess`, `story-to-change`, `story-finish`, `context-refresh`, `context-learn`, `onboard-me` | `.github/skills/` | Call by name; agents often skip skills they are not told to use |
+| **An agent: GitHub Copilot, Claude Code or OpenAI Codex** | The agent | Your editor or terminal | Any model; use your strongest for planning (step 8). `--tool` picks the folders each one reads |
+| **AGENTS.md + scoped instructions + docs/context** | Lasting context | Repo | Created by `/context-create` |
+| **Kit skills** | `context-create` (quick and deep), `context-assess`, `story-start`, `story-finish`, `context-update`, `context-learn`, `onboard-me`; each ends with What changed · Checks · Next | `.github/skills/` (Claude Code `.claude/skills/`, Codex `.agents/skills/`) | Call by name; agents often skip skills they are not told to use |
 | **context-steward agent** | Maintains context files only | `.github/agents/` | Sprint and quarter upkeep |
-| **Agent hooks** | Session-start note, post-edit reminders, one check before finishing | `.github/hooks/` | Preview in VS Code; git hook and check cover the gap |
+| **design-reviewer agent** | Fresh-eyes, read-only review of the plan before code | `.github/agents/` | Starts with no memory of the chat that wrote the plan |
+| **Agent hooks** | Session-start note, post-edit reminders, one check before finishing | `.github/hooks/`, `.claude/settings.json` | Preview in VS Code; `doctor` shows whether they run; git hook and PR check cover the gap |
 | **Git hooks** | Block commits with broken context; refresh the code map | `.githooks/` | Work for every developer, with or without an agent |
-| **context-tools.cjs** | `check` and `status` | `.github/hooks/scripts/` | Node, no dependencies |
+| **context-tools.cjs** | `check`, `status`, `doctor`, `readiness`, `pages-for`, `migrate`, `schema-import`, `ci`, `mcp` | `.ai-kit/` | Node, no dependencies |
+| **Pull request check** | The context check on every PR, whoever wrote it | `.ai-kit/ci/` | Warnings first, then a required check |
 
 ### Recommended — use for real stories
 
@@ -66,7 +68,8 @@ just less well.
 | **VS Code browser tools / Playwright MCP** | Agent opens the Angular app, clicks through the change, takes screenshots | Local app running; test data only |
 | **Library docs MCP (for example Context7)** | Up-to-date docs for the exact Angular / Spring versions you use | It sends your queries to an outside service; policy |
 | **Static analysis (for example SonarQube)** | Add its findings to the story-finish check | Whatever your team already runs |
-| **Claude Code** | Same kit for terminal-based work (`--tool claude`) | Licences |
+| **tbls** | Writes the database schema as JSON for `schema-import` (table pages) | Read-only user, non-production database, run by a person |
+| **The kit's MCP server (preview)** | Lets cloud agents and orchestrators query the context (`--mcp`) | Which agents may run local commands |
 | **Repomix** | Packs a folder into one file for an agent | Use only when Graphify is not available |
 
 ### Later — when several teams adopt it
@@ -142,7 +145,7 @@ The agent's session-start note tells it if the map is older than the code.
 | How is A connected to B? | `shortest_path` | `graphify path "A" "B"` |
 | What breaks if I change X? | — | `graphify affected "X"` |
 | What are the central classes? | `god_nodes` | `graphify god-nodes` |
-| Is the map current? | — | `node .github/hooks/scripts/context-tools.cjs status` |
+| Is the map current? | — | `node .ai-kit/context-tools.cjs status` |
 | Refresh the map now | — | `graphify update .` |
 | How many tokens does it save? | — | `graphify benchmark` (useful numbers for a presentation) |
 
@@ -180,7 +183,7 @@ Note: `graphify hook install` writes to `.git/hooks`, which git ignores once the
 | --- | --- |
 | **Typo, config tweak, one-line fix** | Just ask the agent. Context loads automatically. |
 | **Bug fix** | Ask the agent to find the cause with `query_graph`, check `known-traps.md`, and run `graphify affected` on what it plans to change. Fix, add a regression test, `/context-learn` if the bug came from a missing rule. |
-| **Small change (under a day)** | `/story-to-change` (sizes it) → an OpenSpec change with a Lite technical design, or for a tiny fix just a failing test and the fix → `/story-finish`. |
+| **Small change (under a day)** | `/story-start` (sizes it) → an OpenSpec change with a Lite technical design, or for a tiny fix just a failing test and the fix → `/story-finish`. |
 | **Story (1–5 days)** | Full workflow in Section 1, with OpenSpec. This is the one to demo. |
 | **Story across UI and backend** | Open both repos in one VS Code window. Backend first. One OpenSpec change per repo with the same id. The API contract is the hand-off between them. |
 | **Story across several micro-frontends and services** | `/cross-repo-story` from the product context hub; `hub.mjs workspace` for the window; producers first, shell last ([MULTI-REPO.md](MULTI-REPO.md)). |
@@ -199,7 +202,7 @@ order.
 1. **Map it.** `graphify god-nodes` and `graphify affected "<main classes>"` show what the module is
    built around and what outside code depends on it. `graphify export callflow-html` gives a picture
    for the team.
-2. **Write its context.** Run `/context-bootstrap` focused on the module: a `docs/context/<module>.md`
+2. **Write its context.** Run `/context-create` focused on the module: a `docs/context/<module>.md`
    page, its traps, and scoped rules for its folders.
 3. **Pin down current behaviour.** Before changing anything, add tests that record what it does today
    (including the odd parts). With OpenSpec, run `/opsx-explore` on the module and write baseline
@@ -212,7 +215,7 @@ order.
      scratch), switch callers over, then turn its spec into OpenSpec baseline specs so later changes
      use the normal story workflow.
 5. **Each slice:** `affected` before and after, the behaviour tests must still pass, and
-   `/context-refresh` as the module's structure changes.
+   `/context-update` as the module's structure changes.
 
 ---
 

@@ -26,16 +26,16 @@ links the other PRs and says which must merge first.
    report. Otherwise, if the command is installed, ask the user to run it now (it checks the code against
    the requirements, scenarios and `design.md`). Without it, go through each scenario in the change's
    delta specs and state where the code and a test cover it.
-5. **Context.** Run `node .github/hooks/scripts/context-tools.cjs check --base <base>`, where `<base>` is
+5. **Context.** Run `node .ai-kit/context-tools.cjs check --base <base>`, where `<base>` is
    the branch this PR targets (run `git branch -r` if unsure; for example `origin/main` or
    `origin/develop`). If the check says the base does not exist, run `git fetch` and try again.
-   For each finding, follow the `context-refresh` skill. Context edits go in this same PR.
+   For each finding, follow the `context-update` skill. Context edits go in this same PR.
    Then open the "Context impact" table in `design.md` (or `technical-design.md`): confirm each listed
    page was updated in this PR, and that each page whose anchored code changed is either listed or
    still true. For a page in the product hub, draft its change and tell the user it needs a PR in the
    hub repo, linked from this one. If the repo has a `docs/context/readiness.md`, a reviewed page you
-   changed keeps its "Last verified" only if a reviewer checks it in this PR; otherwise set it back to
-   `Status: draft` for the lines you rewrote.
+   changed keeps counting as reviewed only if a reviewer checks it in this PR and adds a `verified` line;
+   otherwise set it back to `status: draft`.
 6. **Promote what this story taught (only if it applies).** Ask: did understanding an area take a lot of
    tracing (many files read, a flow across UI, API, service and database, or a wrong first guess), and
    does `docs/context/` have no page for it? If yes, and the area will be changed again, offer to turn
@@ -62,3 +62,11 @@ links the other PRs and says which must merge first.
    code (no second PR to the main branch). If the team prefers archiving after merge, do that instead.
    In every case, if an agent was corrected during this story, `/context-learn` turns the correction
    into a rule.
+
+## Finish
+End your reply with this block, filled in:
+- **What changed:** code, tests, context pages and change-folder files in this PR, grouped, as links.
+- **Checks:** tests (passed / failed), test-plan rows still `planned`, verify result, `context-tools check`
+  (errors, warnings), dependents checked.
+- **Next:** the user's own steps: review the diff, commit, push, open the PR with the drafted description;
+  after approval, `/opsx-archive <change-id>` as the last commit. For a multi-repo story, which repo is next.

@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+</head>
+<body>
+<title>Kit Roadmap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a working manual. Sticky section rail on wide screens, one reading column, tables and code scroll in their own boxes. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --ink: #16202c; --muted: #586779; --line: #d8dfe7;
+  --accent: #2b54d6; --accent-soft: #e7edfc; --code-bg: #edf1f6; --good: #1d7a4c;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+    --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+  --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 80px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.toc .label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc ul ul { display: none; }
+nav.toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible, nav.toc a.on { color: var(--ink); border-left-color: var(--accent); }
+main { min-width: 0; }
+header.top { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-size: clamp(30px, 4.6vw, 44px); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--display); font-size: 27px; line-height: 1.2; margin: 48px 0 12px; padding-top: 8px; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { font-family: var(--display); font-size: 20px; margin: 30px 0 8px; scroll-margin-top: 16px; }
+p, li { max-width: 70ch; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 700; }
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin: 14px 0; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+td code { white-space: nowrap; }
+.code { position: relative; margin: 12px 0; }
+.code pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13.5px; line-height: 1.5; }
+.code pre code { background: none; padding: 0; font-size: inherit; }
+.copy { position: absolute; top: 8px; right: 8px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.copy:hover { color: var(--ink); border-color: var(--accent); }
+li.task { list-style: none; margin-left: -1.3em; }
+li.task input { accent-color: var(--good); margin-right: 6px; }
+h3 + p strong:first-child { color: var(--accent); }
+.other { display: inline-block; margin: 12px 20px 0 0; font-weight: 600; text-decoration: none; }
+.other:hover { text-decoration: underline; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+@media (max-width: 920px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { display: none; }
+}
+img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Sections">
+    <p class="label">Sections</p>
+    <div class="toc">
+<ul>
+<li><a href="#the-stages">The stages</a></li>
+<li><a href="#what-makes-the-kit-portable-between-stages">What makes the kit portable between stages</a></li>
+<li><a href="#what-the-kit-does-at-each-stage">What the kit does at each stage</a></li>
+<li><a href="#how-it-works-with-agent-platforms">How it works with agent platforms</a></li>
+<li><a href="#planned">Planned</a></li>
+<li><a href="#not-planned">Not planned</a></li>
+<li><a href="#evidence-so-far-and-what-is-not-proven">Evidence so far, and what is not proven</a></li>
+</ul>
+</div>
+
+  </nav>
+  <main>
+    <header class="top">
+      <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
+      <h1>Roadmap: from AI-assisted to AI-native delivery</h1>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a>
+    </header>
+    
+<p>How the kit fits each stage of AI adoption in software delivery, what it already does for the next stage,
+and what is planned. Kit 2.0.0 · November 2026.</p>
+<h2 id="the-stages">The stages</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Name</th>
+<th>Who does the work</th>
+<th>Where people stay involved</th>
+<th>What context has to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Ad hoc</td>
+<td>People, with chat assistants on the side</td>
+<td>Everything</td>
+<td>Nothing systematic</td>
+</tr>
+<tr>
+<td>2</td>
+<td>AI-assisted</td>
+<td>A developer drives an agent in the editor, step by step</td>
+<td>Every step</td>
+<td>Help one person prompt well; checks run when the developer runs them</td>
+</tr>
+<tr>
+<td>3</td>
+<td>AI-native</td>
+<td>Agents take an approved story to a pull request, often in the cloud, with no chat window</td>
+<td>Spec and design approval; security and quality review of the pull request</td>
+<td>Be queryable by any agent, verified automatically on every pull request, the same whichever agent runs</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Autonomous with governance</td>
+<td>Several agents coordinated by an orchestrator; people set goals and policy</td>
+<td>Goals, policy, exceptions, measured outcomes</td>
+<td>Kept current by the agents themselves, checked by independent reviewers, measured against results</td>
+</tr>
+</tbody>
+</table></div>
+<p>Most brownfield teams are at level 2 today. The risk is building something that only works at level 2: a
+workflow that assumes a person in a chat window typing commands, with checks that live in one editor.</p>
+<h2 id="what-makes-the-kit-portable-between-stages">What makes the kit portable between stages</h2>
+<p>The kit is built in four layers. Only the thinnest one is tied to a tool.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>What it is</th>
+<th>Tied to a tool?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>1. Knowledge</strong></td>
+<td><code>AGENTS.md</code>, <code>docs/context/</code> pages with anchors, OpenSpec specs and change folders, table pages. Plain Markdown with frontmatter in the shape of the Open Knowledge Format</td>
+<td>No. <code>AGENTS.md</code> and MCP are both stewarded by the Linux Foundation's Agentic AI Foundation and read by every major agent</td>
+</tr>
+<tr>
+<td><strong>2. Checks</strong></td>
+<td><code>context-tools.cjs</code>: check, readiness, pages-for, migrate, schema-import, doctor</td>
+<td>No. Runs from a terminal, a git hook, CI or an MCP call</td>
+</tr>
+<tr>
+<td><strong>3. Workflow</strong></td>
+<td>Skills (<code>story-start</code>, <code>story-finish</code>, <code>context-*</code>), the story-tdd OpenSpec schema, the design reviewer</td>
+<td>Lightly. <code>SKILL.md</code> is a shared format; the installer places it where each tool looks</td>
+</tr>
+<tr>
+<td><strong>4. Adapters</strong></td>
+<td>Hook files, agent files, MCP registrations per tool</td>
+<td>Yes, and deliberately small: <code>--tool</code> adds or removes them</td>
+</tr>
+</tbody>
+</table></div>
+<p>Supporting a new agent means adding an adapter, never rewriting knowledge.</p>
+<h2 id="what-the-kit-does-at-each-stage">What the kit does at each stage</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Level 2 (today)</th>
+<th>Level 3 (the kit already supports)</th>
+<th>Level 4 (planned)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Knowledge an agent can trust</td>
+<td>Reviewed, anchored pages; readiness score</td>
+<td>Same pages, readable by any agent; OKF-shaped metadata so catalogue and knowledge tools can read them</td>
+<td>Agents propose context updates in every change; independent review events recorded per page</td>
+</tr>
+<tr>
+<td>Checks</td>
+<td>Agent hooks in the editor, git hook</td>
+<td><strong>Pull request check (<code>ci</code>)</strong> runs whoever wrote the change, including a cloud agent</td>
+<td>Policy as code: which change types may merge with which evidence</td>
+</tr>
+<tr>
+<td>Asking "what do I need to know about this file?"</td>
+<td>After-edit hook</td>
+<td><strong>MCP server (<code>mcp</code>)</strong> and <code>pages-for</code> for agents with no editor</td>
+<td>Context service shared across repos in a product</td>
+</tr>
+<tr>
+<td>Plan before code</td>
+<td>OpenSpec change with technical design and test plan, reviewed by a person</td>
+<td><strong>Fresh-eyes design review</strong> by an agent with no memory of the planning chat; the approved change folder is the handoff to any agent</td>
+<td>Several reviewers with different roles; findings tracked to closure</td>
+</tr>
+<tr>
+<td>Running without a person in the chat</td>
+<td>—</td>
+<td><code>story-start</code> records assumptions and stops after the plan when nobody can answer</td>
+<td>Orchestrator assigns stories by type and readiness</td>
+</tr>
+<tr>
+<td>Several agent tools</td>
+<td>Copilot, Claude Code, Codex (<code>--tool</code>)</td>
+<td>Same</td>
+<td>New tools added as adapters</td>
+</tr>
+<tr>
+<td>Upgrades</td>
+<td><code>--upgrade</code>, <code>migrate</code>: no tokens spent</td>
+<td>Same, in CI</td>
+<td>Same</td>
+</tr>
+<tr>
+<td>Proof it helps</td>
+<td>Story log, readiness score</td>
+<td>Same</td>
+<td>Evaluation set of real stories run against each agent</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="how-it-works-with-agent-platforms">How it works with agent platforms</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Kind of tool</th>
+<th>Examples</th>
+<th>How the kit fits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Agents in the editor and terminal</td>
+<td>GitHub Copilot, Claude Code, OpenAI Codex</td>
+<td>Full support through adapters</td>
+</tr>
+<tr>
+<td>Cloud coding agents</td>
+<td>Copilot cloud agent, Codex cloud, Devin</td>
+<td>They read <code>AGENTS.md</code> and the repo; the pull request check verifies their work; the MCP server answers context questions where the platform allows MCP</td>
+</tr>
+<tr>
+<td>Autonomous development platforms</td>
+<td>Blitzy and similar</td>
+<td>They build their own model of the codebase. The kit's reviewed pages and approved specs are inputs they can read from the repo, and the pull request check applies to their output as to anyone's</td>
+</tr>
+<tr>
+<td>Services from delivery partners</td>
+<td>Spec-driven delivery platforms from integrators</td>
+<td>Same contract: the repo's context and specs in, a pull request that passes the check out</td>
+</tr>
+<tr>
+<td>Agent orchestration frameworks</td>
+<td>Frameworks that run several agents in sequence</td>
+<td>Call the context tool's commands or MCP server as tools; use the OpenSpec change folder as the shared state between agents</td>
+</tr>
+</tbody>
+</table></div>
+<p>The common thread: whatever does the work, the knowledge stays in the repo, owned and reviewed by the
+team, and every change passes the same check. That is what keeps an organisation free to change tools.</p>
+<h2 id="planned">Planned</h2>
+<p>In rough order. Each item ships only after it has been tried on real stories.</p>
+<ol>
+<li><strong>Autonomy policy.</strong> A small file per repo naming which kinds of change an agent may take from plan to
+   pull request on its own (for example: low-risk changes in repos scoring "AI ready" or higher), and which
+   always need a person to approve the design (permissions, personal data, public APIs).</li>
+<li><strong>Evaluation set.</strong> Real past stories with their accepted solutions, run against an agent with and
+   without the kit, to measure the difference on the team's own code.</li>
+<li><strong>Context in every agent change.</strong> Cloud agents update context pages in the same pull request, with the
+   design reviewer checking them.</li>
+<li><strong>Product-wide context service.</strong> The MCP server answering across the repos of a product hub.</li>
+<li><strong>Distribution as a plugin</strong> once agent plugin marketplaces are stable enough for organisation use.</li>
+</ol>
+<h2 id="not-planned">Not planned</h2>
+<ul>
+<li><strong>An agent or orchestrator of our own.</strong> Good ones exist and change fast; the kit stays the layer under them.</li>
+<li><strong>A code graph or data catalogue of our own.</strong> Graphify, OpenMetadata, DataHub and similar tools do this;
+  the kit links to them.</li>
+<li><strong>Vendor-specific integrations</strong> before a pilot shows they are needed.</li>
+</ul>
+<h2 id="evidence-so-far-and-what-is-not-proven">Evidence so far, and what is not proven</h2>
+<p>Published studies support the kit's choices (small always-loaded context, reviewed pages, test-first
+plans; see <a href="architecture.html#where-it-came-from">ARCHITECTURE.md</a>), but the spec-driven development papers
+so far describe approaches without measured results, and studies of context files disagree. The kit
+therefore measures itself on the team's own stories before anything is scaled.</p>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a></footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('button.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.parentElement.querySelector('pre');
+      var reset = function (t) { btn.textContent = t; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+      var select = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); reset('Selected');
+      };
+      try { navigator.clipboard.writeText(pre.innerText).then(function () { reset('Copied'); }, select); } catch (e) { select(); }
+    });
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var heads = links.map(function (a) { return document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1))); });
+  function mark() {
+    var y = window.scrollY + 120, idx = 0;
+    heads.forEach(function (h, i) { if (h && h.offsetTop <= y) idx = i; });
+    links.forEach(function (a, i) { a.classList.toggle('on', i === idx); });
+  }
+  window.addEventListener('scroll', mark, { passive: true }); mark();
+})();
+</script>
+
+</body>
+</html>

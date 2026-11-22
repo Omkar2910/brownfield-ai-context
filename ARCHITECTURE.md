@@ -1,15 +1,16 @@
 # AI Context Kit: Architecture
 
-Kit 1.6.1 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
+Kit 2.0.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
 in [GUIDE.md](GUIDE.md); how to roll it out across an organisation is in [ORG-LEVEL.md](ORG-LEVEL.md).
 
 ## Summary
 
 The AI Context Kit (MIT licence) is a set of plain files installed into each repo that gives AI coding
-agents (GitHub Copilot in VS Code, or Claude Code) correct, current knowledge of an existing system, and
-makes every story follow plan → approve → test-first build → review. It contains no server and no database:
-just text files, eight skills, one agent, one 600-line checking script, git hooks and an installer, plus two
-optional open-source tools (OpenSpec for the story workflow, Graphify for the code map).
+agents (GitHub Copilot, Claude Code, OpenAI Codex, and any agent that reads `AGENTS.md`) correct, current
+knowledge of an existing system, and makes every story follow plan → approve → fresh-eyes review →
+test-first build → review. It contains no server and no database: just text files, seven skills, two agents,
+one checking script (which can also run as an MCP server), git hooks, a pull request check and an installer,
+plus two optional open-source tools (OpenSpec for the story workflow, Graphify for the code map).
 
 Four principles shape every part of it:
 
@@ -21,6 +22,8 @@ Four principles shape every part of it:
    describes, so the kit can tell when it may have gone wrong.
 4. **People approve; machines check.** A developer approves the plan and the pull request. Hooks and checks
    catch out-of-date knowledge automatically.
+5. **The knowledge belongs to no tool.** Everything that matters is Markdown in the repo, readable by any
+   agent; the per-tool parts are thin adapters that can be added or removed. See [ROADMAP.md](ROADMAP.md).
 
 ## At a glance
 
@@ -40,9 +43,10 @@ core is plain files and one script.
 | Component | Installed at | What it does | Owner |
 | --- | --- | --- | --- |
 | `AGENTS.md` | Repo root | One-page always-read file: commands, top rules, traps, "where to look" index. Under 150 lines. | Team |
-| Rule files | `.github/instructions/*.instructions.md` | Short rules for one kind of file, loaded only when the agent touches matching files (`applyTo`) | Team |
+| Rule files | `.github/instructions/*.instructions.md` (Claude Code: `.claude/rules/`) | Short rules for one kind of file, loaded only when the agent touches matching files (`applyTo` / `paths`) | Team |
 | Organisation rules | `.github/instructions/org/` | The org's rules, copied in and stamped by `install.mjs --org` | Org |
 | Dimension pages | `docs/context/architecture.md`, `domain.md`, `screens.md`, `data.md`, `api.md`, `dependencies.md`, `security.md`, `testing.md`, `operations.md` | In-depth reference, one page per readiness dimension, read on demand | Team |
+| Table pages | `docs/context/data/tables/`, `data/index.md` | One page per table: structure generated from a schema file, meaning written by people | Team (generated part: `schema-import`) |
 | Decision pages | `docs/context/decisions/` | Why things are the way they are | Team |
 | Area pages | `docs/context/areas/` | Deep pages for one complex flow or format, added after a story needed one | Team |
 | Known traps | `docs/context/known-traps.md` | Things that look wrong but are deliberate | Team |
@@ -54,28 +58,33 @@ core is plain files and one script.
 
 | Component | When used | What it does |
 | --- | --- | --- |
-| `/context-bootstrap` | Once per repo | Drafts `AGENTS.md`, rule files, architecture and traps from five questions and the code |
-| `/context-baseline` | Once per repo, refreshed per page | Writes the in-depth dimension pages, anchored, with Unverified lists |
+| `/context-create` | Once per repo | Drafts `AGENTS.md`, rule files, architecture and traps from five questions and the code |
+| `/context-create deep` | Once per repo, one page at a time | Writes the in-depth dimension pages and table pages, anchored, with Unverified lists |
+| `/context-assess` | After pages are reviewed | Rates each dimension within the evidence cap; the tool computes the score |
 | `/context-assess` | After review, then each sprint or quarter | Rates each dimension 0–5 within evidence caps; produces the readiness score |
-| `/story-to-change` | Start of each story | Reads the story, searches every repo in the window, groups repos, sizes the story, creates one change per repo |
+| `/story-start` | Start of each story | Reads the story, searches every repo in the window, groups repos, sizes the story, creates one change per repo |
 | `/story-finish` | End of each story | Tests, test plan, impact, context check, Context impact table, area page offer, PR description |
-| `/context-refresh` | When checks flag stale lines | Fixes only the flagged knowledge lines |
+| `/context-update` | When checks flag stale lines, after a migration or a kit upgrade | Fixes only the flagged lines; converts page format; refreshes table pages |
 | `/context-learn` | When the agent was corrected | Turns the correction into a permanent rule |
 | `/onboard-me` | A new joiner's first day | 30-minute guided tour from the same knowledge |
 | Context-steward agent | Monthly or on request | A restricted agent that may only edit knowledge files; a guard hook blocks code and org-rule edits |
-| `/hub-baseline` (in the product hub) | Once per product | Writes system architecture, end-to-end flows, glossary and platform rules, anchored into the repos |
+| Design-reviewer agent | After the technical design and test plan exist | Read-only review with no memory of the chat that wrote the plan: traceability, truth to the code, rules, contracts, tests, context impact |
+| `/hub-context` (in the product hub) | Once per product | Writes system architecture, end-to-end flows, glossary and platform rules, anchored into the repos |
 
-All skills are kit-owned and installed in `.github/skills/` (or `.claude/skills/`).
+All skills are kit-owned and installed per tool: `.github/skills/` (Copilot), `.claude/skills/` (Claude Code),
+`.agents/skills/` (Codex). Every skill ends its reply with **What changed · Checks · Next**, so the person sees
+the result whether or not the agent hooks run.
 
 ### Automatic checks
 
 | Component | Installed at | When it runs | What it does |
 | --- | --- | --- | --- |
-| Context tool | `.github/hooks/scripts/context-tools.cjs` (600 lines, no dependencies) | Called by every check below | Reads anchors and status lines; commands `status`, `check`, `readiness` and four hook commands |
-| Agent hooks | `.github/hooks/ai-context.json` | Chat start, after each edit, before the agent finishes | Health note; "this file is described by line 12"; one request to re-check lines the agent's own edits touched |
+| Context tool | `.ai-kit/context-tools.cjs` (one file, no dependencies) | Called by every check below | Reads anchors and page metadata; `check`, `status`, `doctor`, `readiness`, `pages-for`, `migrate`, `schema-import`, `ci`, `mcp` and four hook commands; logs each hook run in `.git/ai-kit/` |
+| Agent hooks | `.github/hooks/ai-context.json` (Copilot), `.claude/settings.json` (Claude Code) | Chat start, after each edit, before the agent finishes | Health note; "this file is described by line 12"; one request to re-check lines the agent's own edits touched. Duplicate calls ignored |
 | Git hooks | `.githooks/pre-commit`, `post-commit`, `post-merge`, `post-checkout` | Commit, merge, branch switch | Refuse commits with broken anchors; rebuild the code map in the background |
 | PR template | `.azuredevops/pull_request_template.md` | Every pull request | Checklist: design reviewed, test plan passing, knowledge updated |
-| Pipeline check (optional) | `kit/optional/azure-pipelines-context-check.yml` | Every pull request | Runs the context check in CI |
+| Pull request check | `.ai-kit/ci/azure-pipelines.yml`, or `.github/workflows/ai-context.yml` with `--ci github` | Every pull request, whoever or whatever wrote it | `context-tools ci`: the check, a story check, the readiness score |
+| MCP server (preview) | `context-tools.cjs mcp`, registered with `--mcp` | When an agent calls it | The same questions the hooks answer, for agents that work without the editor |
 
 ### Workflow and tooling
 
@@ -84,9 +93,10 @@ All skills are kit-owned and installed in `.github/skills/` (or `.claude/skills/
 | Story workflow | `openspec/schemas/story-tdd/` | Adds a technical design document, a test plan and test-first tasks to every OpenSpec change | Kit (schema), team (templates) |
 | OpenSpec settings | `openspec/config.yaml` | Points OpenSpec at the context and adds rules, including your own TDD skill | Team |
 | Code map connection | `.vscode/mcp.json`, `.graphifyignore` | Lets the agent query Graphify; keeps kit and story files out of the map | Team |
-| Version stamp | `.github/ai-kit.json` | Which kit version and which org rules this repo runs | Kit |
+| Version stamp | `.ai-kit/kit.json` | Which kit version, which tools and which org rules this repo runs | Kit |
+| Readiness weights | `.ai-kit/readiness.json` | Weights and bands, usually synced from the org | Org or team |
 | Installer | `kit/install.mjs` | Installs, upgrades, syncs org rules, creates hubs and org repos; never overwrites team files | Kit repo only |
-| Product hub template | `kit/hub-template/` | Catalogue, platform rules, flows, contracts, `/hub-baseline`, `hub.mjs` | Created once per product |
+| Product hub template | `kit/hub-template/` | Catalogue, platform rules, flows, contracts, `/hub-context`, `hub.mjs` | Created once per product |
 | Org template | `kit/org-template/` | Org rules, shared platforms, AI usage policy, kit version, readiness weights | Created once per organisation |
 
 ## Knowledge model
@@ -110,10 +120,13 @@ a file, a folder, a glob or several of these. In the product hub, anchors name t
 - **Stale:** the anchored file changed but the line didn't, so the line may be wrong. Flagged for a look.
 - **Provenance:** the share of statements with anchors is part of the readiness score.
 
-**Status line.** Each in-depth page starts with one line the tools read:
-`> Dimension: data · Status: reviewed · Last verified: 2026-11-20 by <name> · Independent review: no · Owner: reports-team`.
-A page starts as `draft`; its owner reviews it against the code and sets `reviewed` with a date; a second
-person who didn't write it can set `Independent review: yes`.
+**Page metadata.** Each in-depth page starts with frontmatter the tools read, following the Open Knowledge
+Format (OKF v0.3): `type`, `status` (draft, stable, deprecated), `verified` (a list of review events) and
+`generated` for machine-written pages, plus the kit's own `dimension` and `owner`. A page starts as `draft`;
+its owner reviews it against the code, sets `stable` and adds a `human:` review event; a second person who
+didn't write it adds a second event (independent review). Reviews older than a page's `generated` date stop
+counting, so a regenerated table page needs a fresh look. Generated pages without a human review are
+traceable but count as unreviewed.
 
 **The dimension pages** follow the 12-dimension readiness framework:
 
@@ -122,7 +135,7 @@ person who didn't write it can set `Independent review: yes`.
 | Code understanding | 15% | `AGENTS.md`, rule files, code map | Written; code map generated |
 | Architecture | 10% | `architecture.md` | Written; most-connected parts from the code map |
 | Business/domain | 10% | `domain.md`, `screens.md`, `openspec/specs/` | Written; specs grow with each story |
-| Data | 10% | `data.md` | Tables generated from migrations and entities |
+| Data | 10% | `data.md`, `data/tables/` | Table structure generated from a schema file; meaning written |
 | API/integration | 10% | `api.md` | Endpoints generated from OpenAPI or controllers |
 | Dependencies | 10% | `dependencies.md`, hub catalogue | Generated from build files and the catalogue |
 | Security | 10% | `security.md` | Written, anchored to security config |
@@ -150,7 +163,7 @@ design and test plan exist.
 
 | Order | Document | Holds | Created by | Needs |
 | --- | --- | --- | --- | --- |
-| 0 | `context.md` | The story pack: acceptance criteria, files per repo, rules, open questions | `/story-to-change` | — |
+| 0 | `context.md` | The story pack: acceptance criteria, files per repo, rules, open questions | `/story-start` | — |
 | 1 | `proposal.md` | Why, what changes, acceptance criteria | `/opsx-propose` | — |
 | 2 | `specs/<capability>/spec.md` | Required behaviour as requirements and when/then scenarios | `/opsx-propose` | proposal |
 | 3 | `design.md` | Technical design document: changes per layer, API and data changes, security, decisions, risks, rollback, Context impact | `/opsx-propose` (or your own TDD skill) | proposal |
@@ -169,7 +182,7 @@ own, the design, test plan and tasks steps were written for the kit.
 
 - **Each repo installs the kit and owns its knowledge.** Its rules and pages are reviewed in its own PRs,
   because they change with its code.
-- **One story, one change per repo that changes, same change id.** `/story-to-change` searches every repo in
+- **One story, one change per repo that changes, same change id.** `/story-start` searches every repo in
   the window using each repo's own code map, and sorts repos into *changes*, *read only* and *connected but
   not open*. Producers are planned and built first (services, then UIs); each repo gets its own branch and
   PR, linked to each other.
@@ -178,7 +191,7 @@ own, the design, test plan and tasks steps were written for the kit.
   mapping, glossary, platform rules and cross-service decisions. Its anchors name the repo and
   `hub.mjs check` verifies them against the cloned repos.
 - **Incoming callers are the hard case.** A repo can see what it calls, not who calls it. With the hub open,
-  `/story-to-change` runs `hub.mjs impact` to list repos that call or load the ones being changed, including
+  `/story-start` runs `hub.mjs impact` to list repos that call or load the ones being changed, including
   repos not in the window.
 
 ## Organisation level
@@ -231,7 +244,7 @@ score cannot be raised by writing more:
 
 Provenance and freshness are measured directly. `/context-assess` rates each dimension within its cap with
 evidence; the tool computes the weighted total, the band and the three biggest gaps. Weights and band names
-come from the organisation (`.github/context-readiness.json`, synced from the org repo). The report always
+come from the organisation (`.ai-kit/readiness.json`, synced from the org repo). The report always
 prints the always-loaded size next to the score, because a high score with a bloated `AGENTS.md` would mean
 worse agent results, not better. `hub.mjs status` shows every repo's score and the product average.
 
@@ -241,9 +254,11 @@ worse agent results, not better. `hub.mjs status` shows every repo's score and t
 | --- | --- |
 | `node kit/install.mjs <repo>` | Adds the kit files for Copilot. Never overwrites an existing file; lists what to merge by hand. Running it twice changes nothing. |
 | `… --graphify` | Also connects the code map and keeps its output out of git |
-| `… --tool claude` | Same kit in Claude Code's format (`.claude/`, `/opsx:` command names) |
+| `… --tool claude`, `codex`, `all` | Same kit for Claude Code (`.claude/`, `/opsx:` command names) or Codex (`.agents/skills/`); several tools at once |
+| `… --ci azure` / `--ci github` | Pull request check |
+| `… --mcp` | Registers the kit's MCP server for the chosen tools |
 | `… --org <org-context>` | Copies the organisation's rules and readiness weights into the repo, stamped |
-| `… --upgrade` | Replaces kit-owned files with this version and re-syncs org rules; team files untouched |
+| `… --upgrade` | Replaces kit-owned files with this version, moves a 1.x layout to 2.x, re-syncs org rules; team files untouched. Then `context-tools migrate` updates page format, with no AI and no tokens |
 | `… --keep-schema` | With OpenSpec: installs the story workflow but doesn't make it the default |
 | `… --dry-run` | Shows everything it would do; changes nothing |
 | `node kit/install.mjs --create-hub <folder>` | Creates a product context hub |
@@ -252,7 +267,7 @@ worse agent results, not better. `hub.mjs status` shows every repo's score and t
 Beyond copying files, the installer sets the repo's git hooks folder (or, if the repo already has its own
 hooks, prints the one line to add so they keep working), writes `.gitattributes` so hook scripts keep Unix
 line endings on Windows, adds the kit's OpenSpec settings and makes the story workflow the default for new
-changes, and records the kit version and org sync in `.github/ai-kit.json`. Removal is deleting the added
+changes, and records the kit version and org sync in `.ai-kit/kit.json`. Removal is deleting the added
 folders and one git setting.
 
 ## Security and data boundaries
@@ -262,7 +277,9 @@ agent itself, under the organisation's existing Copilot (or Claude) licence and 
 
 | Component | Network access | Writes to | Notes |
 | --- | --- | --- | --- |
-| Context tool, hooks, git hooks | None | Nothing in the repo; a small list of edited files in the system temp folder | Exits quietly on any internal error so it cannot break a session |
+| Context tool, hooks, git hooks | None | Nothing in the working tree; a list of edited files in the system temp folder and a hook log in `.git/ai-kit/` | Exits quietly on any internal error so it cannot break a session |
+| MCP server (optional) | None (stdio only) | Nothing | Read-only answers about the repo's context |
+| tbls (optional, run by a person) | The database it is pointed at | The schema file | Read-only user, non-production database |
 | Installer | None | Only the target repo, only new files (plus kit- and org-owned files on upgrade or sync) | `--dry-run` previews everything |
 | Graphify (optional) | None for `--code-only` | `graphify-out/` locally, not committed | Builds the map from code structure without an AI model |
 | OpenSpec (optional) | None for its commands | `openspec/` in the repo | The agent writes the documents; OpenSpec structures and validates them |
@@ -270,8 +287,8 @@ agent itself, under the organisation's existing Copilot (or Claude) licence and 
 | Azure DevOps MCP (optional, off by default) | Your Azure DevOps organisation | Work items and PRs, only when asked | Check company policy before enabling |
 
 Controls the kit relies on: people approve the plan and the pull request (the agent never pushes or merges
-unless a developer explicitly asks); files that run commands (`.github/hooks/`, `.githooks/`,
-`.vscode/mcp.json`, `.mcp.json`) get a named reviewer through CODEOWNERS or an Azure Repos branch policy; tool
+unless a developer explicitly asks); files that run commands (`.ai-kit/`, `.github/hooks/`, `.githooks/`,
+`.claude/settings.json`, `.vscode/mcp.json`, `.mcp.json`) get a named reviewer through CODEOWNERS or an Azure Repos branch policy; tool
 versions are pinned to the tested ones; and the steward agent can edit only knowledge files.
 
 ## Where it came from
@@ -292,6 +309,11 @@ licence; credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and the l
 | [VS Code: custom instructions reference](https://code.visualstudio.com/docs/agents/reference/custom-instructions-reference.md), [agent skills](https://code.visualstudio.com/docs/agent-customization/agent-skills.md) | Rule files with `applyTo`, `SKILL.md` skills, where VS Code looks for them |
 | [GitHub: organisation custom instructions](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/configure-custom-instructions/add-organization-instructions) | Why org rules are synced into repos instead (GitHub-hosted, Business/Enterprise, not local sessions) |
 | [VS Code: agent plugins](https://code.visualstudio.com/docs/copilot/customization/agent-plugins) | Considered for distribution; deferred until Azure DevOps support is confirmed |
+| [Codex: agent skills](https://learn.chatgpt.com/docs/build-skills) | Codex reads `AGENTS.md` and `.agents/skills/`; the Codex adapter |
+| [Model Context Protocol](https://modelcontextprotocol.io) and the Agentic AI Foundation (home of MCP and `AGENTS.md`) | The kit's MCP server; why the core is `AGENTS.md` plus plain Markdown |
+| [Open Knowledge Format (OKF v0.3)](https://github.com/open-knowledge-format/open-knowledge-format) | The shape of page frontmatter (`type` required, one subject per file, `index.md`) |
+| [Google Elephant-Goldfish Model](https://github.com/google/elephant-goldfish-model) (Apache-2.0) | The idea behind the design reviewer: a reviewer with no memory of the conversation checks the designs. The kit takes the idea, not the code |
+| [tbls](https://github.com/k1LoW/tbls) (MIT) | Schema file format read by `schema-import` |
 
 ### Tools it uses (installed separately, not included)
 
@@ -325,8 +347,8 @@ licence; credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and the l
 | [Bitovi instruction-generation](https://github.com/bitovi/ai-enablement-prompts) | Generates a full codebase analysis in one run | One-off and loaded on every request; the kit keeps it short, reviewed and current |
 | [Meta-repo pattern](https://seylox.github.io/2026/03/05/blog-agents-meta-repo-pattern.html), Backstage software catalogue | A central place describing many repos | The product hub follows the same idea, with anchors checked against the repos |
 
-What is specific to this kit is the combination, aimed at Copilot in VS Code on brownfield Java and Angular
-systems: small reviewed knowledge with anchors, one tool checking it in chat, at commit and before a PR, the
+What is specific to this kit is the combination, aimed at brownfield Java and Angular systems and usable from
+Copilot, Claude Code and Codex: small reviewed knowledge with anchors, one tool checking it in chat, at commit and before a PR, the
 story workflow with a technical design and test plan, multi-repo and organisation layers, and an
 evidence-capped readiness score.
 
@@ -336,8 +358,9 @@ Everything above was tested on sample repos on Linux. Still open:
 
 - **The benefit on your code.** Measure it before scaling: the story log records premium requests, files read
   before the first edit, review rounds and rework, with and without the kit.
-- **Hooks in live Copilot chats,** including the steward's agent-scoped guard (a new VS Code feature): check
-  them once in your own environment.
+- **Hooks in live agent chats,** including the steward's agent-scoped guard (a new VS Code feature): check
+  them once with `context-tools.cjs doctor` in your own environment.
+- **Codex and the MCP server** were tested with scripted calls, not in long live sessions yet.
 - **Windows.** Written for Windows; tested on Linux.
 - **Skill behaviour varies.** Skills are instructions, not code; the agent can skip a step. The checks exist
   to catch that, and the story log shows how often it happens.

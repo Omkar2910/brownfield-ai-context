@@ -97,7 +97,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>The complete workflow and toolbox</h1>
-      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a>
     </header>
     
 <p>This is the full picture: <strong>every tool you can use</strong>, what each is for, whether you need it, and
@@ -138,13 +138,13 @@ just less well.</p>
 <tr>
 <td>3. Create context</td>
 <td>Lean <code>AGENTS.md</code>, scoped rules, <code>docs/context/</code>, guided by the code map</td>
-<td><code>/context-bootstrap</code> skill</td>
+<td><code>/context-create</code> skill</td>
 <td>Core</td>
 </tr>
 <tr>
 <td>3b. In-depth reference and score</td>
 <td>One reviewed page per dimension (architecture, domain, data, API, dependencies, security, testing, operations, decisions); readiness score 0–100</td>
-<td><code>/context-baseline</code>, <code>/context-assess</code>, <code>context-tools readiness</code></td>
+<td><code>/context-create deep</code>, <code>/context-assess</code>, <code>context-tools readiness</code></td>
 <td>When the team or management needs it</td>
 </tr>
 <tr>
@@ -168,7 +168,7 @@ just less well.</p>
 <tr>
 <td>6. Gather task context</td>
 <td>Relevant files, dependents, rules, traps — nothing else</td>
-<td><code>/story-to-change</code> + Graphify <code>query_graph</code> / <code>affected</code></td>
+<td><code>/story-start</code> + Graphify <code>query_graph</code> / <code>affected</code></td>
 <td>Core (+ Graphify)</td>
 </tr>
 <tr>
@@ -180,7 +180,7 @@ just less well.</p>
 <tr>
 <td>8. Agree the plan</td>
 <td>Proposal, spec scenarios, technical design (TDD), test plan, test-first tasks — <strong>reviewed by a person</strong></td>
-<td><code>/opsx-propose</code> with the kit's <code>story-tdd</code> schema (or the documents from <code>/story-to-change</code>)</td>
+<td><code>/opsx-propose</code> with the kit's <code>story-tdd</code> schema (or the documents from <code>/story-start</code>)</td>
 <td>Core</td>
 </tr>
 <tr>
@@ -259,21 +259,21 @@ just less well.</p>
 </thead>
 <tbody>
 <tr>
-<td><strong>VS Code + GitHub Copilot (agent mode)</strong></td>
+<td><strong>An agent: GitHub Copilot, Claude Code or OpenAI Codex</strong></td>
 <td>The agent</td>
-<td>Your editor</td>
-<td>Any model; use your strongest for planning (step 8)</td>
+<td>Your editor or terminal</td>
+<td>Any model; use your strongest for planning (step 8). <code>--tool</code> picks the folders each one reads</td>
 </tr>
 <tr>
 <td><strong>AGENTS.md + scoped instructions + docs/context</strong></td>
 <td>Lasting context</td>
 <td>Repo</td>
-<td>Created by <code>/context-bootstrap</code></td>
+<td>Created by <code>/context-create</code></td>
 </tr>
 <tr>
 <td><strong>Kit skills</strong></td>
-<td><code>context-bootstrap</code>, <code>context-baseline</code>, <code>context-assess</code>, <code>story-to-change</code>, <code>story-finish</code>, <code>context-refresh</code>, <code>context-learn</code>, <code>onboard-me</code></td>
-<td><code>.github/skills/</code></td>
+<td><code>context-create</code> (quick and deep), <code>context-assess</code>, <code>story-start</code>, <code>story-finish</code>, <code>context-update</code>, <code>context-learn</code>, <code>onboard-me</code>; each ends with What changed · Checks · Next</td>
+<td><code>.github/skills/</code> (Claude Code <code>.claude/skills/</code>, Codex <code>.agents/skills/</code>)</td>
 <td>Call by name; agents often skip skills they are not told to use</td>
 </tr>
 <tr>
@@ -283,10 +283,16 @@ just less well.</p>
 <td>Sprint and quarter upkeep</td>
 </tr>
 <tr>
+<td><strong>design-reviewer agent</strong></td>
+<td>Fresh-eyes, read-only review of the plan before code</td>
+<td><code>.github/agents/</code></td>
+<td>Starts with no memory of the chat that wrote the plan</td>
+</tr>
+<tr>
 <td><strong>Agent hooks</strong></td>
 <td>Session-start note, post-edit reminders, one check before finishing</td>
-<td><code>.github/hooks/</code></td>
-<td>Preview in VS Code; git hook and check cover the gap</td>
+<td><code>.github/hooks/</code>, <code>.claude/settings.json</code></td>
+<td>Preview in VS Code; <code>doctor</code> shows whether they run; git hook and PR check cover the gap</td>
 </tr>
 <tr>
 <td><strong>Git hooks</strong></td>
@@ -296,9 +302,15 @@ just less well.</p>
 </tr>
 <tr>
 <td><strong>context-tools.cjs</strong></td>
-<td><code>check</code> and <code>status</code></td>
-<td><code>.github/hooks/scripts/</code></td>
+<td><code>check</code>, <code>status</code>, <code>doctor</code>, <code>readiness</code>, <code>pages-for</code>, <code>migrate</code>, <code>schema-import</code>, <code>ci</code>, <code>mcp</code></td>
+<td><code>.ai-kit/</code></td>
 <td>Node, no dependencies</td>
+</tr>
+<tr>
+<td><strong>Pull request check</strong></td>
+<td>The context check on every PR, whoever wrote it</td>
+<td><code>.ai-kit/ci/</code></td>
+<td>Warnings first, then a required check</td>
 </tr>
 </tbody>
 </table></div>
@@ -355,9 +367,14 @@ just less well.</p>
 <td>Whatever your team already runs</td>
 </tr>
 <tr>
-<td><strong>Claude Code</strong></td>
-<td>Same kit for terminal-based work (<code>--tool claude</code>)</td>
-<td>Licences</td>
+<td><strong>tbls</strong></td>
+<td>Writes the database schema as JSON for <code>schema-import</code> (table pages)</td>
+<td>Read-only user, non-production database, run by a person</td>
+</tr>
+<tr>
+<td><strong>The kit's MCP server (preview)</strong></td>
+<td>Lets cloud agents and orchestrators query the context (<code>--mcp</code>)</td>
+<td>Which agents may run local commands</td>
 </tr>
 <tr>
 <td><strong>Repomix</strong></td>
@@ -509,7 +526,7 @@ graphify cluster-only . --no-label     # writes GRAPH_REPORT.md and graph.html
 <tr>
 <td>Is the map current?</td>
 <td>—</td>
-<td><code>node .github/hooks/scripts/context-tools.cjs status</code></td>
+<td><code>node .ai-kit/context-tools.cjs status</code></td>
 </tr>
 <tr>
 <td>Refresh the map now</td>
@@ -590,7 +607,7 @@ auto-approve list in VS Code settings (search settings for "auto approve"). Neve
 </tr>
 <tr>
 <td><strong>Small change (under a day)</strong></td>
-<td><code>/story-to-change</code> (sizes it) → an OpenSpec change with a Lite technical design, or for a tiny fix just a failing test and the fix → <code>/story-finish</code>.</td>
+<td><code>/story-start</code> (sizes it) → an OpenSpec change with a Lite technical design, or for a tiny fix just a failing test and the fix → <code>/story-finish</code>.</td>
 </tr>
 <tr>
 <td><strong>Story (1–5 days)</strong></td>
@@ -630,7 +647,7 @@ order.</p>
 <li><strong>Map it.</strong> <code>graphify god-nodes</code> and <code>graphify affected "&lt;main classes&gt;"</code> show what the module is
    built around and what outside code depends on it. <code>graphify export callflow-html</code> gives a picture
    for the team.</li>
-<li><strong>Write its context.</strong> Run <code>/context-bootstrap</code> focused on the module: a <code>docs/context/&lt;module&gt;.md</code>
+<li><strong>Write its context.</strong> Run <code>/context-create</code> focused on the module: a <code>docs/context/&lt;module&gt;.md</code>
    page, its traps, and scoped rules for its folders.</li>
 <li><strong>Pin down current behaviour.</strong> Before changing anything, add tests that record what it does today
    (including the odd parts). With OpenSpec, run <code>/opsx-explore</code> on the module and write baseline
@@ -643,7 +660,7 @@ order.</p>
      scratch), switch callers over, then turn its spec into OpenSpec baseline specs so later changes
      use the normal story workflow.</li>
 <li><strong>Each slice:</strong> <code>affected</code> before and after, the behaviour tests must still pass, and
-   <code>/context-refresh</code> as the module's structure changes.</li>
+   <code>/context-update</code> as the module's structure changes.</li>
 </ol>
 <hr />
 <h2 id="6-choosing-a-model">6. Choosing a model</h2>
@@ -682,7 +699,7 @@ order.</p>
 <li class="task"><input type="checkbox" aria-label="done"> <code>git config core.hooksPath</code> is <code>.githooks</code> on your clone</li>
 <li class="task"><input type="checkbox" aria-label="done"> Optional: Azure DevOps MCP connected; read-only Graphify commands auto-approved</li>
 </ul>
-    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a></footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a></footer>
   </main>
 </div>
 

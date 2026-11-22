@@ -1,5 +1,11 @@
+---
+type: Context Page
+status: draft
+dimension: architecture
+owner: "<architecture group>"
+verified: []
+---
 # Shared platforms
-> Dimension: architecture · Status: draft · Last verified: never · Independent review: no · Owner: <architecture group>
 
 | Platform | Used for | How a repo uses it | Owner |
 | --- | --- | --- | --- |

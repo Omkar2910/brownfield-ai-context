@@ -127,7 +127,7 @@ Treat OpenSpec as the behaviour and change layer (L4–L5) on top of your repo c
 
 - `context:` — 5–10 lines only: stack, the pointer "read `AGENTS.md` and `docs/context/` first", and the platform rule "authz always goes through CIAM". OpenSpec warns that verbose rules make output worse.
 - `rules:` — per artifact, e.g. `tasks: Every endpoint task includes a CIAM permission check and an integration test`.
-- `operations.archive.guidance:` — "If this change altered a convention, command or contract, update `AGENTS.md` or `docs/context/` in the same PR." This turns archive into the context-refresh trigger.
+- `operations.archive.guidance:` — "If this change altered a convention, command or contract, update `AGENTS.md` or `docs/context/` in the same PR." This turns archive into the context-update trigger.
 - `references:` — read-only pointer to the `system-context` store, so the agent gets an index of shared contract specs with the exact command to fetch each.
 
 ### Cross-service changes (UI + backend)
@@ -165,7 +165,7 @@ Practical guidance:
 - **Pick one canonical file.** Write `AGENTS.md`; make `CLAUDE.md` a one-line `@AGENTS.md` import. Copilot, Codex and Claude then read the same rules.
 - **Skills are portable.** The [Agent Skills](https://agentskills.io/skill-creation/quickstart) `SKILL.md` format works in Copilot, Claude Code and Codex. The `description` is the trigger: if a phrase is not in it, the skill will not fire.
 - **Do not use `applyTo: "**"`** for large files; it burns context on every request.
-- **Make context generation a team skill** (`context-bootstrap`) in a shared skills repo, with a sibling `context-refresh` skill that only touches files whose anchors changed.
+- **Make context generation a team skill** (`context-create`) in a shared skills repo, with a sibling `context-update` skill that only touches files whose anchors changed.
 
 ## Managing context in a team
 
@@ -218,12 +218,12 @@ Thoughtworks' April 2026 Radar notes teams mostly use Spec Kit in brownfield set
 ## Novel ideas worth piloting
 
 1. **Consumer briefs published by the producer.** On every merge to main, the backend pipeline generates a one-page "consumer brief" (endpoints changed, CIAM permissions required, error envelope, example payloads) from its OpenAPI and archived OpenSpec deltas, and commits it to `system-context/contracts/<service>/`. Consumers reference it read-only.
-2. **Story context packs.** A `story-to-change` skill takes a Jira/ADO story, queries Graphify for the touched neighbourhood, pulls the relevant specs and consumer briefs, and writes a short `context.md` into the OpenSpec change folder. Context becomes task-scoped instead of global.
+2. **Story context packs.** A `story-start` skill takes a Jira/ADO story, queries Graphify for the touched neighbourhood, pulls the relevant specs and consumer briefs, and writes a short `context.md` into the OpenSpec change folder. Context becomes task-scoped instead of global.
 3. **Context tests (golden tasks).** Keep 5 past stories with known-good diffs per repo. Any change to L1–L3 or to a team skill re-runs them headless and reports pass rate, steps and tokens.
 4. **Anchored facts.** Every context line carries a machine-checkable anchor, e.g. `[anchor: src/main/java/**/ExportController.java]`. The CI check validates anchors and lists lines whose anchored code changed.
 5. **Context budget.** A hard token budget for always-on context per repo (e.g. 1,500 tokens for L0 + L1); CI fails when it is exceeded.
 6. **Agent-miss loop.** Reviewers tag `#agent-miss`; a monthly job clusters them and proposes rule additions *and deletions*.
-7. **Archive-driven context refresh.** OpenSpec archive guidance plus a `context-refresh` skill update context in the same PR as the change.
+7. **Archive-driven context refresh.** OpenSpec archive guidance plus a `context-update` skill update context in the same PR as the change.
 
 ## Demo: one story across UI + backend
 
