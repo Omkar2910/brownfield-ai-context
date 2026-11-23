@@ -2,7 +2,14 @@
 
 This repo holds what no single micro-frontend or service owns: the catalog of repos, the system map,
 platform rules, published API contracts and notes for stories that span several repos.
-It contains no application code.
+It contains no application code. In a product workspace it is also the **home repo**: the kit's skills,
+agents, hooks and context tool live here once, for every repo in the workspace.
+
+## Working across the repos (product workspace)
+- Each repo keeps its own `AGENTS.md`, rule files and `docs/context/`. Read the repo's `AGENTS.md` before
+  working in it; its rules win for its code.
+- Run OpenSpec commands inside the repo that changes (`cd <repo>` first), never here.
+- The context tool works on any repo: `node .ai-kit/context-tools.cjs check --repo ../<repo>`.
 
 ## How to use it
 - Which repos exist, who owns them and what depends on what: `catalog.json` (source of truth) and
@@ -26,7 +33,8 @@ It contains no application code.
 - `node scripts/hub.mjs contracts` — which hub contract copies are out of date
 - `node scripts/hub.mjs check` — every `[anchor: repo:path]` here still resolves; lines whose code changed since review
 - `node scripts/hub.mjs readiness` — readiness score of this hub's context
+- `node scripts/hub.mjs claude` — start Claude Code here with every cloned repo added
 
 ## Creating the product-level context
-Run the `hub-context` skill with the hub and the repos open in one window. Anchor every fact into a repo
+Run the `product-context` skill with the hub and the repos open in one window. Anchor every fact into a repo
 as `[anchor: <repo-name>:<path>]`. Pages start as drafts; owners review them, set `status: stable` and add a `verified` entry.

@@ -99,7 +99,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>Many repos: micro-frontends and backend services</h1>
-      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a>
     </header>
     
 <p>How to set up and run AI-assisted work when a product is split across <strong>many separate repos</strong>:
@@ -216,7 +216,7 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m &quot;Product context hu
 <ol>
 <li>Clone the repos next to the hub (<code>node scripts/hub.mjs clone all --run</code>) and open them all with the hub
    (<code>node scripts/hub.mjs workspace all</code>, then open the generated <code>.code-workspace</code>).</li>
-<li>Type <code>/hub-context</code>. It writes <code>context/architecture.md</code>, <code>context/glossary.md</code>, one
+<li>Type <code>/product-context</code>. It writes <code>context/architecture.md</code>, <code>context/glossary.md</code>, one
    <code>context/flows/&lt;flow&gt;.md</code> per important end-to-end flow (with screen field → API field → column
    mappings) and fills in <code>context/platform/</code>. Every fact is anchored into a repo as
    <code>[anchor: report-service:src/main/java/**/ReportController.java]</code>.</li>
@@ -243,9 +243,10 @@ almost everything uses), <code>exposes</code> (micro-frontends) or <code>api</co
 <p>Each repo records its kit version in <code>.ai-kit/kit.json</code>. When the kit improves:</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs ../reports-mfe --upgrade
 </code></pre></div>
-<p>This replaces only the kit's own files (skills, steward agent, hook script and config, git hooks, and
-<code>openspec/schemas/story-tdd/schema.yaml</code>). It never touches <code>AGENTS.md</code>, instructions, <code>docs/context/</code>,
-your PR template or the story workflow's templates. Commit the result in a
+<p>This replaces only the kit's own files (skills, agents, hook script and config, git hooks). It never
+touches <code>AGENTS.md</code>, instructions, <code>docs/context/</code> or your PR template. With many repos, consider the
+<strong>product workspace</strong> instead: the tools live once in a home repo, so there is one upgrade, not one per
+repo (<a href="kit-guide.html">kit/GUIDE.md</a>). Commit the result in a
 small PR. Later, an agent plugin or APM package can do this centrally (see <a href="toolbox.html">TOOLBOX.md</a>).</p>
 <hr />
 <h2 id="4-opening-the-right-repos-for-a-story">4. Opening the right repos for a story</h2>
@@ -468,7 +469,7 @@ team; catalog and initiatives → product tech leads; <code>contracts/</code> �
 </tr>
 </tbody>
 </table></div>
-    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a></footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a></footer>
   </main>
 </div>
 

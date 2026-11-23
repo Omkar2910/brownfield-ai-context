@@ -53,6 +53,7 @@ Go through every line with `prune-checklist.md`; delete lines that fail and repo
 and after. After each fact that depends on code, add `[anchor: <path or glob>]`.
 
 ## 5. Connect OpenSpec (if `openspec/config.yaml` exists)
+In a product workspace, also write `CLAUDE.md` (`@AGENTS.md`) if the home repo is set up for Claude Code.
 Keep its `context:` block to 5–10 lines: the stack, "Read AGENTS.md first", and the one or two platform
 rules every change must respect. Everything in it is sent with every OpenSpec step.
 
@@ -60,6 +61,9 @@ rules every change must respect. Everything in it is sent with every OpenSpec st
 Run `node .ai-kit/context-tools.cjs check` and fix every ERROR line, then
 `node .ai-kit/context-tools.cjs readiness` for the starting score. Never invent a command or rule you did
 not see.
+
+**Product workspace:** when this repo has no `.ai-kit/context-tools.cjs`, the tool is in the home repo:
+run `node <home>/.ai-kit/context-tools.cjs <command> --repo <this repo>` instead.
 
 ## Finish
 End your reply with this block, filled in:

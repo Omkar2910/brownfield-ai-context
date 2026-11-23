@@ -103,10 +103,10 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>AI Context Kit: Architecture</h1>
-      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="roadmap.html">Roadmap →</a>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a>
     </header>
     
-<p>Kit 2.0.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
+<p>Kit 2.1.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
 in <a href="index.html">GUIDE.md</a>; how to roll it out across an organisation is in <a href="org-level.html">ORG-LEVEL.md</a>.</p>
 <h2 id="summary">Summary</h2>
 <p>The AI Context Kit (MIT licence) is a set of plain files installed into each repo that gives AI coding
@@ -253,7 +253,7 @@ core is plain files and one script.</p>
 <tr>
 <td><code>/story-finish</code></td>
 <td>End of each story</td>
-<td>Tests, test plan, impact, context check, Context impact table, area page offer, PR description</td>
+<td>Tests per scenario, impact, context check, area page offer, PR description</td>
 </tr>
 <tr>
 <td><code>/context-update</code></td>
@@ -277,11 +277,11 @@ core is plain files and one script.</p>
 </tr>
 <tr>
 <td>Design-reviewer agent</td>
-<td>After the technical design and test plan exist</td>
+<td>After the change's documents exist</td>
 <td>Read-only review with no memory of the chat that wrote the plan: traceability, truth to the code, rules, contracts, tests, context impact</td>
 </tr>
 <tr>
-<td><code>/hub-context</code> (in the product hub)</td>
+<td><code>/product-context</code> (in the product hub)</td>
 <td>Once per product</td>
 <td>Writes system architecture, end-to-end flows, glossary and platform rules, anchored into the repos</td>
 </tr>
@@ -323,7 +323,7 @@ the result whether or not the agent hooks run.</p>
 <td>PR template</td>
 <td><code>.azuredevops/pull_request_template.md</code></td>
 <td>Every pull request</td>
-<td>Checklist: design reviewed, test plan passing, knowledge updated</td>
+<td>Checklist: plan reviewed, every scenario tested, knowledge updated</td>
 </tr>
 <tr>
 <td>Pull request check</td>
@@ -350,12 +350,6 @@ the result whether or not the agent hooks run.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>Story workflow</td>
-<td><code>openspec/schemas/story-tdd/</code></td>
-<td>Adds a technical design document, a test plan and test-first tasks to every OpenSpec change</td>
-<td>Kit (schema), team (templates)</td>
-</tr>
 <tr>
 <td>OpenSpec settings</td>
 <td><code>openspec/config.yaml</code></td>
@@ -389,7 +383,7 @@ the result whether or not the agent hooks run.</p>
 <tr>
 <td>Product hub template</td>
 <td><code>kit/hub-template/</code></td>
-<td>Catalogue, platform rules, flows, contracts, <code>/hub-context</code>, <code>hub.mjs</code></td>
+<td>Catalogue, platform rules, flows, contracts, <code>/product-context</code>, <code>hub.mjs</code></td>
 <td>Created once per product</td>
 </tr>
 <tr>
@@ -516,7 +510,7 @@ traceable but count as unreviewed.</p>
 <tr>
 <td>Testing</td>
 <td>5%</td>
-<td><code>testing.md</code>, each story's test plan</td>
+<td><code>testing.md</code></td>
 <td>Written</td>
 </tr>
 <tr>
@@ -552,9 +546,8 @@ commit check is the one hard stop, and it only blocks knowledge that points at a
 Every check calls the same context tool, so a rule is defined once.</p>
 <h2 id="story-workflow">Story workflow</h2>
 <p><img alt="People approve the plan and the code; the agent does the rest" src="images/story-flow.png" /></p>
-<p>Each story that changes behaviour gets a folder per repo it changes, <code>openspec/changes/&lt;change-id&gt;/</code>, with six
-documents created in a fixed order. Each needs the ones before it, so the agent cannot write tasks before the
-design and test plan exist.</p>
+<p>Each story that changes behaviour gets a folder per repo it changes, <code>openspec/changes/&lt;change-id&gt;/</code>, with
+OpenSpec's own documents, created in a fixed order:</p>
 <div class="tablebox"><table>
 <thead>
 <tr>
@@ -576,7 +569,7 @@ design and test plan exist.</p>
 <tr>
 <td>1</td>
 <td><code>proposal.md</code></td>
-<td>Why, what changes, acceptance criteria</td>
+<td>Why and what changes</td>
 <td><code>/opsx-propose</code></td>
 <td>—</td>
 </tr>
@@ -590,31 +583,25 @@ design and test plan exist.</p>
 <tr>
 <td>3</td>
 <td><code>design.md</code></td>
-<td>Technical design document: changes per layer, API and data changes, security, decisions, risks, rollback, Context impact</td>
-<td><code>/opsx-propose</code> (or your own TDD skill)</td>
+<td>Only when needed: approach, decisions, risks</td>
+<td><code>/opsx-propose</code></td>
 <td>proposal</td>
 </tr>
 <tr>
 <td>4</td>
-<td><code>test-plan.md</code></td>
-<td>Each scenario and acceptance criterion mapped to a named test, plus extra cases and regression</td>
-<td><code>/opsx-propose</code></td>
-<td>specs, design</td>
-</tr>
-<tr>
-<td>5</td>
 <td><code>tasks.md</code></td>
-<td>Ordered tasks, tests first in each slice</td>
+<td>Ordered tasks; the kit's config asks for each test before its code</td>
 <td><code>/opsx-propose</code></td>
-<td>specs, design, test plan</td>
+<td>specs (and design)</td>
 </tr>
 </tbody>
 </table></div>
-<p>After approval, <code>/opsx-apply</code> works through the tasks, <code>/opsx-verify</code> checks the code against specs and
-design, and <code>/story-finish</code> checks the test plan and the Context impact table. <code>/opsx-archive</code> then merges the
-specs into <code>openspec/specs/</code>, the permanent record. Tiny fixes skip the folder: failing test, fix, finish.
-The workflow is a kit-made variant of OpenSpec's built-in one: the proposal and specs steps are OpenSpec's
-own, the design, test plan and tasks steps were written for the kit.</p>
+<p>Then the design reviewer checks the plan with fresh eyes, a person approves it, <code>/opsx-apply</code> works
+through the tasks, <code>/opsx-verify</code> checks the code against the specs, and <code>/story-finish</code> checks every
+scenario has a passing test. <code>/opsx-archive</code> merges the specs into <code>openspec/specs/</code>, the permanent record.
+Tiny fixes skip the folder: failing test, fix, finish. Without OpenSpec, <code>/story-start</code> writes one
+<code>plan.md</code> instead. A team's own technical design or test-scenario format runs as its own skill after
+<code>/opsx-propose</code>, so OpenSpec itself stays unchanged and upgrades cleanly.</p>
 <h2 id="many-repos">Many repos</h2>
 <p><img alt="Each repo keeps its own kit; the hub holds what spans them" src="images/architecture-many-repos.png" /></p>
 <ul>
@@ -669,7 +656,7 @@ agent in the way that suits how often it changes. Details and rollout: <a href="
 </tr>
 <tr>
 <td>4. Story</td>
-<td>Proposal, specs, technical design, test plan, tasks</td>
+<td>Proposal, specs, design (if needed), tasks</td>
 <td><code>openspec/changes/&lt;id&gt;/</code> in each repo it changes</td>
 <td>The developer, approved by a reviewer</td>
 <td>Read during that story; merged into specs on archive</td>
@@ -703,9 +690,9 @@ miss. Each later net exists because the earlier ones can be skipped.</p>
 </thead>
 <tbody>
 <tr>
-<td>1. Context impact</td>
-<td>Writing the technical design</td>
-<td>The design lists every page the change makes out of date (e.g. <code>data.md</code>, <code>api.md</code>, <code>screens.md</code>, a hub flow)</td>
+<td>1. Design review</td>
+<td>Before code</td>
+<td>The fresh-eyes reviewer lists the context pages the plan makes out of date (<code>pages-for</code> on the files it changes)</td>
 <td>Agent, approved by the developer</td>
 </tr>
 <tr>
@@ -729,7 +716,7 @@ miss. Each later net exists because the earlier ones can be skipped.</p>
 <tr>
 <td>5. Story finish</td>
 <td>End of story</td>
-<td>Every Context impact row updated; stale anchors since main; PR lists context changes</td>
+<td>Pages anchored to changed files updated or still true; stale anchors since main; PR lists context changes</td>
 <td>Agent + reviewer</td>
 </tr>
 </tbody>
@@ -812,8 +799,8 @@ worse agent results, not better. <code>hub.mjs status</code> shows every repo's 
 <td>Replaces kit-owned files with this version, moves a 1.x layout to 2.x, re-syncs org rules; team files untouched. Then <code>context-tools migrate</code> updates page format, with no AI and no tokens</td>
 </tr>
 <tr>
-<td><code>… --keep-schema</code></td>
-<td>With OpenSpec: installs the story workflow but doesn't make it the default</td>
+<td><code>… --create-workspace &lt;home&gt;</code> / <code>&lt;repo&gt; --workspace &lt;home&gt;</code></td>
+<td>Product workspace: the tools once in a home repo; each repo keeps only its knowledge</td>
 </tr>
 <tr>
 <td><code>… --dry-run</code></td>
@@ -1088,7 +1075,7 @@ licence; credited in <a href="../THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md<
 </table></div>
 <p>What is specific to this kit is the combination, aimed at brownfield Java and Angular systems and usable from
 Copilot, Claude Code and Codex: small reviewed knowledge with anchors, one tool checking it in chat, at commit and before a PR, the
-story workflow with a technical design and test plan, multi-repo and organisation layers, and an
+story workflow with a fresh-eyes plan review and test-first tasks, a product workspace, organisation layers, and an
 evidence-capped readiness score.</p>
 <h2 id="limits-and-what-is-not-proven-yet">Limits and what is not proven yet</h2>
 <p>Everything above was tested on sample repos on Linux. Still open:</p>
@@ -1107,7 +1094,7 @@ evidence-capped readiness score.</p>
   on the same day as a review is not counted.</li>
 <li><strong>The readiness score measures context, not outcomes.</strong> Read it with the always-loaded size and the story log.</li>
 </ul>
-    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="roadmap.html">Roadmap →</a></footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a></footer>
   </main>
 </div>
 

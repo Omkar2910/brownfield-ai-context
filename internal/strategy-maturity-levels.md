@@ -45,7 +45,7 @@ pull requests.
 | Orchestration frameworks | Multi-agent frameworks | Need tools to call and shared state | Context tool commands and MCP as tools; the OpenSpec change folder as shared state |
 
 **Position:** the kit is not an agent and should not become one. It is the **context and governance layer
-under any agent**: knowledge the organisation owns, a workflow contract (approved spec, design, test plan),
+under any agent**: knowledge the organisation owns, a workflow contract (approved specs and test-first tasks),
 and checks that do not care who wrote the code. That is also the honest "novel" part: individual pieces
 exist elsewhere (code-coupled docs, generated analyses, spec-driven tools, memoryless review), but the
 combination of reviewed, anchored, evidence-scored knowledge, tool-neutral checks and a spec-first story

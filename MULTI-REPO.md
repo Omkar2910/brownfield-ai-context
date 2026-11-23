@@ -86,7 +86,7 @@ Then the product-level context (half a day, the tech lead with one developer per
 
 1. Clone the repos next to the hub (`node scripts/hub.mjs clone all --run`) and open them all with the hub
    (`node scripts/hub.mjs workspace all`, then open the generated `.code-workspace`).
-2. Type `/hub-context`. It writes `context/architecture.md`, `context/glossary.md`, one
+2. Type `/product-context`. It writes `context/architecture.md`, `context/glossary.md`, one
    `context/flows/<flow>.md` per important end-to-end flow (with screen field → API field → column
    mappings) and fills in `context/platform/`. Every fact is anchored into a repo as
    `[anchor: report-service:src/main/java/**/ReportController.java]`.
@@ -120,9 +120,10 @@ Each repo records its kit version in `.ai-kit/kit.json`. When the kit improves:
 ```bash
 node brownfield-ai-context/kit/install.mjs ../reports-mfe --upgrade
 ```
-This replaces only the kit's own files (skills, steward agent, hook script and config, git hooks, and
-`openspec/schemas/story-tdd/schema.yaml`). It never touches `AGENTS.md`, instructions, `docs/context/`,
-your PR template or the story workflow's templates. Commit the result in a
+This replaces only the kit's own files (skills, agents, hook script and config, git hooks). It never
+touches `AGENTS.md`, instructions, `docs/context/` or your PR template. With many repos, consider the
+**product workspace** instead: the tools live once in a home repo, so there is one upgrade, not one per
+repo ([kit/GUIDE.md](kit/GUIDE.md)). Commit the result in a
 small PR. Later, an agent plugin or APM package can do this centrally (see [TOOLBOX.md](TOOLBOX.md)).
 
 ---

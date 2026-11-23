@@ -27,6 +27,9 @@ Goal: fix a gap in the context once, for everyone, without bloating it.
 5. **Check the budget.** Run `node .ai-kit/context-tools.cjs status`. If `AGENTS.md` is over ~100 lines,
    propose a line to move to a scoped file or `docs/context/` in exchange.
 
+**Product workspace:** when this repo has no `.ai-kit/context-tools.cjs`, the tool is in the home repo:
+run `node <home>/.ai-kit/context-tools.cjs <command> --repo <this repo>` instead.
+
 ## Finish
 End your reply with this block, filled in:
 - **What changed:** the file and the line added or changed, as a diff, and why that file.

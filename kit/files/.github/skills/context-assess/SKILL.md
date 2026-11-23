@@ -43,6 +43,9 @@ gaps that would raise it most.
 - Never raise a rating because a page is long. Length is not coverage.
 - Weights and band names come from `.ai-kit/readiness.json` if the team or organisation has one.
 
+**Product workspace:** when this repo has no `.ai-kit/context-tools.cjs`, the tool is in the home repo:
+run `node <home>/.ai-kit/context-tools.cjs <command> --repo <this repo>` instead.
+
 ## Finish
 End your reply with this block, filled in:
 - **What changed:** `docs/context/readiness.md` (link) and the History line added.

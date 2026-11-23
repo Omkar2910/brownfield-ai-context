@@ -97,7 +97,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>The complete workflow and toolbox</h1>
-      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a>
     </header>
     
 <p>This is the full picture: <strong>every tool you can use</strong>, what each is for, whether you need it, and
@@ -179,8 +179,8 @@ just less well.</p>
 </tr>
 <tr>
 <td>8. Agree the plan</td>
-<td>Proposal, spec scenarios, technical design (TDD), test plan, test-first tasks — <strong>reviewed by a person</strong></td>
-<td><code>/opsx-propose</code> with the kit's <code>story-tdd</code> schema (or the documents from <code>/story-start</code>)</td>
+<td>Proposal, spec scenarios, design (if needed), test-first tasks, fresh-eyes review — <strong>approved by a person</strong></td>
+<td><code>/opsx-propose</code>, then the <code>design-reviewer</code> agent (or <code>plan.md</code> from <code>/story-start</code>)</td>
 <td>Core</td>
 </tr>
 <tr>
@@ -197,7 +197,7 @@ just less well.</p>
 </tr>
 <tr>
 <td>11. Check</td>
-<td>Tests, test-plan rows all passing, impact of changes, spec and design coverage, context freshness</td>
+<td>Tests for every scenario passing, impact of changes, spec and design coverage, context freshness</td>
 <td><code>/story-finish</code> + <code>/opsx-verify</code> + Graphify <code>affected</code> + <code>context-tools check</code></td>
 <td>Core</td>
 </tr>
@@ -607,7 +607,7 @@ auto-approve list in VS Code settings (search settings for "auto approve"). Neve
 </tr>
 <tr>
 <td><strong>Small change (under a day)</strong></td>
-<td><code>/story-start</code> (sizes it) → an OpenSpec change with a Lite technical design, or for a tiny fix just a failing test and the fix → <code>/story-finish</code>.</td>
+<td><code>/story-start</code> (sizes it) → an OpenSpec change, or for a tiny fix just a failing test and the fix → <code>/story-finish</code>.</td>
 </tr>
 <tr>
 <td><strong>Story (1–5 days)</strong></td>
@@ -699,7 +699,7 @@ order.</p>
 <li class="task"><input type="checkbox" aria-label="done"> <code>git config core.hooksPath</code> is <code>.githooks</code> on your clone</li>
 <li class="task"><input type="checkbox" aria-label="done"> Optional: Azure DevOps MCP connected; read-only Graphify commands auto-approved</li>
 </ul>
-    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a></footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a></footer>
   </main>
 </div>
 

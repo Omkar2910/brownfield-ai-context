@@ -7,8 +7,8 @@ keeps the parts that matter in plain files any agent can read:
 - small context files the agent reads, and reviewed in-depth pages it opens when a task needs them, every
   fact anchored to the code it describes;
 - a **Graphify** code map it can query;
-- **OpenSpec** to agree on the plan before code, with a technical design, a test plan and a fresh-eyes
-  design review for every story, and tasks written test-first;
+- **OpenSpec** (its default workflow) to agree on the plan before code, with a fresh-eyes review of every
+  plan and tasks written test-first;
 - reusable **skills**, a **context-steward** agent, and **checks** (git hook, pull request check, agent
   hooks) that keep the context true, plus a readiness score that measures it.
 
@@ -16,7 +16,8 @@ keeps the parts that matter in plain files any agent can read:
 
 | I want to… | Open |
 | --- | --- |
-| Set it up and run a story, step by step, in plain English | **[GUIDE.md](GUIDE.md)** (web page: [docs/index.html](docs/index.html)) |
+| Use the kit: both setups, every skill, a story start to finish in each agent | **[kit/GUIDE.md](kit/GUIDE.md)** (web page: [docs/kit-guide.html](docs/kit-guide.html)) |
+| Set it up in one repo and run a story, step by step, in plain English | **[GUIDE.md](GUIDE.md)** (web page: [docs/index.html](docs/index.html)) |
 | Understand how to create, use and maintain context for any task, with or without OpenSpec | **[CONTEXT-GUIDE.md](CONTEXT-GUIDE.md)** (web page: [docs/context.html](docs/context.html)) |
 | See every tool (core, recommended, optional), Graphify in depth, and which workflow fits which task | **[TOOLBOX.md](TOOLBOX.md)** (web page: [docs/toolbox.html](docs/toolbox.html)) |
 | See how the kit is built: components, layers, when each part runs, where it came from | **[ARCHITECTURE.md](ARCHITECTURE.md)** (web page: [docs/architecture.html](docs/architecture.html)) |
@@ -44,6 +45,9 @@ node .ai-kit/context-tools.cjs doctor
 
 Then open the repo in VS Code, switch Chat to agent mode and type `/context-create`.
 
+For a product with several repos, use a **product workspace** instead: one home repo holds every skill, hook
+and the product context, and each repo holds only its own knowledge. See [kit/GUIDE.md](kit/GUIDE.md).
+
 ## Repository layout
 
 ```
@@ -65,7 +69,7 @@ internal/           working notes for the maintainer (briefing, strategy, valida
 
 ## Status
 
-Kit 2.0.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 22 on Linux (Node 18 or newer is required); written for Windows, macOS and Linux.
+Kit 2.1.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 22 on Linux (Node 18 or newer is required); written for Windows, macOS and Linux.
 Agent hooks are preview features in VS Code; the git hook, the pull request check and the skills work without
 them, and `context-tools.cjs doctor` shows whether they run. The MCP server is a preview.
 Last updated November 2026. MIT licence.

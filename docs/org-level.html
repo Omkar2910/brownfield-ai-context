@@ -98,7 +98,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
     <header class="top">
       <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
       <h1>Organisation level: rolling the kit out across many products</h1>
-      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a>
     </header>
     
 <p>For architecture and engineering-excellence groups who want every team to use the kit the same way. How the
@@ -139,7 +139,7 @@ and run it.</p>
 </tr>
 <tr>
 <td><strong>Story</strong></td>
-<td>Proposal, specs, technical design, test plan, tasks</td>
+<td>Proposal, specs, design (if needed), tasks</td>
 <td><code>openspec/changes/&lt;id&gt;/</code></td>
 <td>Developer + reviewer</td>
 <td>Every story</td>
@@ -380,10 +380,10 @@ node brownfield-ai-context/kit/install.mjs &lt;repo&gt; --graphify --org ../org-
 <td>Search; the skills fall back to it</td>
 </tr>
 <tr>
-<td>OpenSpec story workflow</td>
+<td>OpenSpec</td>
 <td><code>openspec init</code>, then the installer again</td>
-<td><code>--keep-schema</code>, or set <code>schema: spec-driven</code></td>
-<td><code>/story-start</code> writes the technical design and test plan to <code>docs/stories/</code></td>
+<td>Remove <code>openspec/</code></td>
+<td><code>/story-start</code> writes one <code>plan.md</code> per story instead</td>
 </tr>
 <tr>
 <td>Agent hooks</td>
@@ -403,7 +403,7 @@ node brownfield-ai-context/kit/install.mjs &lt;repo&gt; --graphify --org ../org-
 agent can read; only the thin per-tool folders change. Adding support for a new tool means adding its
 folder mapping to the installer, not rewriting context. List the approved tools in
 <code>org-context/context/ai-usage.md</code>.</p>
-    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a></footer>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a></footer>
   </main>
 </div>
 

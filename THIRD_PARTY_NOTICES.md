@@ -2,10 +2,9 @@
 
 ## OpenSpec
 
-`kit/openspec-schema/story-tdd/schema.yaml` and `kit/openspec-schema/story-tdd/templates/proposal.md`
-and `spec.md` are adapted from the "spec-driven" workflow schema of OpenSpec 1.16
-(https://github.com/Fission-AI/OpenSpec). The proposal and specs steps keep OpenSpec's wording; the
-design, test-plan and tasks steps and their templates were written for this kit. OpenSpec's licence:
+Kit versions up to 2.0 included a workflow schema adapted from OpenSpec's "spec-driven" schema
+(https://github.com/Fission-AI/OpenSpec). From 2.1 the kit no longer ships it and uses OpenSpec's own
+default workflow; the licence is kept here for those earlier versions:
 
 ```
 MIT License

@@ -1,6 +1,6 @@
 ---
 name: story-start
-description: Start a user story the spec-driven way - read the story, find what it touches in every repo open in the window, size it, gather only the context it needs, show the pack in the chat, prepare one OpenSpec change per repo that changes, and get a fresh-eyes review of the technical design before any code. Use when asked to "start story <ID>", "plan this story", "pick up <work item>" or before running /opsx-propose.
+description: Start a user story the spec-driven way - read the story, find what it touches in every repo open in the window, size it, gather only the context it needs, show the pack in the chat, prepare one OpenSpec change per repo that changes, and get a fresh-eyes review of the plan before any code. Use when asked to "start story <ID>", "plan this story", "pick up <work item>" or before running /opsx-propose.
 ---
 
 # Story start
@@ -46,7 +46,8 @@ normal-size story without an approved plan.
 4. **Collect relevant knowledge only,** from each repo that changes:
    - Current behaviour: specs in its `openspec/specs/` for the domains touched (if any).
    - Rules: its AGENTS.md lines and the rule files (`.github/instructions/`, `.claude/rules/`) that apply to
-     those files. `node .ai-kit/context-tools.cjs pages-for <file> ...` lists the context lines anchored to them.
+     those files. `node .ai-kit/context-tools.cjs pages-for <file> ...` lists the context lines anchored to
+     them (in a product workspace, run the home repo's copy with `--repo <repo>`).
    - Area pages and traps: its `docs/context/` page for the area, and matching `known-traps.md` entries.
    - Data: the pages in `docs/context/data/tables/` for the tables the story reads or changes.
    - Contracts: the API definitions (OpenAPI files, DTOs) the story changes or calls.
@@ -54,7 +55,7 @@ normal-size story without an approved plan.
 5. **Size it and order it.** Say which path you recommend; the user decides.
    - **Tiny** (one or two files in one repo, no API, data or permission change): no change folder.
      Failing test that shows the problem, fix, run the tests, then `/story-finish`.
-   - **Small** (one repo, one layer or a small slice): one OpenSpec change; "Lite" technical design.
+   - **Small** (one repo, one layer or a small slice): one OpenSpec change (or one `plan.md`).
    - **Normal** (several layers, an API or data change, or more than one repo): one OpenSpec change
      **in each repo that changes**, all with the same change id.
    Order the repos producers first: database and services before the UIs that call them. Put every repo
@@ -72,16 +73,16 @@ normal-size story without an approved plan.
    or not OpenSpec is set up: it is what the user reads and clicks through. Link every file you name,
    with its path from the workspace, so it opens with one click. Keep it under ~150 lines.
 8. **Save the change folders** (not for tiny stories).
-   - Choose one change id for the whole story, in kebab-case, starting with the work item number and a
-     verb (e.g. `wi1234-add-report-export`). Use the same id in every repo.
+   - Choose one change id for the whole story: lowercase kebab-case, the work item number first, then a
+     verb (e.g. `48213-add-report-export`). Use the same id in every repo.
    - For **each repo that changes and has `openspec/`**, in that repo's folder: run
-     `openspec new change <change-id>` FIRST (it records the workflow from that repo's
-     `openspec/config.yaml`), then save `openspec/changes/<change-id>/context.md`: the full pack, with
+     `openspec new change <change-id>` FIRST, then save `openspec/changes/<change-id>/context.md`: the full pack, with
      that repo's section first and the other repos' sections kept short, so a reviewer of this repo
      still sees the whole story and where the other half lives.
    - For a repo that changes but has **no `openspec/`**: say so plainly and ask whether to set it up now
-     (`openspec init --tools github-copilot --no-copilot-cloud`, then the kit installer again in that
-     repo) or plan that repo without OpenSpec (see step 9). Do not silently treat the whole story as
+     (`openspec init --tools github-copilot --no-copilot-cloud`; in a product workspace
+     `openspec init --tools none`, because the home repo already has the OpenSpec commands) or plan that
+     repo without OpenSpec (see step 9). Do not silently treat the whole story as
      "no OpenSpec" because one repo lacks it.
    - Then add one line to the chat per repo: the clickable path of each `context.md` you wrote.
 9. **Hand over, one repo at a time, in the order from step 5.**
@@ -89,22 +90,19 @@ normal-size story without an approved plan.
      ("in report-service"), because in a window with several repos the commands and the terminal
      otherwise default to the first folder. When propose says the change exists, choose **continue**.
      Plan the producer first; plan a consumer only after the producer's plan is approved, and point it at
-     the producer's `design.md` for the API instead of restating it. Do not write the change documents
-     yourself. With the kit's `story-tdd` workflow (check `schema:` in that repo's
-     `openspec/config.yaml`), propose creates proposal, specs, `design.md` (the technical design
-     document), `test-plan.md` and test-first `tasks.md`.
-   - Without OpenSpec (small or normal story, in that repo): write two documents in that repo's
-     `docs/stories/<story-id>/` and wait for approval before changing any code:
-     - `technical-design.md` from `references/technical-design.template.md` (the "Lite" form for a
-       small story: Overview, Approach, Changes by layer, Risks). If the team has its own TDD skill,
-       use that instead.
-     - `test-plan.md` from `references/test-plan.template.md`: each acceptance check mapped to a
-       named test, plus extra cases and regression.
-     Then list the ordered steps, test-first: for each layer, write its tests from the plan, confirm
-     they fail, then implement until they pass.
-10. **Fresh-eyes review of the plan** (small and normal stories). Once `design.md` and `test-plan.md` exist
-   in a repo (or `technical-design.md` without OpenSpec), ask the `design-reviewer` agent to review them
-   before any code is written. It starts with no memory of this chat, so a plan that only makes sense to
+     the producer's specs (and its `design.md`, if it has one) for the API instead of restating it. Do not
+     write the change documents yourself: OpenSpec's own workflow creates `proposal.md`, the delta specs,
+     `design.md` when the change needs one, and `tasks.md`.
+     **In a product workspace** the OpenSpec commands live in the home repo: run every `openspec`
+     command inside the repo that changes (`cd <repo>` first), never in the home repo.
+   - Without OpenSpec (small or normal story, in that repo): write one document,
+     `docs/stories/<story-id>/plan.md`, from `references/plan.template.md`, and wait for approval before
+     changing any code.
+   - If the team has its own skill for a technical design or test scenarios in its house format, run it
+     now, after the plan exists, and save its output next to the plan.
+10. **Fresh-eyes review of the plan** (small and normal stories). Once the change's documents exist in a
+   repo (or `plan.md` without OpenSpec), ask the `design-reviewer` agent to review them before any code is
+   written. It starts with no memory of this chat, so a plan that only makes sense to
    the person who wrote it gets caught. Run it as a subagent if your tool supports that (for example
    "run the design-reviewer agent on change <change-id> in <repo>"); otherwise the user opens a new chat
    with that agent and gives it the change id. Show its findings; the user decides what to change.
@@ -114,4 +112,4 @@ End your reply with this block, filled in:
 - **What changed:** the change folders and `context.md` files created, as links, per repo.
 - **Checks:** the code map queries run per repo, and anything you could not find.
 - **Next:** the exact next command per repo, in order (for example "in report-service:
-  `/opsx-propose wi1234-add-report-export`, choose continue"), then the design review, then `/opsx-apply`.
+  `/opsx-propose 48213-add-report-export`, choose continue"), then the design review, then `/opsx-apply`.

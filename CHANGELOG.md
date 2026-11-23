@@ -1,5 +1,40 @@
 # Changelog
 
+## 2.1.0 (November 2026)
+
+Two ways to set the kit up, OpenSpec back to its default documents, and a user guide inside the kit.
+
+**Added**
+- **Product workspace** (recommended for a product with several repos): one home repo holds every skill,
+  agent, hook, the context tool and the product context; each repo holds only its own knowledge, so each
+  skill appears once in the editor and the kit is upgraded once.
+  - `install.mjs --create-workspace <home>` creates the home repo; `install.mjs <repo> --workspace <home>`
+    registers a repo (catalogue, `product.code-workspace`, commit check from the home repo, a small stamp,
+    the PR template, and with `--ci` a pipeline that checks out the home repo).
+  - `--upgrade` with `--workspace` removes a repo's own copies of the kit and of OpenSpec's tool files.
+  - The home repo's session note lists every repo, those without context yet and those not registered;
+    `doctor` in the home repo checks every repo.
+  - `node scripts/hub.mjs claude` starts Claude Code in the home repo with every repo added.
+  - `/product-context update` refreshes only the product pages a new or removed repo affects.
+- `kit/GUIDE.md`: the kit's user guide (both setups, every skill, a story start to finish in each agent).
+- A discovery pass at the start of `/context-create deep` (stack, file categories, domains, style per
+  file kind).
+- Change ids start with the work item number as it is: `48213-add-report-export`.
+
+**Changed**
+- OpenSpec uses its **default** documents (proposal, specs, a design when needed, tasks). The kit no
+  longer installs the custom `story-tdd` schema; `openspec/config.yaml` gets only a short context and
+  test-first guidance. `--upgrade` switches a repo back to `schema: spec-driven`; changes already started
+  with `story-tdd` keep it until archived. A team's own design or test-scenario format runs as its own
+  skill after `/opsx-propose`.
+- Without OpenSpec, `/story-start` writes one `plan.md` instead of a technical design and a test plan.
+- `/story-finish` and the design reviewer check that every scenario has a test, from the specs and tasks.
+- The product hub skill is now `product-context`.
+- Git hooks find the context tool next to themselves, so one `.githooks/` folder serves every repo.
+
+**Removed**
+- `kit/openspec-schema/` and `--keep-schema`.
+
 ## 2.0.0 (November 2026)
 
 The kit now works the same in GitHub Copilot, Claude Code and OpenAI Codex, shows whether its checks run,
@@ -55,7 +90,7 @@ stops and asks for `--upgrade`.
 - `context-tools pages-for <file>`.
 - `/story-start` works without a person in the chat: it records assumptions and stops after the plan.
 - Claude Code hooks are merged into an existing `.claude/settings.json` instead of asking you to merge.
-- `ROADMAP.md` (maturity levels), `tools/test-kit.sh` (end-to-end test of the kit, 37 checks).
+- `ROADMAP.md` (maturity levels), `tools/test-kit.sh` (end-to-end test of the kit).
 
 **Removed**
 - `kit/optional/azure-pipelines-context-check.yml` (now `.ai-kit/ci/azure-pipelines.yml`, installed).

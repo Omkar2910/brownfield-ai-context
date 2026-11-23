@@ -11,7 +11,7 @@ and run it.
 | **Organisation** | The few rules every repo must follow; shared platforms; AI usage policy; kit version; readiness weights | One `org-context` repo | Architecture / engineering excellence | Rarely; reviewed by the owners |
 | **Product** | Catalogue of repos, system architecture, end-to-end flows, glossary, product-wide platform rules | One `product-context` hub per product ([MULTI-REPO.md](MULTI-REPO.md)) | Product tech leads | When flows or contracts change |
 | **Repo** | `AGENTS.md`, rule files, in-depth pages, specs, code map | Each repo | The owning team | With every PR that changes the code it describes |
-| **Story** | Proposal, specs, technical design, test plan, tasks | `openspec/changes/<id>/` | Developer + reviewer | Every story |
+| **Story** | Proposal, specs, design (if needed), tasks | `openspec/changes/<id>/` | Developer + reviewer | Every story |
 | **Personal** | A developer's own preferences | Their VS Code profile | The developer | Any time; never team rules |
 
 **The rule for where something goes:** put it at the lowest layer where it is true, and only once. A rule true
@@ -124,7 +124,7 @@ Every part of the kit is a set of plain files with one owner, so each can be add
 | Organisation rules | `install.mjs <repo> --org <org-context>` | Delete `org/` rule folders and the `org` entry in `.ai-kit/kit.json` | The repo's own rules |
 | Product hub | `install.mjs --create-hub`, clone it next to the repos | Stop opening it in the window | Each repo's own context; `repo:path` anchors are simply not checked |
 | Code map | `--graphify` | Remove the MCP entry and `graphify-out/` | Search; the skills fall back to it |
-| OpenSpec story workflow | `openspec init`, then the installer again | `--keep-schema`, or set `schema: spec-driven` | `/story-start` writes the technical design and test plan to `docs/stories/` |
+| OpenSpec | `openspec init`, then the installer again | Remove `openspec/` | `/story-start` writes one `plan.md` per story instead |
 | Agent hooks | Installed by default | Delete `.github/hooks/ai-context.json` or the kit entries in `.claude/settings.json` | Git hook, PR check, the skills' final block |
 | MCP server | `--mcp` | Remove the `ai-context` entry from the MCP files | The command line and hooks |
 

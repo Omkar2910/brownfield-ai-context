@@ -1,0 +1,33 @@
+# AI context check for pull requests in a repo that belongs to a product workspace (Azure Pipelines).
+# The check itself lives in the home repo, so this pipeline checks out both.
+# 1. Replace <project>/<home-repo> below with the home repo's Azure Repos project and name.
+# 2. Create a pipeline from this file and add it as build validation on the main branch (warnings first).
+
+trigger: none
+pr:
+  branches:
+    include: ['*']
+
+resources:
+  repositories:
+    - repository: home
+      type: git
+      name: <project>/__HOME__
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+  - checkout: self
+    path: s/repo
+    fetchDepth: 0
+  - checkout: home
+    path: s/__HOME__
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+  - script: |
+      TARGET="origin/${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}"
+      node ../__HOME__/.ai-kit/context-tools.cjs ci --repo . --base "$TARGET"
+    workingDirectory: $(Pipeline.Workspace)/s/repo
+    displayName: AI context check

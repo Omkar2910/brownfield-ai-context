@@ -5,13 +5,13 @@
 1. **The problem (1 min).** Agents guess our conventions in old code; every developer prompts differently;
    each new AI platform rebuilds its own private, unreviewed picture of our systems.
 2. **The idea (2 min).** Knowledge in the repo, reviewed like code, readable by any agent; a fixed story
-   contract (spec, design, test plan); checks that do not care who wrote the code. Show the four-layer
+   contract (specs and test-first tasks); checks that do not care who wrote the code. Show the four-layer
    picture from ROADMAP.md: knowledge, checks, workflow, thin adapters.
 3. **Live demo (5 min).** In this order:
    - `node .ai-kit/context-tools.cjs doctor`: what is installed, and proof the hooks ran.
    - `readiness`: the score, the caps, the three gaps.
    - `pages-for <a central class>`: "what do I need to know before changing this?"
-   - A real story's change folder: design, test plan, the design reviewer's findings.
+   - A real story's change folder: proposal, specs, tasks, the design reviewer's findings.
    - A pull request where the check flagged a stale line.
 4. **Level 2 → 3 (2 min).** Same kit, more tools: Copilot, Claude Code, Codex today; cloud agents through the
    PR check and MCP server. We stay free to change tools because the knowledge is ours.

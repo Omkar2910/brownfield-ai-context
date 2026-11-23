@@ -5,12 +5,14 @@
 //   node scripts/hub.mjs workspace <area|repo>...     write workspaces/<name>.code-workspace (+ direct non-platform dependencies)
 //        [--no-deps] [--name <file-name>]
 //   node scripts/hub.mjs impact <repo>                which repos depend on <repo> (calls, uses, loads)
-//   node scripts/hub.mjs status                       per repo: cloned? kit installed? context check result
+//   node scripts/hub.mjs status                       per repo: cloned? context? context check result
 //   node scripts/hub.mjs clone <area|repo|all> [--run] print (or run) git clone for missing repos
 //   node scripts/hub.mjs contracts [--sync]           compare services' API contracts with contracts/<service>/
 //   node scripts/hub.mjs check                        every [anchor: repo:path] in the hub resolves in the cloned repos;
 //                                                     lines whose anchored code changed since their page was verified
-//   node scripts/hub.mjs readiness [--json]           readiness score of the hub's own context (scripts/context-tools.cjs)
+//   node scripts/hub.mjs readiness [--json]           readiness score of the hub's own context
+//   node scripts/hub.mjs claude [<area|repo>...]      start Claude Code in this home repo with the repos added
+//                                                     (their CLAUDE.md and rules load too); default: every cloned repo
 //
 // Repos are expected as sibling folders of the hub (change with "reposDir" in catalog.json).
 
@@ -24,11 +26,13 @@ const catalog = JSON.parse(fs.readFileSync(path.join(hub, 'catalog.json'), 'utf8
 const reposDir = path.resolve(hub, catalog.reposDir || '..');
 const repos = catalog.repos;
 const byName = new Map(repos.map(r => [r.name, r]));
+// The context tool: the home repo's own copy (product workspace), or a copy kept with the hub scripts.
+const hubTool = [path.join(hub, '.ai-kit', 'context-tools.cjs'), path.join(hub, 'scripts', 'context-tools.cjs')].find(p => fs.existsSync(p));
 const [cmd, ...rest] = process.argv.slice(2);
 const flag = f => rest.includes(f);
 const optVal = f => { const i = rest.indexOf(f); return i >= 0 ? rest[i + 1] : undefined; };
 const words = rest.filter((a, i) => !a.startsWith('--') && !['--name'].includes(rest[i - 1]));
-const repoDir = name => path.join(reposDir, name);
+const repoDir = name => { const r = byName.get(name); return r && r.path ? path.resolve(hub, r.path) : path.join(reposDir, name); };
 const cloned = name => fs.existsSync(path.join(repoDir(name), '.git'));
 const deps = r => [...(r.calls || []), ...(r.uses || [])];
 const TYPE_LABEL = { 'mfe-shell': 'Micro-frontend shell', 'mfe-remote': 'Micro-frontend', service: 'Backend service', library: 'Shared library' };
@@ -134,7 +138,7 @@ function cmdStatus() {
   for (const r of repos) {
     const dir = repoDir(r.name);
     if (!cloned(r.name)) { console.log(`  ✗ ${r.name.padEnd(22)} not cloned`); continue; }
-    const tool = ['.ai-kit/context-tools.cjs', '.github/hooks/scripts/context-tools.cjs', '.claude/hooks/context-tools.cjs'].map(p => path.join(dir, p)).find(p => fs.existsSync(p));
+    const tool = ['.ai-kit/context-tools.cjs', '.github/hooks/scripts/context-tools.cjs', '.claude/hooks/context-tools.cjs'].map(p => path.join(dir, p)).find(p => fs.existsSync(p)) || hubTool;
     let result = 'kit not installed';
     if (tool) {
       try { result = execFileSync('node', [tool, 'check', '--repo', dir], { encoding: 'utf8' }); }
@@ -252,13 +256,23 @@ function cmdCheck() {
   if (errors) process.exitCode = 1;
 }
 function cmdReadiness() {
-  const tool = path.join(hub, 'scripts', 'context-tools.cjs');
-  if (!fs.existsSync(tool)) { console.log('scripts/context-tools.cjs is missing: copy it from the kit (kit/files/.ai-kit/context-tools.cjs).'); process.exitCode = 2; return; }
+  const tool = hubTool;
+  if (!tool) { console.log('The context tool is missing: copy kit/files/.ai-kit/context-tools.cjs to scripts/ (or install the kit into this repo).'); process.exitCode = 2; return; }
   try { process.stdout.write(execFileSync('node', [tool, 'readiness', '--repo', hub, ...(flag('--json') ? ['--json'] : [])], { encoding: 'utf8' })); }
   catch (e) { process.stdout.write(String(e.stdout || e.message)); process.exitCode = 1; }
   console.log('Cross-repo anchors are checked separately: node scripts/hub.mjs check');
 }
 
-const commands = { map: cmdMap, check: cmdCheck, readiness: cmdReadiness, workspace: cmdWorkspace, impact: cmdImpact, status: cmdStatus, clone: cmdClone, contracts: cmdContracts };
+function cmdClaude() {
+  const names = (words.length ? select(words) : repos.map(r => r.name)).filter(cloned);
+  const addDirs = names.flatMap(n => ['--add-dir', repoDir(n)]);
+  console.log(`Starting Claude Code in ${path.basename(hub)} with: ${names.join(', ') || '(no cloned repos)'}`);
+  try {
+    execFileSync('claude', [...addDirs, ...rest.filter(a => a.startsWith('--'))], { stdio: 'inherit', cwd: hub, shell: process.platform === 'win32',
+      env: { ...process.env, CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: '1' } });
+  } catch (e) { if (e.code === 'ENOENT') console.log('Claude Code (the "claude" command) is not installed or not on PATH.'); process.exitCode = e.status || 1; }
+}
+
+const commands = { claude: cmdClaude, map: cmdMap, check: cmdCheck, readiness: cmdReadiness, workspace: cmdWorkspace, impact: cmdImpact, status: cmdStatus, clone: cmdClone, contracts: cmdContracts };
 if (commands[cmd]) commands[cmd]();
 else console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 15).map(l => l.replace(/^\/\/ ?/, '')).join('\n'));

@@ -1,6 +1,6 @@
 # AI Context Kit: Architecture
 
-Kit 2.0.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
+Kit 2.1.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
 in [GUIDE.md](GUIDE.md); how to roll it out across an organisation is in [ORG-LEVEL.md](ORG-LEVEL.md).
 
 ## Summary
@@ -63,13 +63,13 @@ core is plain files and one script.
 | `/context-assess` | After pages are reviewed | Rates each dimension within the evidence cap; the tool computes the score |
 | `/context-assess` | After review, then each sprint or quarter | Rates each dimension 0–5 within evidence caps; produces the readiness score |
 | `/story-start` | Start of each story | Reads the story, searches every repo in the window, groups repos, sizes the story, creates one change per repo |
-| `/story-finish` | End of each story | Tests, test plan, impact, context check, Context impact table, area page offer, PR description |
+| `/story-finish` | End of each story | Tests per scenario, impact, context check, area page offer, PR description |
 | `/context-update` | When checks flag stale lines, after a migration or a kit upgrade | Fixes only the flagged lines; converts page format; refreshes table pages |
 | `/context-learn` | When the agent was corrected | Turns the correction into a permanent rule |
 | `/onboard-me` | A new joiner's first day | 30-minute guided tour from the same knowledge |
 | Context-steward agent | Monthly or on request | A restricted agent that may only edit knowledge files; a guard hook blocks code and org-rule edits |
-| Design-reviewer agent | After the technical design and test plan exist | Read-only review with no memory of the chat that wrote the plan: traceability, truth to the code, rules, contracts, tests, context impact |
-| `/hub-context` (in the product hub) | Once per product | Writes system architecture, end-to-end flows, glossary and platform rules, anchored into the repos |
+| Design-reviewer agent | After the change's documents exist | Read-only review with no memory of the chat that wrote the plan: traceability, truth to the code, rules, contracts, tests, context impact |
+| `/product-context` (in the product hub) | Once per product | Writes system architecture, end-to-end flows, glossary and platform rules, anchored into the repos |
 
 All skills are kit-owned and installed per tool: `.github/skills/` (Copilot), `.claude/skills/` (Claude Code),
 `.agents/skills/` (Codex). Every skill ends its reply with **What changed · Checks · Next**, so the person sees
@@ -82,7 +82,7 @@ the result whether or not the agent hooks run.
 | Context tool | `.ai-kit/context-tools.cjs` (one file, no dependencies) | Called by every check below | Reads anchors and page metadata; `check`, `status`, `doctor`, `readiness`, `pages-for`, `migrate`, `schema-import`, `ci`, `mcp` and four hook commands; logs each hook run in `.git/ai-kit/` |
 | Agent hooks | `.github/hooks/ai-context.json` (Copilot), `.claude/settings.json` (Claude Code) | Chat start, after each edit, before the agent finishes | Health note; "this file is described by line 12"; one request to re-check lines the agent's own edits touched. Duplicate calls ignored |
 | Git hooks | `.githooks/pre-commit`, `post-commit`, `post-merge`, `post-checkout` | Commit, merge, branch switch | Refuse commits with broken anchors; rebuild the code map in the background |
-| PR template | `.azuredevops/pull_request_template.md` | Every pull request | Checklist: design reviewed, test plan passing, knowledge updated |
+| PR template | `.azuredevops/pull_request_template.md` | Every pull request | Checklist: plan reviewed, every scenario tested, knowledge updated |
 | Pull request check | `.ai-kit/ci/azure-pipelines.yml`, or `.github/workflows/ai-context.yml` with `--ci github` | Every pull request, whoever or whatever wrote it | `context-tools ci`: the check, a story check, the readiness score |
 | MCP server (preview) | `context-tools.cjs mcp`, registered with `--mcp` | When an agent calls it | The same questions the hooks answer, for agents that work without the editor |
 
@@ -90,13 +90,12 @@ the result whether or not the agent hooks run.
 
 | Component | Installed at | What it does | Owner |
 | --- | --- | --- | --- |
-| Story workflow | `openspec/schemas/story-tdd/` | Adds a technical design document, a test plan and test-first tasks to every OpenSpec change | Kit (schema), team (templates) |
 | OpenSpec settings | `openspec/config.yaml` | Points OpenSpec at the context and adds rules, including your own TDD skill | Team |
 | Code map connection | `.vscode/mcp.json`, `.graphifyignore` | Lets the agent query Graphify; keeps kit and story files out of the map | Team |
 | Version stamp | `.ai-kit/kit.json` | Which kit version, which tools and which org rules this repo runs | Kit |
 | Readiness weights | `.ai-kit/readiness.json` | Weights and bands, usually synced from the org | Org or team |
 | Installer | `kit/install.mjs` | Installs, upgrades, syncs org rules, creates hubs and org repos; never overwrites team files | Kit repo only |
-| Product hub template | `kit/hub-template/` | Catalogue, platform rules, flows, contracts, `/hub-context`, `hub.mjs` | Created once per product |
+| Product hub template | `kit/hub-template/` | Catalogue, platform rules, flows, contracts, `/product-context`, `hub.mjs` | Created once per product |
 | Org template | `kit/org-template/` | Org rules, shared platforms, AI usage policy, kit version, readiness weights | Created once per organisation |
 
 ## Knowledge model
@@ -139,7 +138,7 @@ traceable but count as unreviewed.
 | API/integration | 10% | `api.md` | Endpoints generated from OpenAPI or controllers |
 | Dependencies | 10% | `dependencies.md`, hub catalogue | Generated from build files and the catalogue |
 | Security | 10% | `security.md` | Written, anchored to security config |
-| Testing | 5% | `testing.md`, each story's test plan | Written |
+| Testing | 5% | `testing.md` | Written |
 | Runtime/operations | 5% | `operations.md` | Written, anchored to config and pipelines |
 | Decision history | 5% | `decisions/`, archived designs | Written per decision |
 | Provenance | 5% | All pages | Measured: share of statements anchored |
@@ -157,24 +156,23 @@ Every check calls the same context tool, so a rule is defined once.
 
 ![People approve the plan and the code; the agent does the rest](docs/images/story-flow.png)
 
-Each story that changes behaviour gets a folder per repo it changes, `openspec/changes/<change-id>/`, with six
-documents created in a fixed order. Each needs the ones before it, so the agent cannot write tasks before the
-design and test plan exist.
+Each story that changes behaviour gets a folder per repo it changes, `openspec/changes/<change-id>/`, with
+OpenSpec's own documents, created in a fixed order:
 
 | Order | Document | Holds | Created by | Needs |
 | --- | --- | --- | --- | --- |
 | 0 | `context.md` | The story pack: acceptance criteria, files per repo, rules, open questions | `/story-start` | — |
-| 1 | `proposal.md` | Why, what changes, acceptance criteria | `/opsx-propose` | — |
+| 1 | `proposal.md` | Why and what changes | `/opsx-propose` | — |
 | 2 | `specs/<capability>/spec.md` | Required behaviour as requirements and when/then scenarios | `/opsx-propose` | proposal |
-| 3 | `design.md` | Technical design document: changes per layer, API and data changes, security, decisions, risks, rollback, Context impact | `/opsx-propose` (or your own TDD skill) | proposal |
-| 4 | `test-plan.md` | Each scenario and acceptance criterion mapped to a named test, plus extra cases and regression | `/opsx-propose` | specs, design |
-| 5 | `tasks.md` | Ordered tasks, tests first in each slice | `/opsx-propose` | specs, design, test plan |
+| 3 | `design.md` | Only when needed: approach, decisions, risks | `/opsx-propose` | proposal |
+| 4 | `tasks.md` | Ordered tasks; the kit's config asks for each test before its code | `/opsx-propose` | specs (and design) |
 
-After approval, `/opsx-apply` works through the tasks, `/opsx-verify` checks the code against specs and
-design, and `/story-finish` checks the test plan and the Context impact table. `/opsx-archive` then merges the
-specs into `openspec/specs/`, the permanent record. Tiny fixes skip the folder: failing test, fix, finish.
-The workflow is a kit-made variant of OpenSpec's built-in one: the proposal and specs steps are OpenSpec's
-own, the design, test plan and tasks steps were written for the kit.
+Then the design reviewer checks the plan with fresh eyes, a person approves it, `/opsx-apply` works
+through the tasks, `/opsx-verify` checks the code against the specs, and `/story-finish` checks every
+scenario has a passing test. `/opsx-archive` merges the specs into `openspec/specs/`, the permanent record.
+Tiny fixes skip the folder: failing test, fix, finish. Without OpenSpec, `/story-start` writes one
+`plan.md` instead. A team's own technical design or test-scenario format runs as its own skill after
+`/opsx-propose`, so OpenSpec itself stays unchanged and upgrades cleanly.
 
 ## Many repos
 
@@ -204,7 +202,7 @@ agent in the way that suits how often it changes. Details and rollout: [ORG-LEVE
 | 1. Organisation | Rules every repo must follow (secrets, personal data, identity and permission services, API error format, AI usage), shared platforms, readiness weights, kit version | One org context repo (`--create-org`) | Architecture / engineering excellence group | Rule files copied into each repo by `install.mjs --org`, stamped with the org repo's commit |
 | 2. Product | Catalogue of repos, system architecture, end-to-end flows, glossary, product platform rules | One hub per product (`--create-hub`) | Product tech leads | Opened as a folder in the story's VS Code window; read on demand |
 | 3. Repo | `AGENTS.md`, rule files, in-depth pages, specs, code map | Each repo | The team that owns the repo | Loaded by the agent (always, per file type, or on demand) |
-| 4. Story | Proposal, specs, technical design, test plan, tasks | `openspec/changes/<id>/` in each repo it changes | The developer, approved by a reviewer | Read during that story; merged into specs on archive |
+| 4. Story | Proposal, specs, design (if needed), tasks | `openspec/changes/<id>/` in each repo it changes | The developer, approved by a reviewer | Read during that story; merged into specs on archive |
 | 5. Personal | Each developer's own preferences | Their VS Code profile | The developer | Loaded only for them; never holds team rules |
 
 Organisation rules are copied rather than linked because GitHub's organisation-level instructions require
@@ -221,11 +219,11 @@ miss. Each later net exists because the earlier ones can be skipped.
 
 | Net | Trigger | What it catches | Who acts |
 | --- | --- | --- | --- |
-| 1. Context impact | Writing the technical design | The design lists every page the change makes out of date (e.g. `data.md`, `api.md`, `screens.md`, a hub flow) | Agent, approved by the developer |
+| 1. Design review | Before code | The fresh-eyes reviewer lists the context pages the plan makes out of date (`pages-for` on the files it changes) | Agent, approved by the developer |
 | 2. After-edit hook | Each agent edit | "This file is described by `data.md` line 14" | Agent |
 | 3. Before-finish hook | Agent says it is done | Lines anchored to files it edited that it didn't revisit (asked once) | Agent |
 | 4. Commit check | Each commit | Broken anchors: commit refused | Developer |
-| 5. Story finish | End of story | Every Context impact row updated; stale anchors since main; PR lists context changes | Agent + reviewer |
+| 5. Story finish | End of story | Pages anchored to changed files updated or still true; stale anchors since main; PR lists context changes | Agent + reviewer |
 
 Behind these, a monthly steward run and the weekly hub check catch drift that slipped through, and
 `/context-learn` turns every agent correction into a rule.
@@ -259,7 +257,7 @@ worse agent results, not better. `hub.mjs status` shows every repo's score and t
 | `… --mcp` | Registers the kit's MCP server for the chosen tools |
 | `… --org <org-context>` | Copies the organisation's rules and readiness weights into the repo, stamped |
 | `… --upgrade` | Replaces kit-owned files with this version, moves a 1.x layout to 2.x, re-syncs org rules; team files untouched. Then `context-tools migrate` updates page format, with no AI and no tokens |
-| `… --keep-schema` | With OpenSpec: installs the story workflow but doesn't make it the default |
+| `… --create-workspace <home>` / `<repo> --workspace <home>` | Product workspace: the tools once in a home repo; each repo keeps only its knowledge |
 | `… --dry-run` | Shows everything it would do; changes nothing |
 | `node kit/install.mjs --create-hub <folder>` | Creates a product context hub |
 | `node kit/install.mjs --create-org <folder>` | Creates an organisation context repo |
@@ -349,7 +347,7 @@ licence; credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), and the l
 
 What is specific to this kit is the combination, aimed at brownfield Java and Angular systems and usable from
 Copilot, Claude Code and Codex: small reviewed knowledge with anchors, one tool checking it in chat, at commit and before a PR, the
-story workflow with a technical design and test plan, multi-repo and organisation layers, and an
+story workflow with a fresh-eyes plan review and test-first tasks, a product workspace, organisation layers, and an
 evidence-capped readiness score.
 
 ## Limits and what is not proven yet

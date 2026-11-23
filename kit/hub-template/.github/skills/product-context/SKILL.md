@@ -1,9 +1,9 @@
 ---
-name: hub-context
-description: Create or refresh the product-level context in this hub - system architecture, end-to-end flows across micro-frontends and services, glossary, platform rules (auth, errors, logging, micro-frontend loading) and cross-service decisions, every fact anchored into the repos with repo:path anchors. Use when asked for "product context", "common context across services", "system architecture document" or a "hub baseline".
+name: product-context
+description: Create, refresh or update (after repos were added) the product-level context in this home repo or hub - system architecture, end-to-end flows across micro-frontends and services, glossary, platform rules (auth, errors, logging, micro-frontend loading) and cross-service decisions, every fact anchored into the repos with repo:path anchors. Use when asked for "product context", "/product-context update", "common context across services", "system architecture document", or after a repo joined the workspace.
 ---
 
-# Hub context
+# Product context
 
 Goal: the knowledge no single repo owns, written once, reviewed by the tech leads, kept current by
 checks against the cloned repos. Per-repo detail (its data, API, screens, security) stays in each
@@ -33,6 +33,18 @@ repo's `docs/context/` (made with `/context-create deep` there); this hub links 
 5. **Hand over the review:** each page's owner (the catalog owner of the repos it covers, or the tech
    lead) reviews it, then sets `status: stable` and adds a line under `verified:` (`- { by: "human:<name>", at: "<date>" }`). Changes reach the
    hub through pull requests reviewed by the tech leads.
+
+## Update after repos were added or removed (`/product-context update`)
+1. Run `node scripts/hub.mjs map` (system map from `catalog.json`) and `node scripts/hub.mjs status`.
+2. For each repo in the catalogue that no product page mentions yet: make sure its `catalog.json` entry
+   has type, description, owner, areas and calls/uses/loads (read its config, HTTP clients and routes to
+   fill them, then show the user). If the repo has no `AGENTS.md`, tell the user to run `/context-create`
+   for it first: product pages link to repo pages, they do not replace them.
+3. Change only the pages the new repo affects: the architecture page (where it sits, what it talks to),
+   the flows it takes part in, glossary terms it introduces, platform rules it uses. Anchor every new
+   line into the repo (`[anchor: <repo>:<path>]`). Leave other pages alone.
+4. For a removed repo: list every line that names it or anchors into it, and ask before deleting them.
+5. Run `node scripts/hub.mjs check`. Changed pages go back to `status: draft` until their owner reviews.
 
 ## Keeping it current
 - When a story changes a cross-repo flow, contract or platform rule, its technical design lists the hub

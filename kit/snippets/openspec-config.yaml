@@ -1,27 +1,15 @@
+
 # --- added by the AI context kit: edit to fit this service, keep it short ---
+# Sent with every OpenSpec step, so every line here costs tokens on every step.
 context: |
   Read AGENTS.md first. Open the files it lists under "Where to look" only when this change needs them.
   Follow the rules in AGENTS.md and the rule files (.github/instructions/ or .claude/rules/) for every file you change.
   If the graphify tools are available, use them to find relevant code and its dependents before reading files.
-  Keep artifacts short and concrete; prefer bullet points.
-
-rules:
-  proposal:
-    - List the files, endpoints, components and data the change touches, and say whether any API contract changes
-    - Name any new permission, configuration key or database change
-  design:
-    - Describe API changes as request/response examples, not prose
-    # Have your own TDD skill write the technical design (uncomment and use its name):
-    # - Write this artifact with the tdd-doc skill, using our team's TDD format
-  test-plan:
-    - Every new endpoint or UI action has a test for the allowed and the denied case
-    # Name your test stack so the plan uses it, for example:
-    # - Backend tests use JUnit 5, Mockito and Testcontainers; UI tests use Jasmine and Karma
 
 operations:
   apply:
     guidance:
-      - Run the tests named in AGENTS.md before marking a task complete
+      - Write the test for each task before its code, and run the tests named in AGENTS.md before marking a task complete
   archive:
     guidance:
       - Before archiving, list any context lines (AGENTS.md, rule files, docs/context) this change made out of date, and update them

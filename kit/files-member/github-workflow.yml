@@ -1,0 +1,26 @@
+# AI context check for pull requests in a repo that belongs to a product workspace (GitHub Actions).
+# The check itself lives in the home repo, so this workflow checks out both.
+# Replace <owner>/__HOME__ with the home repo. If it is private, add a token with read access as HOME_REPO_TOKEN.
+name: AI context check
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  context:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: repo
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: <owner>/__HOME__
+          path: __HOME__
+          token: ${{ secrets.HOME_REPO_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node ../__HOME__/.ai-kit/context-tools.cjs ci --repo . --base "origin/${{ github.base_ref }}"
+        working-directory: repo

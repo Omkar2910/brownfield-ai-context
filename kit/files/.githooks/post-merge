@@ -1,3 +1,4 @@
 #!/bin/sh
-# Keeps the Graphify code map fresh (no-op without Graphify).
-exec "$(git rev-parse --show-toplevel)/.githooks/graph-refresh"
+# Keeps the Graphify code map fresh (no-op without Graphify). Works for a repo that uses its own
+# .githooks and for a repo whose hooks come from the product home repo.
+exec "$(dirname "$0")/graph-refresh"

@@ -233,7 +233,7 @@ greenfield project's constitution. That is compatible with the research above, a
    leaving things out, and confident but wrong explanations of "why". Every page starts as a draft with
    its unproven claims listed under "Unverified"; its owner reviews it against the code.
 3. **It is kept current by the same machinery as everything else**: anchors on every claim, the checks,
-   and each story's technical design listing the pages it makes out of date.
+   and each story's plan review listing the pages it makes out of date.
 
 **The pages** (`/context-create deep` creates them in `docs/context/`, one per dimension):
 

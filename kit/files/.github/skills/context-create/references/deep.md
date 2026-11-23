@@ -9,6 +9,17 @@ and only links here.
 - Refresh the code map if Graphify is installed: `graphify update .`
 - Older documentation is a SOURCE, never copied: every line you keep must be confirmed in today's code.
 
+## 0. Discovery pass (notes only, not committed)
+Before writing any page, look at the whole repo once, in this order, and keep short notes in the chat:
+1. **Stack:** languages, frameworks, build tool, test tools, main libraries (build files).
+2. **File categories:** what kinds of files exist and where (controllers, services, repositories,
+   entities, migrations, components, routes, tests, config), with counts.
+3. **Domains:** the business areas the code is organised around, and the main classes of each.
+4. **Style per file kind:** how each category is usually written (naming, error handling, tests).
+These notes decide which pages to write and feed the rule files (one per file kind). If an earlier
+generated analysis exists (for example a results folder from another tool), use it as this pass's input,
+and keep only what today's code confirms.
+
 ## 1. Plan the pages (templates in `pages/`)
 - Service: architecture, domain, data, api, dependencies, security, testing, operations.
 - UI / micro-frontend: architecture, domain, screens, api (calls it makes), dependencies, security,
@@ -59,6 +70,9 @@ testing, operations, decisions. With `deep <page>`, do only that page.
   the Unverified lines, then sets `status: stable` and adds a line under `verified:` (`- { by: "human:<name>", at: "<date>" }`). A second person who did not
   write it adds their own line (needed for a 5). Pages go through a
   normal pull request, like code.
+
+**Product workspace:** when this repo has no `.ai-kit/context-tools.cjs`, the tool is in the home repo:
+run `node <home>/.ai-kit/context-tools.cjs <command> --repo <this repo>` instead.
 
 ## Finish
 End your reply with this block, filled in:

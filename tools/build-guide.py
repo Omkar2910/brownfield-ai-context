@@ -25,10 +25,11 @@ PAGES = [
     ("ORG-LEVEL.md", "org-level.html", "Organisation Level", "Organisation level"),
     ("ARCHITECTURE.md", "architecture.html", "Kit Architecture", "Architecture"),
     ("ROADMAP.md", "roadmap.html", "Kit Roadmap", "Roadmap"),
+    ("kit/GUIDE.md", "kit-guide.html", "Kit User Guide", "Kit user guide"),
 ]
 TEMPLATE = (ROOT / "tools" / "guide-template.html").read_text(encoding="utf-8")
 LINKS = {"GUIDE.md": "index.html", "CONTEXT-GUIDE.md": "context.html", "TOOLBOX.md": "toolbox.html", "MULTI-REPO.md": "multi-repo.html",
-         "ORG-LEVEL.md": "org-level.html", "ARCHITECTURE.md": "architecture.html", "ROADMAP.md": "roadmap.html"}
+         "ORG-LEVEL.md": "org-level.html", "ARCHITECTURE.md": "architecture.html", "ROADMAP.md": "roadmap.html", "kit/GUIDE.md": "kit-guide.html"}
 
 
 def build(src_name, out_name, page_title, other_label):
@@ -50,7 +51,7 @@ def build(src_name, out_name, page_title, other_label):
     body = body.replace("</code></pre>", "</code></pre></div>")
     # Links between the two guides point at the web versions; other repo links go up one level.
     for md_name, html_name in LINKS.items():
-        body = body.replace(f'href="{md_name}', f'href="{html_name}')
+        body = body.replace(f'href="../{md_name}', f'href="{html_name}').replace(f'href="{md_name}', f'href="{html_name}')
     body = body.replace('href="docs/', 'href="').replace('src="docs/', 'src="').replace('href="templates/', 'href="../templates/')
     for other in ("THIRD_PARTY_NOTICES.md", "CHANGELOG.md", "README.md", "kit/", "demo-kit/", "tools/"):
         body = body.replace(f'href="{other}', f'href="../{other}')

@@ -29,6 +29,9 @@ Give a 15-minute guided tour. Ask the person's role first (developer, QA, BA) an
 End by asking: "What did you have to ask a person about today?" Write the answers down as possible
 gaps in the context for the tech lead.
 
+**Product workspace:** when this repo has no `.ai-kit/context-tools.cjs`, the tool is in the home repo:
+run `node <home>/.ai-kit/context-tools.cjs <command> --repo <this repo>` instead.
+
 ## Finish
 End your reply with this block, filled in:
 - **What changed:** nothing (a tour changes no files), unless the person asked you to note gaps.

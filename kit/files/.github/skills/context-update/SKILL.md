@@ -31,6 +31,9 @@ Goal: change only the context lines whose facts changed. Never rewrite context f
    checks it in this pull request and adds a `verified` line.
 8. Run the check again until there are no ERROR lines.
 
+**Product workspace:** when this repo has no `.ai-kit/context-tools.cjs`, the tool is in the home repo:
+run `node <home>/.ai-kit/context-tools.cjs <command> --repo <this repo>` instead.
+
 ## Finish
 End your reply with this block, filled in:
 - **What changed:** each edit as `file: old → new (reason)`, plus migrated pages and refreshed table pages.

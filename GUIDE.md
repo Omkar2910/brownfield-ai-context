@@ -6,6 +6,11 @@ where they differ, the guide says so. Written in plain English. Read it top to b
 
 Last checked: November 2026. Tools in this area change monthly; see [What is still changing](#10-what-is-still-changing).
 
+> **Two setups.** This page walks through the **one repo** setup in detail. For a product with several
+> repos, the recommended setup is a **product workspace**: one home repo holds every skill, hook and the
+> product context, and each repo holds only its own knowledge. The kit's own user guide,
+> **[kit/GUIDE.md](kit/GUIDE.md)**, covers both setups, every skill and the story flow in each agent.
+>
 > **Four guides.** This one is the setup and the story workflow. How to create, use and maintain the
 > context itself, for any task, is in **[CONTEXT-GUIDE.md](CONTEXT-GUIDE.md)**. Every tool you can use
 > (core, recommended, optional), Graphify in depth, and which workflow fits which task are in
@@ -46,10 +51,10 @@ Three ideas behind it, all from published studies of coding agents:
  ─────────────────                     ───────────
  install kit (--graphify)              /story-start   read story; code map finds the files
      │                                        │            and what depends on them
- build code map (Graphify)             /opsx-propose       proposal, spec changes, technical design
-     │                                        │            (TDD), test plan, test-first tasks
+ build code map (Graphify)             /opsx-propose       proposal, spec changes, design (if
+     │                                        │            needed), tasks: OpenSpec's own documents
  /context-create                    YOU REVIEW          ← the most important step
-     │                                 design-reviewer     fresh-eyes check of design + test plan
+     │                                 design-reviewer     fresh-eyes check of the plan
  review + commit                              │
      │                                 /opsx-apply         agent codes task by task
  doctor: is it all wired up?                  │
@@ -152,8 +157,7 @@ What it adds:
 | `.githooks/post-commit`, `post-merge`, `post-checkout` | Refresh the Graphify code map in the background (do nothing if Graphify isn't installed) |
 | `.vscode/mcp.json`, `.graphifyignore`, `.gitignore` entry | Connect Copilot to the code map (with `--graphify`) |
 | `.azuredevops/pull_request_template.md` | PR template with the context checklist |
-| `openspec/config.yaml` (appended) | Tells OpenSpec to read your context and adds a few rules |
-| `openspec/schemas/story-tdd/` + `schema: story-tdd` | The story workflow: every change also gets a technical design document and a test plan, and tasks are written test-first (Step 4c) |
+| `openspec/config.yaml` (appended) | Tells OpenSpec to read your context, write tests first and update context before archiving. OpenSpec's own documents are unchanged (Step 4c) |
 
 ### Step 4b — Build the code map (5 minutes)
 
@@ -169,42 +173,28 @@ This runs only on your machine: no API key, nothing is sent anywhere. It writes 
 Open `graphify-out/graph.html` in a browser to see your code as a picture. Details and choices:
 [TOOLBOX.md, Section 3](TOOLBOX.md#3-graphify-in-depth).
 
-### Step 4c — Fit the technical design and test plan to your team (10 minutes)
+### Step 4c — What OpenSpec writes for a story
 
-With OpenSpec, the kit sets your repo to its **story workflow** (`schema: story-tdd` in
-`openspec/config.yaml`). Every `/opsx-propose` then creates five documents instead of four:
+The kit uses OpenSpec's **default** documents. `/opsx-propose` creates:
 
 | Document | What it is |
 | --- | --- |
-| `proposal.md` | Why, what changes, and the story's acceptance criteria (AC1, AC2…) |
+| `proposal.md` | Why, and what changes |
 | `specs/…/spec.md` | The behaviour, as requirements and WHEN/THEN scenarios |
-| `design.md` | **The technical design document (TDD)**, always created: changes per layer, API and data changes, security, errors, risks, rollback. A small story gets the short "Lite" form. |
-| `test-plan.md` | **The test cases**: every scenario and acceptance criterion mapped to a named test, plus extra cases (permissions, bad input, failures), regression on dependents, test data and manual checks |
-| `tasks.md` | Ordered **test-first**: each group writes its tests, sees them fail, then implements until they pass |
+| `design.md` | Only when the change needs one (it crosses layers or repos, adds a dependency, changes data or security) |
+| `tasks.md` | The ordered steps |
 
-Make it yours:
+The kit adds three short lines to `openspec/config.yaml`: read `AGENTS.md` first, write each test before
+its code, and update context lines before archiving. Nothing else about OpenSpec changes, so OpenSpec
+upgrades work as usual.
 
-- **Your team's TDD format:** replace `openspec/schemas/story-tdd/templates/design.md` with your
-  sections (keep the file name). The kit never overwrites the templates.
-- **Your test stack:** add a rule under `test-plan:`, for example
-  `- Backend tests use JUnit 5, Mockito and Testcontainers; UI tests use Jasmine and Karma`.
-- **Your own TDD skill:** if you already have one, put it in `.github/skills/` and name it in
-  `openspec/config.yaml` (example below). You no longer have to ask for it each time.
-- **Don't want it?** Install with `--keep-schema`, or set `schema: spec-driven` again. Changes you
-  already started keep the workflow they were created with.
+**Your own technical design or test-scenario format:** keep it as your own skill (in the skills folder)
+and run it after `/opsx-propose`; `/story-start` reminds you. Upgraded from kit 2.0, which used a custom
+"story-tdd" workflow? `--upgrade` switches the repo back to OpenSpec's default; changes already started keep
+theirs until they are archived.
 
-```yaml
-rules:
-  design:
-    - Write this artifact with the tdd-doc skill, using our team's TDD format
-  test-plan:
-    - Backend tests use JUnit 5, Mockito and Testcontainers; UI tests use Jasmine and Karma
-```
-
-Already installed the kit before this existed? Run the installer again with `--upgrade`.
-
-Not using OpenSpec? `/story-start` writes the same two documents to `docs/stories/<story-id>/`
-(`technical-design.md` and `test-plan.md`) and waits for your approval before any code.
+Not using OpenSpec? `/story-start` writes one short `docs/stories/<story-id>/plan.md` (why, what changes,
+acceptance checks, approach if needed, test-first tasks) and waits for your approval before any code.
 
 ### Step 5 — Check that VS Code sees everything
 
@@ -288,9 +278,9 @@ to open them based on what the story touches.
   pack in the chat: one section per repo, every file a clickable link, the order to plan them in, and open
   questions.
 - **It then creates one change per repo that changes, with the same change id**, e.g.
-  `report-service/openspec/changes/wi1234-add-report-export/` and
-  `report-ui/openspec/changes/wi1234-add-report-export/`, each with its own `context.md`.
-- **Plan and build the service first.** Run `/opsx-propose wi1234-add-report-export` and say "in
+  `report-service/openspec/changes/48213-add-report-export/` and
+  `report-ui/openspec/changes/48213-add-report-export/`, each with its own `context.md`.
+- **Plan and build the service first.** Run `/opsx-propose 48213-add-report-export` and say "in
   report-service". After that plan is approved, run it again for the UI ("in report-ui"); the UI's design
   points at the service's `design.md` for the API instead of copying it.
 - **Each repo gets its own branch (same name), commits and PR.** Link the two PRs, merge the service first,
@@ -391,7 +381,7 @@ It also **sizes the story** and recommends a path. You decide:
 | Size | Path |
 | --- | --- |
 | Tiny: one or two files, no API, data or permission change | No change folder. Failing test, fix, `/story-finish`. |
-| Small: one repo, one layer or a small slice | An OpenSpec change; the technical design is the short "Lite" form. |
+| Small: one repo, one layer or a small slice | An OpenSpec change (OpenSpec adds a design only if it is needed). |
 | Normal: several layers, an API or data change, or two repos | An OpenSpec change in each repo that changes, backend first. |
 
 **Result:** for small and normal stories, the change folder is created and the pack is saved as
@@ -412,9 +402,9 @@ It says the change already exists (`/story-start` created it): choose **continue
 **Check — this is the most important step in the whole workflow:**
 - `proposal.md`: is the scope right? Anything out of scope that crept in?
 - `specs/.../spec.md`: are the requirements and scenarios what the story really means? Missing edge cases (permissions, empty data, large data, errors)?
-- `design.md` (the technical design): does it follow your codebase's patterns? Are the API examples, data changes and rollback right? Does its "Context impact" table list every context page the change makes out of date (data, API, screens, security…)?
-- `test-plan.md`: does every scenario and acceptance criterion have a named test? Are the denied, empty, large and failure cases there?
-- `tasks.md`: small, ordered steps, each group starting with its tests?
+- `design.md`, if there is one: does it follow your codebase's patterns? Are the API, data changes and rollback right?
+- `tasks.md`: small, ordered steps, each starting with its test? Does every scenario have a task that tests it, including the denied, empty, large and failure cases?
+- If your team has its own technical design or test-scenario skill, run it now and review its output too.
 
 **Then get a fresh-eyes review.** `/story-start` asks the `design-reviewer` agent to read the change with no
 memory of this chat (Claude Code runs it as a subagent; in VS Code pick it in the agent list in a new chat
@@ -431,9 +421,8 @@ before any code. This replaces a lot of later review comments.
 /opsx-apply <change-id>
 ```
 Work in slices: ask it to do tasks 1–3, review the diff, run the tests, commit, then continue.
-With the story workflow, each slice starts with its tests: check that they fail before the code is
-written (a test that passes straight away is not testing the change). The agent marks rows in
-`test-plan.md` as `passing` as it goes.
+Each slice starts with its tests: check that they fail before the code is written (a test that passes
+straight away is not testing the change).
 **Check:** each diff before accepting it. Watch for the hook messages: when the agent edits a file that a
 context line points to, it is told which line to re-check.
 **Write down:** every time you corrected the agent, one line each (what it did, what was right). These
@@ -448,12 +437,12 @@ are your `#agent-miss` notes. For anything that would trip up the agent again, r
 ```
 (`/story-finish` uses the verify report you just made; it does not ask for it again.)
 `/opsx-verify` checks the code against the requirements, scenarios and `design.md`. `/story-finish` runs the tests,
-checks every test-plan row names a test that exists and passes,
+checks every scenario has a test that exists and passes,
 refreshes the code map and runs `graphify affected` on every class you changed (so you can confirm each
 dependent is tested), runs the context check, fixes out-of-date context lines with you, and drafts the
 PR description. It also asks whether this story taught you something about an area worth keeping: if
 understanding the area took a lot of tracing and there is no page for it yet, it offers to save an
-**area page** in `docs/context/` from the verified parts of `design.md` (see
+**area page** in `docs/context/` from what was verified (see
 [CONTEXT-GUIDE.md](CONTEXT-GUIDE.md#7-how-much-context-is-enough)).
 **Check:** any requirement marked not covered; any context line it wants to change; whether the area
 page (if offered) is worth keeping.
@@ -476,9 +465,9 @@ When reviewers have approved the PR:
 This merges the spec changes into `openspec/specs/` (the record of what the system now does) and moves
 the change to `openspec/changes/archive/`. Commit and push it to the same PR, so the specs change together
 with the code and you don't need a second PR to a protected main branch. (Teams that prefer to archive
-after merge can; it just means one more small PR.) The story's technical design and test plan stay
-there (`openspec/changes/archive/<date>-<change-id>/design.md` and `test-plan.md`); link them from the
-work item or copy them to your wiki if your process asks for that.
+after merge can; it just means one more small PR.) The story's documents stay there
+(`openspec/changes/archive/<date>-<change-id>/`); link them from the work item or copy them to your wiki if
+your process asks for that.
 At the end of the sprint, select the **context-steward** agent and type `sprint-digest`.
 
 ### Rough timeline for a 3–5 day story
@@ -590,8 +579,8 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 | **Fresh-eyes review** | A review by an agent that has not seen the conversation that wrote the plan, so it judges the documents alone |
 | **Code map** | Graphify's local graph of classes, calls and dependencies (`graphify-out/`) |
 | **Anchor** | `[anchor: path]` at the end of a context line, saying which code the line describes, so changes can be detected |
-| **OpenSpec change** | A folder with proposal, spec changes, technical design, test plan and tasks for one story |
-| **Technical design document (TDD)** | `design.md` in the change: how the story will be built, reviewed before code |
+| **OpenSpec change** | A folder with the proposal, spec changes, design (if needed) and tasks for one story |
+| **Design** | `design.md` in the change, when OpenSpec judges one is needed: how the story will be built, reviewed before code |
 | **Test-first** | Write the test, see it fail, then write the code that makes it pass |
 | **Delta spec** | The requirements a change adds, modifies or removes |
 | **Archive** | Merging a finished change's spec into the main spec record |

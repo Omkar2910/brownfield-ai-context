@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}</style>
+</head>
+<body>
+<title>Kit User Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a working manual. Sticky section rail on wide screens, one reading column, tables and code scroll in their own boxes. */
+:root {
+  --bg: #f4f6f9; --surface: #ffffff; --ink: #16202c; --muted: #586779; --line: #d8dfe7;
+  --accent: #2b54d6; --accent-soft: #e7edfc; --code-bg: #edf1f6; --good: #1d7a4c;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+    --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151c; --surface: #16202a; --ink: #e5ebf2; --muted: #9babbd; --line: #2a3746;
+  --accent: #85a3f6; --accent-soft: #1c2947; --code-bg: #1a2531; --good: #5cc28f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 32px 80px; display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 14px; }
+nav.toc .label { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+nav.toc ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc ul ul { display: none; }
+nav.toc a { display: block; padding: 4px 10px; border-left: 2px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible, nav.toc a.on { color: var(--ink); border-left-color: var(--accent); }
+main { min-width: 0; }
+header.top { border-bottom: 1px solid var(--line); padding-bottom: 20px; margin-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-size: clamp(30px, 4.6vw, 44px); line-height: 1.1; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+h2 { font-family: var(--display); font-size: 27px; line-height: 1.2; margin: 48px 0 12px; padding-top: 8px; text-wrap: balance; scroll-margin-top: 16px; }
+h3 { font-family: var(--display); font-size: 20px; margin: 30px 0 8px; scroll-margin-top: 16px; }
+p, li { max-width: 70ch; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 32px 0 0; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font-family: var(--mono); font-size: .86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+strong { font-weight: 700; }
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin: 14px 0; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+td code { white-space: nowrap; }
+.code { position: relative; margin: 12px 0; }
+.code pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13.5px; line-height: 1.5; }
+.code pre code { background: none; padding: 0; font-size: inherit; }
+.copy { position: absolute; top: 8px; right: 8px; font-family: var(--mono); font-size: 11px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.copy:hover { color: var(--ink); border-color: var(--accent); }
+li.task { list-style: none; margin-left: -1.3em; }
+li.task input { accent-color: var(--good); margin-right: 6px; }
+h3 + p strong:first-child { color: var(--accent); }
+.other { display: inline-block; margin: 12px 20px 0 0; font-weight: 600; text-decoration: none; }
+.other:hover { text-decoration: underline; }
+footer { margin-top: 56px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+@media (max-width: 920px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  nav.toc { display: none; }
+}
+img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Sections">
+    <p class="label">Sections</p>
+    <div class="toc">
+<ul>
+<li><a href="#1-what-the-kit-does">1. What the kit does</a></li>
+<li><a href="#2-choose-your-setup">2. Choose your setup</a></li>
+<li><a href="#3-what-you-need">3. What you need</a></li>
+<li><a href="#4-set-up-a-product-workspace">4. Set up a product workspace</a></li>
+<li><a href="#5-set-up-one-repo">5. Set up one repo</a></li>
+<li><a href="#6-open-it-in-your-agent">6. Open it in your agent</a></li>
+<li><a href="#7-the-skills">7. The skills</a></li>
+<li><a href="#8-a-story-start-to-finish">8. A story, start to finish</a></li>
+<li><a href="#9-keeping-context-current">9. Keeping context current</a></li>
+<li><a href="#10-adding-moving-and-removing-repos">10. Adding, moving and removing repos</a></li>
+<li><a href="#11-upgrading-the-kit">11. Upgrading the kit</a></li>
+<li><a href="#12-when-something-goes-wrong">12. When something goes wrong</a></li>
+<li><a href="#13-words-used-in-this-guide">13. Words used in this guide</a></li>
+</ul>
+</div>
+
+  </nav>
+  <main>
+    <header class="top">
+      <p class="eyebrow">VS Code + GitHub Copilot · OpenSpec · brownfield services</p>
+      <h1>AI Context Kit: user guide</h1>
+      <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a>
+    </header>
+    
+<p>Kit 2.1 · for developers and tech leads · plain language</p>
+<p>This guide covers everything you need to use the kit: setting it up, the skills, and running a story from
+start to finish in GitHub Copilot, Claude Code or OpenAI Codex. It assumes you have the kit's folder on
+your machine (the folder that contains this guide and <code>install.mjs</code>). Below, <code>&lt;kit&gt;</code> means that folder.</p>
+<hr />
+<h2 id="1-what-the-kit-does">1. What the kit does</h2>
+<p>AI agents write good code in new projects but make mistakes in older ones, because what matters (how
+things are done here, the traps, why the code is the way it is) is not written down. The kit fixes that
+with three things:</p>
+<ol>
+<li><strong>Knowledge the agent reads.</strong> A short <code>AGENTS.md</code> in each repo, rule files for certain kinds of
+   files, and in-depth pages (<code>docs/context/</code>) the agent opens only when a task needs them. Every fact
+   points at the code it describes (an <em>anchor</em>), so the kit can tell when it goes out of date.</li>
+<li><strong>Skills for each job.</strong> Saved step-by-step instructions you start with a slash command:
+   create context, start a story, finish a story, learn from a mistake.</li>
+<li><strong>Checks.</strong> The kit warns when knowledge no longer matches the code: in the agent's chat, when you
+   commit, and on every pull request.</li>
+</ol>
+<p>Nothing is sent anywhere by the kit. It only adds plain files, which you review and commit like code.</p>
+<hr />
+<h2 id="2-choose-your-setup">2. Choose your setup</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Product workspace</strong> (recommended for a product)</th>
+<th><strong>One repo</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Use it when</td>
+<td>Your product has several repos (micro-frontends, services, libraries) that you open together</td>
+<td>A single repo, or a repo a team works on alone</td>
+</tr>
+<tr>
+<td>Where the tools live</td>
+<td>Once, in a <strong>home repo</strong> for the product</td>
+<td>Inside the repo</td>
+</tr>
+<tr>
+<td>What each repo holds</td>
+<td>Only its own knowledge: <code>AGENTS.md</code>, rule files, <code>docs/context/</code>, <code>openspec/</code></td>
+<td>Its knowledge <strong>and</strong> its own copy of the tools</td>
+</tr>
+<tr>
+<td>Skills shown in the editor</td>
+<td>Each skill once</td>
+<td>Once per repo you open</td>
+</tr>
+<tr>
+<td>Product-wide context (system map, flows across repos)</td>
+<td>In the home repo, updated as repos are added</td>
+<td>Not included (add a product hub later if needed)</td>
+</tr>
+<tr>
+<td>Updating the kit</td>
+<td>Once, in the home repo</td>
+<td>In every repo</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Why knowledge stays in each repo, even in a workspace:</strong> a cloud agent or a pipeline sees only one repo,
+and a page should change in the same pull request as the code it describes.</p>
+<p>You can switch a repo from "one repo" to the workspace later (section 10).</p>
+<hr />
+<h2 id="3-what-you-need">3. What you need</h2>
+<ul>
+<li><strong>Node.js 18 or newer</strong> (<code>node --version</code>).</li>
+<li><strong>git</strong>.</li>
+<li><strong>An agent:</strong> GitHub Copilot in VS Code (agent mode), Claude Code, or OpenAI Codex.</li>
+<li>Optional, recommended:</li>
+<li><strong>OpenSpec</strong> for planning stories: <code>npm install -g @fission-ai/openspec@latest</code>.</li>
+<li><strong>Graphify</strong> for a code map the agent can search: <code>pip install "graphifyy[mcp]"</code>.</li>
+</ul>
+<hr />
+<h2 id="4-set-up-a-product-workspace">4. Set up a product workspace</h2>
+<p>Put the home repo and your repos side by side in one folder:</p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code>projects/
+  product-context/     ← the home repo (created below)
+  report-service/
+  report-ui/
+</code></pre></div>
+<p><strong>Step 1: create the home repo.</strong></p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node &lt;kit&gt;/install.mjs --create-workspace product-context --tool copilot,claude
+</code></pre></div>
+<ul>
+<li><code>--tool</code> picks the agents your team uses: <code>copilot</code>, <code>claude</code>, <code>codex</code>, a comma list, or <code>all</code>.</li>
+<li>Add <code>--org &lt;path-to-org-context&gt;</code> if your organisation has shared rules (see <a href="org-level.html">ORG-LEVEL.md</a>).</li>
+</ul>
+<p>This creates the home repo with every skill, both helper agents, the hooks, the context tool, the commit
+check, <code>catalog.json</code> (the list of repos), <code>product.code-workspace</code>, and the product context pages.</p>
+<p><strong>Step 2: add each repo.</strong></p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node &lt;kit&gt;/install.mjs report-service --workspace product-context --graphify --ci azure
+node &lt;kit&gt;/install.mjs report-ui      --workspace product-context --graphify --ci azure
+</code></pre></div>
+<p>Each command registers the repo in the home repo's catalogue and workspace file, links its commit check
+to the home repo, and adds a small stamp (<code>.ai-kit/kit.json</code>) and a pull request template. It adds no
+skills or hooks to the repo. <code>--graphify</code> prepares the repo for a code map; <code>--ci azure</code> (or <code>github</code>) adds
+a pull request pipeline file: put the home repo's project and name in it, then create the pipeline from it
+and add it as a build validation on the main branch (warnings first).</p>
+<p><strong>Step 3: OpenSpec (if you use it).</strong> Once, in the home repo, so its commands exist once:</p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">cd product-context &amp;&amp; openspec init --tools github-copilot,claude      # your tools
+cd ../report-service &amp;&amp; openspec init --tools none                    # each repo: folder only
+node &lt;kit&gt;/install.mjs report-service --workspace product-context      # adds the kit's OpenSpec settings
+</code></pre></div>
+<p><strong>Step 4: build each code map</strong> (if you use Graphify), in each repo:</p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">graphify extract . --code-only &amp;&amp; graphify cluster-only . --no-label
+</code></pre></div>
+<p><strong>Step 5: check the setup.</strong></p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">cd product-context
+node .ai-kit/context-tools.cjs doctor
+</code></pre></div>
+<p>It lists every repo, whether it has context yet, and whether its commit check is linked.</p>
+<p><strong>Step 6: commit.</strong> Commit the home repo and push it where the team can clone it next to the repos.
+Commit each repo's new files on a branch through a normal pull request.</p>
+<p><strong>Each teammate,</strong> after cloning the home repo and the repos side by side, runs once per repo:</p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node &lt;kit&gt;/install.mjs &lt;repo&gt; --workspace product-context
+</code></pre></div>
+<p>(It only links the commit check on their clone; everything else is already committed. Without the kit
+folder, the same thing is one command: <code>git config core.hooksPath ../product-context/.githooks</code>.)</p>
+<hr />
+<h2 id="5-set-up-one-repo">5. Set up one repo</h2>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node &lt;kit&gt;/install.mjs &lt;repo&gt; --tool copilot --graphify --ci azure
+node &lt;repo&gt;/.ai-kit/context-tools.cjs doctor
+</code></pre></div>
+<p>The repo gets its own copy of the skills, agents, hooks, context tool and checks. If you use OpenSpec, run
+<code>openspec init --tools github-copilot</code> (or your tool) in the repo first, then the installer.</p>
+<hr />
+<h2 id="6-open-it-in-your-agent">6. Open it in your agent</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Agent</th>
+<th>Product workspace</th>
+<th>One repo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Copilot in VS Code</strong></td>
+<td>Open <code>product-context/product.code-workspace</code> (the home repo is listed first). Switch Chat to agent mode</td>
+<td>Open the repo folder</td>
+</tr>
+<tr>
+<td><strong>Claude Code</strong></td>
+<td>From the home repo: <code>node scripts/hub.mjs claude</code>. It starts Claude Code in the home repo with every repo added, and loads each repo's <code>CLAUDE.md</code> and rules</td>
+<td><code>claude</code> in the repo</td>
+</tr>
+<tr>
+<td><strong>Codex</strong></td>
+<td>Start Codex in the home repo. Skills come from there; the skills tell Codex to read each repo's <code>AGENTS.md</code> before working in it</td>
+<td><code>codex</code> in the repo</td>
+</tr>
+</tbody>
+</table></div>
+<p>Type <code>/</code> in the chat to see the skills. In Claude Code, OpenSpec's commands are written <code>/opsx:propose</code>
+instead of <code>/opsx-propose</code>.</p>
+<hr />
+<h2 id="7-the-skills">7. The skills</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Skill</th>
+<th>When</th>
+<th>What you get</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/context-create</code></td>
+<td>Once per repo</td>
+<td>A lean <code>AGENTS.md</code>, two to four rule files, an architecture page and a traps page, after five questions to you</td>
+</tr>
+<tr>
+<td><code>/context-create deep</code></td>
+<td>After that, one page at a time</td>
+<td>In-depth pages per area: architecture, business rules, screens, data and table pages, API, dependencies, security, testing, operations, decisions</td>
+</tr>
+<tr>
+<td><code>/context-assess</code></td>
+<td>After pages are reviewed</td>
+<td>A readiness score from 0 to 100, with the three biggest gaps</td>
+</tr>
+<tr>
+<td><code>/context-update</code></td>
+<td>When a check says context is out of date, after a database migration, after a kit upgrade</td>
+<td>Only the out-of-date lines fixed</td>
+</tr>
+<tr>
+<td><code>/context-learn</code></td>
+<td>When the agent got something wrong</td>
+<td>The correction turned into a one-line rule in the right file</td>
+</tr>
+<tr>
+<td><code>/story-start &lt;id&gt;</code></td>
+<td>Start of every story</td>
+<td>The story read, the repos and files it touches, what to know, one change folder per repo, a fresh-eyes plan review</td>
+</tr>
+<tr>
+<td><code>/story-finish</code></td>
+<td>End of every story</td>
+<td>Tests and scenarios checked, impact checked, context fixed, the pull request description drafted</td>
+</tr>
+<tr>
+<td><code>/onboard-me</code></td>
+<td>A new joiner's first day</td>
+<td>A guided tour built from the same knowledge</td>
+</tr>
+<tr>
+<td><code>/product-context</code> (workspace)</td>
+<td>Once, then after repos are added (<code>/product-context update</code>)</td>
+<td>System map, flows across repos, glossary, platform rules</td>
+</tr>
+<tr>
+<td><code>/cross-repo-story</code> (workspace)</td>
+<td>A story across several repos</td>
+<td>One plan that links each repo's change</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two helper agents: <strong>context-steward</strong> (can only edit knowledge files) and <strong>design-reviewer</strong> (reviews a
+plan with no memory of the chat that wrote it, and changes nothing).</p>
+<p><strong>Every skill ends with the same three lines,</strong> so you always see what happened:
+<strong>What changed</strong> (files, as links) · <strong>Checks</strong> (what was run, and the result) · <strong>Next</strong> (your next step).</p>
+<hr />
+<h2 id="8-a-story-start-to-finish">8. A story, start to finish</h2>
+<p>The work item number (for example <code>48213</code>) names the story everywhere. A change id is the number plus a
+few words: <code>48213-add-report-export</code>.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>You type</th>
+<th>What happens</th>
+<th>You do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Start</td>
+<td><code>/story-start 48213</code></td>
+<td>The agent reads the work item (or asks you to paste it), finds the repos and files it touches, lists what to know, and sizes it: tiny, small or normal</td>
+<td>Answer at most one question, if it asks</td>
+</tr>
+<tr>
+<td>2. Plan</td>
+<td><code>/opsx-propose 48213-add-report-export</code> (say which repo; services before UIs)</td>
+<td>OpenSpec writes the proposal, the specs (scenarios), a design if the change needs one, and the tasks. Without OpenSpec, the agent writes one <code>plan.md</code></td>
+<td>Read it</td>
+</tr>
+<tr>
+<td>3. Fresh-eyes review</td>
+<td>Run the <code>design-reviewer</code> agent on the change</td>
+<td>A table of gaps: scenarios without a test, files that don't exist, rules broken, context to update</td>
+<td>Decide what to fix</td>
+</tr>
+<tr>
+<td>4. <strong>Approve</strong></td>
+<td>—</td>
+<td>—</td>
+<td><strong>Approve the plan, or ask for changes. Nothing is coded before this.</strong></td>
+</tr>
+<tr>
+<td>5. Build</td>
+<td><code>/opsx-apply</code></td>
+<td>The agent writes each test first, sees it fail, then writes the code, a slice at a time</td>
+<td>Review each slice</td>
+</tr>
+<tr>
+<td>6. Finish</td>
+<td><code>/story-finish</code></td>
+<td>Tests run, every scenario has a test, impact checked, <code>/opsx-verify</code>, context updated, pull request text drafted</td>
+<td>Review the diff</td>
+</tr>
+<tr>
+<td>7. Pull request</td>
+<td>—</td>
+<td>The pull request check runs</td>
+<td>Commit, push, open the pull request yourself; the team reviews</td>
+</tr>
+<tr>
+<td>8. Archive</td>
+<td><code>/opsx-archive 48213-add-report-export</code></td>
+<td>The story's specs merge into the repo's record of what it does</td>
+<td>Push it as the last commit of the same pull request</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Tiny stories</strong> (one or two files, no API, data or permission change) skip steps 2 to 4: a failing test,
+the fix, then <code>/story-finish</code>.</p>
+<p><strong>Stories across repos:</strong> one change folder per repo, same change id. Plan and build the service first,
+then the UI against the finished API. One pull request per repo, each linking the others.</p>
+<p><strong>Your own design or test format:</strong> if your team has a skill for a technical design document or test
+scenarios in its house format, run it after step 2 and keep its output next to the plan.</p>
+<hr />
+<h2 id="9-keeping-context-current">9. Keeping context current</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>When</th>
+<th>What catches it</th>
+<th>What you do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>While the agent works</td>
+<td>The hooks tell the agent which context line describes the file it just edited, and ask it once at the end to check those lines</td>
+<td>Nothing, unless it asks</td>
+</tr>
+<tr>
+<td>When you commit</td>
+<td>The commit is stopped if a context line points at a file that no longer exists</td>
+<td>Fix that line, or run <code>/context-update</code></td>
+</tr>
+<tr>
+<td>On every pull request</td>
+<td>The pull request check lists lines whose code changed</td>
+<td>Fix them in the same pull request</td>
+</tr>
+<tr>
+<td>After a database migration</td>
+<td>—</td>
+<td>Run tbls again, then <code>/context-update</code> (only the generated part of each table page changes)</td>
+</tr>
+<tr>
+<td>A new repo joins the workspace</td>
+<td>The home repo's session note says "no context yet"</td>
+<td><code>/context-create</code> for it, then <code>/product-context update</code></td>
+</tr>
+<tr>
+<td>Each sprint or quarter</td>
+<td>—</td>
+<td>Run the context-steward agent in "sprint-digest" or "quarterly-review" mode, about 30 minutes</td>
+</tr>
+</tbody>
+</table></div>
+<p>To see whether the hooks actually run, use <code>node .ai-kit/context-tools.cjs doctor</code>. It shows when each
+hook last ran. Hook notes go to the agent, not to you, so "I don't see anything" is normal.</p>
+<hr />
+<h2 id="10-adding-moving-and-removing-repos">10. Adding, moving and removing repos</h2>
+<ul>
+<li><strong>Add a repo to the workspace:</strong> <code>node &lt;kit&gt;/install.mjs &lt;repo&gt; --workspace product-context</code>, then
+  <code>/context-create</code> for it and <code>/product-context update</code>.</li>
+<li><strong>Move a one-repo install into the workspace:</strong> run the same command with <code>--upgrade</code>. It removes the
+  repo's own copies of the skills, hooks, context tool and OpenSpec tool files (the home repo has them) and
+  keeps everything your team wrote.</li>
+<li><strong>Remove a repo:</strong> delete its entry in <code>catalog.json</code> and <code>product.code-workspace</code>, run
+  <code>/product-context update</code> (it lists the product lines that mention the repo), and in the repo run
+  <code>git config --unset core.hooksPath</code>.</li>
+</ul>
+<hr />
+<h2 id="11-upgrading-the-kit">11. Upgrading the kit</h2>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node &lt;kit&gt;/install.mjs product-context --upgrade      # workspace: once, in the home repo
+node &lt;kit&gt;/install.mjs &lt;repo&gt; --upgrade               # one-repo setup: in each repo
+node .ai-kit/context-tools.cjs migrate                # if the page format changed (no AI, no tokens)
+node .ai-kit/context-tools.cjs doctor
+</code></pre></div>
+<p><code>--upgrade</code> replaces only the kit's own files. It never touches <code>AGENTS.md</code>, rule files, <code>docs/context/</code>
+or your pull request template. Add <code>--dry-run</code> first to see what it would do.</p>
+<hr />
+<h2 id="12-when-something-goes-wrong">12. When something goes wrong</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Skills don't appear</td>
+<td>VS Code: run "Chat: Open Customizations". In a workspace, open <code>product.code-workspace</code>, not a single repo. Claude Code: start it with <code>node scripts/hub.mjs claude</code></td>
+</tr>
+<tr>
+<td>The same skill shows twice</td>
+<td>A repo still has its own copy: <code>node &lt;kit&gt;/install.mjs &lt;repo&gt; --workspace product-context --upgrade</code></td>
+</tr>
+<tr>
+<td>Hooks never run</td>
+<td>Run <code>doctor</code>. In VS Code check the chat's session target, the <code>chat.useHooks</code> setting, your organisation's policy, and "Developer: Open Agent Debug Logs". The commit check and the pull request check still work without hooks</td>
+</tr>
+<tr>
+<td>The commit is stopped</td>
+<td>Read the ERROR line: a context line points at a file that is gone. Fix the line. In an emergency: <code>git commit --no-verify</code></td>
+</tr>
+<tr>
+<td>OpenSpec created the change in the home repo</td>
+<td>Move the folder into the right repo; next time say which repo ("in report-service"). The skills tell the agent to run OpenSpec inside the repo that changes</td>
+</tr>
+<tr>
+<td>OpenSpec feels slow</td>
+<td>The OpenSpec program is fast (about 0.25 seconds per command). The time is the agent writing each document. Keep <code>openspec/config.yaml</code>'s <code>context:</code> short, and let tiny stories skip OpenSpec</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="13-words-used-in-this-guide">13. Words used in this guide</h2>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Word</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Anchor</td>
+<td><code>[anchor: path]</code> at the end of a context line: the code that line describes</td>
+</tr>
+<tr>
+<td>Context</td>
+<td>What the agent reads about your code: <code>AGENTS.md</code>, rule files, <code>docs/context/</code></td>
+</tr>
+<tr>
+<td>Home repo</td>
+<td>In a product workspace, the one repo that holds the kit's tools and the product context</td>
+</tr>
+<tr>
+<td>Change folder</td>
+<td><code>openspec/changes/&lt;id&gt;/</code>: a story's plan in one repo</td>
+</tr>
+<tr>
+<td>Work item</td>
+<td>The story, bug or task in your tracker (Azure DevOps, Jira)</td>
+</tr>
+<tr>
+<td>Fresh-eyes review</td>
+<td>A review by an agent that has not seen how the plan was made</td>
+</tr>
+<tr>
+<td>Readiness score</td>
+<td>0–100: how much trustworthy context a repo has, capped by evidence such as reviews</td>
+</tr>
+</tbody>
+</table></div>
+    <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a></footer>
+  </main>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll('button.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var pre = btn.parentElement.querySelector('pre');
+      var reset = function (t) { btn.textContent = t; setTimeout(function () { btn.textContent = 'Copy'; }, 1400); };
+      var select = function () {
+        var r = document.createRange(); r.selectNodeContents(pre);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); reset('Selected');
+      };
+      try { navigator.clipboard.writeText(pre.innerText).then(function () { reset('Copied'); }, select); } catch (e) { select(); }
+    });
+  });
+  var links = Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var heads = links.map(function (a) { return document.getElementById(decodeURIComponent(a.getAttribute('href').slice(1))); });
+  function mark() {
+    var y = window.scrollY + 120, idx = 0;
+    heads.forEach(function (h, i) { if (h && h.offsetTop <= y) idx = i; });
+    links.forEach(function (a, i) { a.classList.toggle('on', i === idx); });
+  }
+  window.addEventListener('scroll', mark, { passive: true }); mark();
+})();
+</script>
+
+</body>
+</html>

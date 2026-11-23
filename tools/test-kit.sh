@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # End-to-end test of the kit on throwaway repos. Needs git and Node 18+. Usage: bash tools/test-kit.sh
 # Covers: fresh install per tool, all tools, 1.x upgrade + migrate, doctor, hooks (dedupe, stop, guard),
-# schema-import (create, refresh, keep human text), readiness caps, ci, mcp, org sync, hub.
+# schema-import (create, refresh, keep human text), readiness caps, ci, mcp, org sync, hub, product workspace.
 set -euo pipefail
 KIT="$(cd "$(dirname "$0")/.." && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
@@ -85,5 +85,29 @@ $I "$T/b" --tool copilot,claude --org "$T/org" >/dev/null
 [ -f "$T/b/.github/instructions/org/org-engineering.instructions.md" ] && [ -f "$T/b/.claude/rules/org/org-engineering.instructions.md" ] && ok "org rules synced for both tools" || bad "org sync"
 echo "x" >> "$T/b/.claude/rules/org/org-api.instructions.md"; out=$(cd "$T/b" && node $CT check); has "$out" "Org rules edited in this repo" "edited org rule detected"
 $I --create-hub "$T/hub" >/dev/null; (cd "$T/hub" && node scripts/hub.mjs map >/dev/null); has "$(cat "$T/hub/context/system-map.md")" 'generated: { by: "hub.mjs/map"' "hub map is a generated page"
+
+echo "9. Product workspace"
+mkrepo "$T/w-svc"; mkrepo "$T/w-ui"; echo '{}' > "$T/w-ui/angular.json"
+$I --create-workspace "$T/w-home" --tool copilot,claude >/dev/null
+git -C "$T/w-home" add -A; git -C "$T/w-home" -c user.email=a@b -c user.name=a commit -qm home --no-verify
+[ -f "$T/w-home/.github/skills/product-context/SKILL.md" ] && [ -f "$T/w-home/.claude/skills/story-start/SKILL.md" ] && ok "home has all skills, per tool" || bad "home skills"
+has "$(cat "$T/w-home/.ai-kit/kit.json")" '"workspace"' "home stamp says workspace"
+$I "$T/w-svc" --workspace "$T/w-home" --ci azure >/dev/null; $I "$T/w-ui" --workspace "$T/w-home" >/dev/null
+[ ! -d "$T/w-svc/.github/skills" ] && [ ! -f "$T/w-svc/.ai-kit/context-tools.cjs" ] && ok "member has no tool copies" || bad "member clean"
+has "$(cat "$T/w-home/catalog.json")" '"mfe-remote"' "repos registered in the catalogue with a type"
+has "$(cat "$T/w-home/product.code-workspace")" '../w-ui' "workspace file lists the repos"
+printf -- '- gone [anchor: src/Gone.java]\n' > "$T/w-svc/AGENTS.md"; git -C "$T/w-svc" add -A
+if git -C "$T/w-svc" commit -qm ctx >/dev/null 2>&1; then bad "member commit check from the home repo"; else ok "member commit check from the home repo"; fi
+out=$(echo "{\"hook_event_name\":\"SessionStart\",\"session_id\":\"w-$$\",\"cwd\":\"$T/w-home\"}" | node "$T/w-home/$CT" session-start); has "$out" "no context yet: w-ui" "home session start lists repos without context"
+P="{\"hook_event_name\":\"PostToolUse\",\"session_id\":\"w2-$$\",\"cwd\":\"$T/w-home\",\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$T/w-svc/src/main/java/com/ex/Orders.java\"}}"
+printf -- '- orders [anchor: src/main/java/com/ex/Orders.java]\n' >> "$T/w-svc/AGENTS.md"
+out=$(echo "$P" | node "$T/w-home/$CT" post-edit); has "$out" "w-svc/AGENTS.md" "home hook names a member repo's context line"
+out=$(cd "$T/w-home" && node $CT doctor); has "$out" "w-ui: no AGENTS.md yet" "home doctor lists repos"
+echo "10. Upgrade from a repo-mode install into the workspace, and away from the old OpenSpec workflow"
+mkrepo "$T/w-old"; $I "$T/w-old" --tool claude >/dev/null; mkdir -p "$T/w-old/openspec"; printf 'schema: story-tdd\n' > "$T/w-old/openspec/config.yaml"
+out=$($I "$T/w-old" --workspace "$T/w-home"); has "$out" "Run again with --upgrade" "join without --upgrade keeps copies and says so"
+$I "$T/w-old" --workspace "$T/w-home" --upgrade >/dev/null
+[ ! -d "$T/w-old/.claude/skills/story-start" ] && ! grep -q context-tools "$T/w-old/.claude/settings.json" 2>/dev/null && ok "join with --upgrade removes the copies" || bad "join with --upgrade"
+has "$(cat "$T/w-old/openspec/config.yaml")" "schema: spec-driven" "old story-tdd workflow switched back to OpenSpec default"
 
 echo ""; echo "Passed: $pass, failed: $fail"; [ "$fail" -eq 0 ]

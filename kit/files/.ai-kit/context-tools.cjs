@@ -242,6 +242,29 @@ function kitStamp(repo) {
 }
 const toolCmd = 'node ' + KIT_TOOL;
 
+// ---------------------------------------------------------------- product workspace
+// Workspace mode: one home repo holds the kit's tools and the product context; each member repo holds only
+// its own knowledge (AGENTS.md, rule files, docs/context, openspec) and a small stamp pointing at the home.
+function workspaceHome(repo) {
+  const st = kitStamp(repo);
+  if (st && st.mode === 'workspace') return repo;
+  if (st && st.mode === 'member' && st.workspace) { const h = path.resolve(repo, st.workspace); if (exists(path.join(h, '.ai-kit', 'kit.json'))) return h; }
+  return null;
+}
+function members(home) {
+  const cat = readJson(path.join(home, 'catalog.json'));
+  if (!cat || !Array.isArray(cat.repos)) return [];
+  const base = path.resolve(home, cat.reposDir || '..');
+  return cat.repos.map(r => ({ name: r.name, dir: r.path ? path.resolve(home, r.path) : path.join(base, r.name) }));
+}
+// Folders in product.code-workspace that are git repos but not in catalog.json yet.
+function unregistered(home) {
+  const ws = readJson(path.join(home, 'product.code-workspace'));
+  if (!ws || !Array.isArray(ws.folders)) return [];
+  const known = new Set(members(home).map(m => path.resolve(m.dir)));
+  return ws.folders.map(f => path.resolve(home, f.path)).filter(d => d !== path.resolve(home) && !known.has(d) && exists(path.join(d, '.git')));
+}
+
 // ---------------------------------------------------------------- check
 function runCheck(repo, { base, strict } = {}) {
   const errors = [], warnings = [];
@@ -458,8 +481,24 @@ function hookSessionStart(input) {
   if (gl) lines.push(gl);
   const ol = orgLine(orgState(repo));
   if (ol) lines.push(ol);
+  let user = `AI context kit: ${a.ctx.contextFiles.length} context files, ${a.ctx.anchors.length} anchors, ${a.broken.length} broken${active.length ? `, active change: ${active.join(', ')}` : ''}.`;
+  if (workspaceHome(repo) === repo) {
+    const ms = members(repo).filter(m => exists(path.join(m.dir, '.git')));
+    const noContext = [];
+    const parts = ms.map(m => {
+      const ma = analyse(m.dir);
+      if (!ma.agentsMd) noContext.push(m.name);
+      const act = activeChanges(m.dir);
+      return `${m.name}: ${ma.agentsMd ? `${ma.ctx.contextFiles.length} context files, ${ma.broken.length} broken` : 'no context yet'}${act.length ? `, changes: ${act.join(', ')}` : ''}`;
+    });
+    lines.splice(1, 0, `Product workspace (this is the home repo: kit tools and product context). Repos: ${parts.join('; ') || 'none registered'}.`,
+      'Each repo keeps its own AGENTS.md, rule files and docs/context; read a repo\'s AGENTS.md before working in it. Run OpenSpec commands inside the repo that changes, never in the home repo.');
+    if (noContext.length) lines.push(`No context yet in: ${noContext.join(', ')}. Suggest /context-create for each.`);
+    const extra = unregistered(repo);
+    if (extra.length) lines.push(`Open in the workspace but not registered: ${extra.map(d => path.basename(d)).join(', ')}. Register with: node <kit>/install.mjs <repo> --workspace ${path.basename(repo)}`);
+    user = `AI context kit (product workspace): ${ms.length} repo(s)${noContext.length ? `, no context yet: ${noContext.join(', ')}` : ''}${extra.length ? `, not registered: ${extra.map(d => path.basename(d)).join(', ')}` : ''}.`;
+  }
   lines.push('Context files describe this code; when an edit changes what a context line says, the line is updated in the same change.');
-  const user = `AI context kit: ${a.ctx.contextFiles.length} context files, ${a.ctx.anchors.length} anchors, ${a.broken.length} broken${active.length ? `, active change: ${active.join(', ')}` : ''}.`;
   addContext('SessionStart', lines.join('\n'), user);
   return { notes: lines.length, broken: a.broken.length };
 }
@@ -691,6 +730,8 @@ function readinessConfig(repo) {
     const j = readJson(path.join(repo, f));
     if (j) return { ...READINESS_DEFAULT, ...j, source: f };
   }
+  const home = workspaceHome(repo);
+  if (home && home !== repo) { const j = readJson(path.join(home, '.ai-kit', 'readiness.json')); if (j) return { ...READINESS_DEFAULT, ...j, source: path.basename(home) + '/.ai-kit/readiness.json' }; }
   return { ...READINESS_DEFAULT, source: 'default' };
 }
 
@@ -968,7 +1009,25 @@ function cmdDoctor() {
   const st = kitStamp(repo);
   if (!st) warn('kit', 'No kit stamp (.ai-kit/kit.json). Was the kit installed here? node <kit>/kit/install.mjs <repo>');
   else if (st._file !== '.ai-kit/kit.json') warn('kit', `Kit ${st.version} uses the 1.x layout (${st._file}). Upgrade: node <kit>/kit/install.mjs <repo> --upgrade`);
-  else ok('kit', `Kit ${st.version} for ${[].concat(st.tools || st.tool || []).join(', ') || 'unknown tools'}`);
+  else ok('kit', `Kit ${st.version} for ${[].concat(st.tools || st.tool || []).join(', ') || 'unknown tools'}${st.mode === 'workspace' ? ' (product workspace home)' : st.mode === 'member' ? ` (repo in the product workspace ${st.workspace})` : ''}`);
+  const isMember = st && st.mode === 'member';
+  if (isMember) {
+    const home = workspaceHome(repo);
+    home ? ok('workspace', `Tools, hooks and skills come from ${toPosix(path.relative(repo, home))}; open the product workspace to use them`)
+      : fail('workspace', `The home repo recorded in .ai-kit/kit.json (${st.workspace}) is not there. Clone it next to this repo, or re-register this repo`);
+  }
+  if (st && st.mode === 'workspace') {
+    for (const m of members(repo)) {
+      if (!exists(path.join(m.dir, '.git'))) { warn('workspace', `${m.name}: not cloned at ${toPosix(path.relative(repo, m.dir))}`); continue; }
+      const hp = (git(m.dir, ['config', '--get', 'core.hooksPath']) || '').trim();
+      const toHome = hp && path.resolve(m.dir, hp) === path.resolve(repo, '.githooks');
+      const agents = exists(path.join(m.dir, 'AGENTS.md'));
+      (toHome && agents) ? ok('workspace', `${m.name}: context present, commit check from the home repo`)
+        : warn('workspace', `${m.name}: ${agents ? '' : 'no AGENTS.md yet (/context-create); '}${toHome ? '' : 'commit check not linked (re-run install.mjs <repo> --workspace on this clone)'}`.replace(/; $/, ''));
+    }
+    const extra = unregistered(repo);
+    if (extra.length) warn('workspace', `In product.code-workspace but not registered: ${extra.map(d => path.basename(d)).join(', ')}`);
+  }
   for (const p of OLD_TOOL_PATHS) if (exists(path.join(repo, p))) warn('kit', `Old copy of the context tool at ${p}. Run install.mjs --upgrade (it removes it).`);
 
   // Agent hook files
@@ -993,7 +1052,7 @@ function cmdDoctor() {
     else if (!text.includes(KIT_TOOL)) warn('hooks', '.claude/settings.json points at an old script path: run install.mjs --upgrade');
     else { ok('hooks', `.claude/settings.json: ${Object.keys(j.hooks || {}).join(', ')} (Claude Code)`); hookFiles.push('claude'); }
   }
-  if (!hookFiles.length) warn('hooks', 'No agent hook file found. The skills and the git hook still work; hooks only add notes for the agent.');
+  if (!hookFiles.length && !isMember) warn('hooks', 'No agent hook file found. The skills and the git hook still work; hooks only add notes for the agent.');
   if (hookFiles.length === 2) info('hooks', 'Both hook files present: VS Code\'s Copilot harness reads both, so each event can arrive twice. The tool ignores the second call.');
 
   // VS Code settings that switch hooks off
@@ -1011,7 +1070,7 @@ function cmdDoctor() {
   // Did any agent actually call the hooks in this clone?
   const last = lastHookRuns(repo);
   if (Object.keys(last).length) for (const [e, r] of Object.entries(last)) ok('hook runs', `${e}: last run ${ago(r.t)} from ${r.harness}${r.duplicate ? ' (duplicate ignored)' : ''}`);
-  else if (hookFiles.length) warn('hook runs', 'No agent has called the hooks in this clone yet. If you have used agent chat here, hooks are not running. In VS Code: check the session target (Copilot harness reads .github/hooks), that "chat.useHooks" is on for Local sessions, that your organisation allows hooks, and look in "Developer: Open Agent Debug Logs". In Claude Code: run /hooks.');
+  else if (hookFiles.length && !isMember) warn('hook runs', 'No agent has called the hooks in this clone yet. If you have used agent chat here, hooks are not running. In VS Code: check the session target (Copilot harness reads .github/hooks), that "chat.useHooks" is on for Local sessions, that your organisation allows hooks, and look in "Developer: Open Agent Debug Logs". In Claude Code: run /hooks.');
 
   // Git hook (the backstop that works with every tool)
   const hooksPath = (git(repo, ['config', '--get', 'core.hooksPath']) || '').trim();
@@ -1038,7 +1097,7 @@ function cmdDoctor() {
   ci.some(p => p.startsWith('.github/workflows')) ? ok('ci', 'GitHub workflow present') : ci.length ? info('ci', `Pipeline template at ${ci[0]}: create a pipeline from it and add it as a pull request check`) : warn('ci', 'No pull request check. Install with --ci azure or --ci github');
   if (exists(path.join(repo, 'openspec'))) {
     const cfg = (() => { try { return fs.readFileSync(path.join(repo, 'openspec', 'config.yaml'), 'utf8'); } catch { return ''; } })();
-    /^schema:\s*story-tdd/m.test(cfg) ? ok('openspec', 'schema: story-tdd') : info('openspec', 'OpenSpec present but not using the story-tdd schema');
+    /^schema:\s*story-tdd/m.test(cfg) ? warn('openspec', 'openspec/config.yaml still uses the old story-tdd workflow: run install.mjs --upgrade to return to OpenSpec\'s default documents') : ok('openspec', 'OpenSpec with its default documents');
   }
   const g = graphState(repo);
   if (g) g.stale ? warn('code map', `Graphify map is older than HEAD: graphify update .`) : ok('code map', 'Graphify map current');

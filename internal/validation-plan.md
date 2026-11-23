@@ -8,9 +8,9 @@ How to convince yourself (and others) that kit 2.0 works, before and during the 
 bash tools/test-kit.sh
 ```
 
-37 checks on throwaway repos: fresh install per tool, all tools at once, upgrade from 1.6.1 and `migrate`,
+49 checks on throwaway repos: fresh install per tool, all tools at once, upgrade from 1.6.1 and `migrate`,
 `doctor`, hooks (dedupe, post-edit, stop, guard), `schema-import` (create, refresh, keep human text),
-readiness caps, `ci`, `mcp`, org sync for two tools, hub map. Run it on Windows (Git Bash) once too.
+readiness caps, `ci`, `mcp`, org sync for two tools, hub map, product workspace (home, members, commit check, hooks across repos, joining with --upgrade). Run it on Windows (Git Bash) once too.
 
 ## 2. Manual checks in real tools (once per tool, on your machine)
 
@@ -28,6 +28,10 @@ readiness caps, `ci`, `mcp`, org sync for two tools, hub map. Run it on Windows 
 | 10 | Copilot + Claude in one repo | Start a Copilot chat, check the hook log | Second call marked duplicate, no double notes |
 | 11 | PR check | Push a branch with a stale anchor through the pipeline | Warning in the pipeline output |
 | 12 | Schema import | Run tbls against a QA database (read-only user), then `schema-import` | Table pages generated; re-import after a migration changes only generated parts |
+| 14 | Product workspace in VS Code | Open `product.code-workspace` with the home repo and two repos | Each kit skill listed once; each repo's `AGENTS.md` and rules still apply |
+| 15 | Workspace hooks | Ask the agent to edit a file in a service repo, then `doctor` in the home repo | post-edit ran; the note names the service repo's context line |
+| 16 | OpenSpec in a workspace | `/opsx-propose <id>` "in report-service" | The change folder is created in report-service, not in the home repo |
+| 17 | Claude Code in a workspace | `node scripts/hub.mjs claude` | Skills from the home repo; each repo's `CLAUDE.md` loaded |
 | 13 | Upgrade of a real 1.x repo | `--upgrade --dry-run`, `--upgrade`, `migrate`, `doctor` | No team file edited; pages converted; doctor clean |
 
 Record results in a short table with the date, tool version and outcome; anything that fails becomes an

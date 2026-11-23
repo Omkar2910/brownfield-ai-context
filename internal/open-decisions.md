@@ -10,4 +10,6 @@
 | 6 | Unprefixed kit keys in frontmatter (`dimension`, `owner`) vs OKF's reserved `x-` prefix | Plain · `x-kit-` | Plain for readability; `migrate` renames them if OKF defines them differently | Decided for 2.0, revisit at OKF 1.0 |
 | 7 | MCP server on by default | Opt-in `--mcp` · always | Opt-in: every MCP server adds tool descriptions to each request | Decided for 2.0 |
 | 8 | Refresh the `demo-kit/` to 2.0 | Now · before the next demo | Before the next external demo | Open |
+| 10 | Product workspace in real tools | Test before rollout · roll out as is | Test three things first: each skill shown once in VS Code with the workspace open; the home repo's hooks fire on edits in a service repo (`doctor`); OpenSpec writes the change inside the service repo | Open: not yet tried in a live editor |
+| 11 | The team's own design and test-scenario format | OpenSpec custom schema · separate skill | Separate skill, run after `/opsx-propose`; OpenSpec stays default (removed the custom schema in 2.1) | Decided; skill not written yet |
 | 9 | Communicate skill renames to teams that already use 1.x | Release note · pairing session | Release note with the upgrade commands from CHANGELOG.md | Open |

@@ -23,10 +23,10 @@ just less well.
 | 5. Read the story | Work item text and acceptance criteria | Azure DevOps MCP server *(optional)*, or paste it | Optional |
 | 6. Gather task context | Relevant files, dependents, rules, traps — nothing else | `/story-start` + Graphify `query_graph` / `affected` | Core (+ Graphify) |
 | 7. Explore risky parts | Understand the area before planning | `/opsx-explore` + Graphify `shortest_path` | Recommended |
-| 8. Agree the plan | Proposal, spec scenarios, technical design (TDD), test plan, test-first tasks — **reviewed by a person** | `/opsx-propose` with the kit's `story-tdd` schema (or the documents from `/story-start`) | Core |
+| 8. Agree the plan | Proposal, spec scenarios, design (if needed), test-first tasks, fresh-eyes review — **approved by a person** | `/opsx-propose`, then the `design-reviewer` agent (or `plan.md` from `/story-start`) | Core |
 | 9. Build | Code in slices, tests first; hooks flag context lines that may now be wrong | `/opsx-apply` + agent hooks | Core |
 | 10. Test the UI | Click through the Angular screen the story changed | VS Code browser tools or Playwright MCP *(optional)* | Optional |
-| 11. Check | Tests, test-plan rows all passing, impact of changes, spec and design coverage, context freshness | `/story-finish` + `/opsx-verify` + Graphify `affected` + `context-tools check` | Core |
+| 11. Check | Tests for every scenario passing, impact of changes, spec and design coverage, context freshness | `/story-finish` + `/opsx-verify` + Graphify `affected` + `context-tools check` | Core |
 | 12. Pull request | Description drafted; created by you or by the agent with approval | `/story-finish`, Azure DevOps MCP *(optional)*, PR template | Core |
 | 13. CI | Context check on the PR (warnings first, blocking later) | Azure Pipelines template | Later |
 | 14. Archive | Spec record updated as the PR's last commit; code map refreshed automatically | `/opsx-archive` + git hooks | Core |
@@ -183,7 +183,7 @@ Note: `graphify hook install` writes to `.git/hooks`, which git ignores once the
 | --- | --- |
 | **Typo, config tweak, one-line fix** | Just ask the agent. Context loads automatically. |
 | **Bug fix** | Ask the agent to find the cause with `query_graph`, check `known-traps.md`, and run `graphify affected` on what it plans to change. Fix, add a regression test, `/context-learn` if the bug came from a missing rule. |
-| **Small change (under a day)** | `/story-start` (sizes it) → an OpenSpec change with a Lite technical design, or for a tiny fix just a failing test and the fix → `/story-finish`. |
+| **Small change (under a day)** | `/story-start` (sizes it) → an OpenSpec change, or for a tiny fix just a failing test and the fix → `/story-finish`. |
 | **Story (1–5 days)** | Full workflow in Section 1, with OpenSpec. This is the one to demo. |
 | **Story across UI and backend** | Open both repos in one VS Code window. Backend first. One OpenSpec change per repo with the same id. The API contract is the hand-off between them. |
 | **Story across several micro-frontends and services** | `/cross-repo-story` from the product context hub; `hub.mjs workspace` for the window; producers first, shell last ([MULTI-REPO.md](MULTI-REPO.md)). |

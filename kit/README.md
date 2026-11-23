@@ -1,9 +1,18 @@
 # AI context kit
 
-Installs skills, agents, agent hooks, the context tool and a pull request check into one of your
-repositories. Read [`../GUIDE.md`](../GUIDE.md) first; this page is the reference.
+The user guide is **[GUIDE.md](GUIDE.md)** (setup, skills, a story from start to finish, in every agent).
+This page is the reference for the installer and the files it adds.
+
+**Two setups.** A **product workspace** (one home repo holds every tool and the product context; each repo
+holds only its own knowledge), or **one repo** with its own copy of everything.
 
 ```bash
+# Product workspace
+node kit/install.mjs --create-workspace ../product-context --tool copilot,claude   # the home repo
+node kit/install.mjs <repo> --workspace ../product-context [--graphify] [--ci azure]   # each repo
+node kit/install.mjs <repo> --workspace ../product-context --upgrade   # move a one-repo install in
+
+# One repo
 node kit/install.mjs <repo>                          # GitHub Copilot (default)
 node kit/install.mjs <repo> --tool claude            # Claude Code
 node kit/install.mjs <repo> --tool codex             # OpenAI Codex
@@ -14,7 +23,6 @@ node kit/install.mjs <repo> --mcp                    # register the kit's MCP se
 node kit/install.mjs <repo> --org ../org-context     # copy the org's rules and readiness weights in, stamped
 node kit/install.mjs <repo> --upgrade                # replace the kit's own files; moves a 1.x repo to 2.x
 node kit/install.mjs <repo> --dry-run                # show what it would do, change nothing
-node kit/install.mjs <repo> --keep-schema            # with OpenSpec: don't switch to the story-tdd workflow
 node kit/install.mjs <repo> --no-git-hook            # skip the git hooks
 node kit/install.mjs --create-hub ../product-context # new product context hub (many repos, see MULTI-REPO.md)
 node kit/install.mjs --create-org ../org-context     # new organisation context repo (see ORG-LEVEL.md)
@@ -41,10 +49,10 @@ optional: run `openspec init` first so the installer can add the story workflow.
 | `files-graphify/` | `.vscode/mcp.json` / `.mcp.json`, `.graphifyignore` (with `--graphify`) | Graphify MCP server and ignore file; adds `graphify-out/` to `.gitignore` |
 | `files/.azuredevops/pull_request_template.md` | `.azuredevops/` | PR template with the context checklist |
 | `snippets/openspec-config.yaml` | appended to `openspec/config.yaml` | Points OpenSpec at your context, adds rules |
-| `openspec-schema/story-tdd/` | `openspec/schemas/story-tdd/` + `schema: story-tdd` | Story workflow: proposal → specs → technical design (`design.md`) → `test-plan.md` → test-first tasks. `schema.yaml` is kit-owned; `templates/` are yours |
 | `<org-context>/rules/*.md` | `.github/instructions/org/` and/or `.claude/rules/org/` (with `--org`) | Organisation rules, stamped with the org repo's commit; org-owned, replaced on every sync |
 | `<org-context>/context-readiness.json` | `.ai-kit/readiness.json` | The organisation's readiness weights, unless the repo keeps its own |
-| `hub-template/`, `org-template/` | new folders, with `--create-hub` / `--create-org` | Product context hub; organisation context repo |
+| `hub-template/`, `org-template/` | new folders, with `--create-workspace` / `--create-hub` / `--create-org` | Home repo's product context; product context hub; organisation context repo |
+| `files-member/` | a repo joining a workspace, with `--ci` | Pull request check that checks out the home repo and runs its tool |
 
 **What each tool reads.** Copilot: `AGENTS.md`, `.github/instructions/`, `.github/skills/`,
 `.github/agents/`, `.github/hooks/`. Claude Code: `CLAUDE.md` (which imports `AGENTS.md`), `.claude/rules/`,
@@ -65,7 +73,7 @@ node .ai-kit/context-tools.cjs migrate            # convert context pages to the
 node .ai-kit/context-tools.cjs doctor
 ```
 
-From 1.x, `--upgrade` moves the context tool to `.ai-kit/`, the version stamp to `.ai-kit/kit.json` and the
+From 2.0, `--upgrade` switches OpenSpec back to its default documents (see below). From 1.x, `--upgrade` moves the context tool to `.ai-kit/`, the version stamp to `.ai-kit/kit.json` and the
 readiness weights to `.ai-kit/readiness.json`; renames the skills (`context-bootstrap` and
 `context-baseline` → `context-create`, `context-refresh` → `context-update`, `story-to-change` →
 `story-start`); points the Claude Code hooks at the new path; and lists files your team wrote that still
@@ -73,25 +81,28 @@ name the old paths. It never edits `AGENTS.md`, rule files or `docs/context/`. `
 1.x status line (`> Dimension: … · Status: …`) into frontmatter. Upgrades cost no tokens: nothing in them
 needs an agent. See [`../CHANGELOG.md`](../CHANGELOG.md).
 
-## The story workflow (OpenSpec schema)
+## Product workspace: what goes where
 
-When the repo has `openspec/`, the installer adds the `story-tdd` schema and makes it the default for
-**new** changes (changes already started keep theirs; `--keep-schema` skips the switch). Each change then
-has five documents, created in this order:
+| Home repo (`--create-workspace`) | Each repo (`--workspace <home>`) |
+| --- | --- |
+| Every skill and agent, per tool; the product skills `product-context` and `cross-repo-story` | Nothing from the kit's tools |
+| Hooks, `.ai-kit/context-tools.cjs`, `.githooks/` | `core.hooksPath` pointing at the home repo's `.githooks/` (per clone) |
+| `catalog.json`, `product.code-workspace`, product context pages, `scripts/hub.mjs` | `.ai-kit/kit.json`: a stamp naming the home repo |
+| OpenSpec's commands (`openspec init --tools <tool>` once) | `openspec/` only (`openspec init --tools none`) |
+| Readiness weights, org rules | Org rules (copied: cloud agents and CI need them in the repo) |
+| | `azure-pipelines.ai-context.yml` or `.github/workflows/ai-context.yml` (with `--ci`): checks out the home repo and runs its check |
 
-| Artifact | File | Needs |
-| --- | --- | --- |
-| proposal | `proposal.md` (with the story's acceptance criteria) | — |
-| specs | `specs/<capability>/spec.md` | proposal |
-| design | `design.md`: the technical design document, always created, "Lite" for small stories | proposal |
-| test-plan | `test-plan.md`: each scenario and acceptance criterion mapped to a named test, extra cases, regression, test data | specs, design |
-| tasks | `tasks.md`: per layer, tests first, then code, then mark test-plan rows `passing` | specs, design, test-plan |
+The home repo's session note lists every repo, the ones without context yet, and repos open in the
+workspace but not registered. `node scripts/hub.mjs claude` starts Claude Code in the home repo with every
+cloned repo added (`--add-dir`, with their `CLAUDE.md` and rules loaded).
 
-It keeps the id `design` and the file name `design.md` on purpose: `/opsx-verify` checks the code against
-an artifact with that id. Customise with `openspec/schemas/story-tdd/templates/` (your TDD format) and
-`rules:` in `openspec/config.yaml` (for example, name your own TDD skill under `design:`). Check it with
-`openspec schema validate story-tdd`. After `design.md` and `test-plan.md` exist, `/story-start` asks the
-`design-reviewer` agent for a fresh-eyes review before any code.
+## OpenSpec
+
+The kit uses OpenSpec's **default** documents (proposal, specs, a design when needed, tasks). It appends
+a short block to `openspec/config.yaml`: read `AGENTS.md` first, write each test before its code, update
+context lines before archiving. Kit 2.0 used a custom "story-tdd" schema; `--upgrade` switches a repo back
+to `schema: spec-driven` and leaves `openspec/schemas/story-tdd/` for changes already started with it.
+After the change's documents exist, `/story-start` asks the `design-reviewer` agent for a fresh-eyes review.
 
 ## The context tool
 

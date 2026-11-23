@@ -1,8 +1,11 @@
 #!/bin/sh
 # Refuses a commit when a context line in it points at a file that will not exist in the commit.
 # Installed by the AI context kit. Skip once in an emergency with: git commit --no-verify
+# Works in a repo with its own copy of the kit, and in a repo whose hooks come from the product home repo.
 root="$(git rev-parse --show-toplevel)"
+here="$(cd "$(dirname "$0")" && pwd)"
 tool="$root/.ai-kit/context-tools.cjs"
+[ -f "$tool" ] || tool="$here/../.ai-kit/context-tools.cjs"             # product workspace: the home repo's copy
 [ -f "$tool" ] || tool="$root/.github/hooks/scripts/context-tools.cjs"   # kit 1.x layout
 [ -f "$tool" ] || tool="$root/.claude/hooks/context-tools.cjs"           # kit 1.x layout (Claude Code)
 [ -f "$tool" ] || exit 0
