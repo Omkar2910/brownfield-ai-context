@@ -328,9 +328,10 @@ API, dependencies, security, testing, operations, decisions) and a readiness sco
 1. **Type `/context-create deep`.** It asks which flows matter most and who owns each page, then writes one
    page at a time in `docs/context/`, every fact anchored, unproven claims under "Unverified". Check each
    page as it appears.
-2. **Data pages.** If you can get a schema file (tbls, run once by a person with a read-only user against a
-   development or QA database), `node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.json`
-   writes one page per table; the skill then fills in what each table means for the tables your flows use.
+2. **Data pages.** If you can get a schema file (a DDL dump such as `pg_dump --schema-only` or a DB viewer's
+   "Generate DDL", exported once by a person with a read-only user from a development or QA database),
+   save it as `docs/context/data/schema.sql` and run
+   `node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql`. It writes one page per table; the skill then fills in what each table means for the tables your flows use.
    Without one, it writes table pages from migrations, entities and query constants. See
    [CONTEXT-GUIDE.md](CONTEXT-GUIDE.md#data-context-from-code-and-from-the-database).
 3. **Review.** Each page's owner reads it against the code, resolves the Unverified lines and sets the

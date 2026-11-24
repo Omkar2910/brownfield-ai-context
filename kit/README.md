@@ -113,7 +113,7 @@ node .ai-kit/context-tools.cjs check [--base origin/main] [--staged] [--strict]
 node .ai-kit/context-tools.cjs readiness [--json]         # readiness score 0-100 over 12 dimensions
 node .ai-kit/context-tools.cjs pages-for <file> ...       # which context lines describe these files
 node .ai-kit/context-tools.cjs migrate [--dry-run]        # upgrade page format after a kit upgrade
-node .ai-kit/context-tools.cjs schema-import <schema.json> [--out docs/context/data]   # table pages from tbls
+node .ai-kit/context-tools.cjs schema-import <schema.sql|schema.json> [--out docs/context/data]   # table pages from a DDL dump or tbls
 node .ai-kit/context-tools.cjs ci --base origin/main      # the pull request check
 node .ai-kit/context-tools.cjs mcp                        # MCP server on stdio (preview)
 ```
@@ -156,10 +156,11 @@ plus ratings from `/context-assess` in `docs/context/readiness.md`. Each rating 
 provenance and freshness are measured. Weights and bands: `.ai-kit/readiness.json`
 (`{"dimensions":[{"id","label","weight"}…],"bands":[{"min","name"}…],"reviewMaxAgeDays":180}`).
 
-**Table pages.** `schema-import` reads a tbls `schema.json` and writes one page per table in
+**Table pages.** `schema-import` reads a DDL dump (`.sql`: PostgreSQL `pg_dump --schema-only` or a DB
+viewer's DDL export; simple MySQL and SQL Server tables mostly work) or a tbls `schema.json`, and writes one page per table in
 `docs/context/data/tables/` plus `docs/context/data/index.md`. Only the part between the `generated`
 markers is replaced on a later import; what people wrote is kept. Tables that disappeared are reported,
-never deleted. See the `context-create` skill's `references/data-sources.md`.
+never deleted. An existing page without markers keeps every word and gets a generated section added. See the `context-create` skill's `references/data-sources.md`.
 
 **ci.** Runs `check --base`, notes code changes that arrive without an OpenSpec change folder (in repos that
 use OpenSpec), and prints the readiness score. On GitHub Actions it also writes the job summary.

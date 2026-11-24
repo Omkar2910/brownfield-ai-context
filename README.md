@@ -69,7 +69,7 @@ internal/           working notes for the maintainer (briefing, strategy, valida
 
 ## Status
 
-Kit 2.1.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 22 on Linux (Node 18 or newer is required); written for Windows, macOS and Linux.
+Kit 2.1.1. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 22 on Linux (Node 18 or newer is required); written for Windows, macOS and Linux.
 Agent hooks are preview features in VS Code; the git hook, the pull request check and the skills work without
 them, and `context-tools.cjs doctor` shows whether they run. The MCP server is a preview.
 Last updated November 2026. MIT licence.

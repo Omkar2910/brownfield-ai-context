@@ -68,7 +68,7 @@ just less well.
 | **VS Code browser tools / Playwright MCP** | Agent opens the Angular app, clicks through the change, takes screenshots | Local app running; test data only |
 | **Library docs MCP (for example Context7)** | Up-to-date docs for the exact Angular / Spring versions you use | It sends your queries to an outside service; policy |
 | **Static analysis (for example SonarQube)** | Add its findings to the story-finish check | Whatever your team already runs |
-| **tbls** | Writes the database schema as JSON for `schema-import` (table pages) | Read-only user, non-production database, run by a person |
+| **A DDL dump or tbls** | The database schema for `schema-import` (table pages): `pg_dump --schema-only`, a DB viewer's DDL export, or tbls JSON | Read-only user, non-production database, run by a person |
 | **The kit's MCP server (preview)** | Lets cloud agents and orchestrators query the context (`--mcp`) | Which agents may run local commands |
 | **Repomix** | Packs a folder into one file for an agent | Use only when Graphify is not available |
 

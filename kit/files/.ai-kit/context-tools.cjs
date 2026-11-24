@@ -12,8 +12,8 @@
  *   readiness [--json]             Context readiness score (0-100) over 12 dimensions.
  *   pages-for <file> [<file> ...]  Context lines and pages that describe these files (anchored to them).
  *   migrate [--dry-run]            Upgrade context pages to the current kit format (no AI, no tokens).
- *   schema-import <schema.json> [--out docs/context/data] [--dry-run]
- *                                  Build or refresh one page per table from a tbls schema.json. Only the
+ *   schema-import <schema.sql|schema.json> [--out docs/context/data] [--dry-run]
+ *                                  Build or refresh one page per table from a DDL dump or a tbls schema.json. Only the
  *                                  generated part of each page is replaced; what people wrote is kept.
  *   ci [--base <git-ref>] [--strict]  The pull request check: check + story check + readiness summary.
  *   mcp                            MCP server on stdio, so any MCP-capable agent can query the context.
@@ -762,16 +762,20 @@ function changedSince(repo, date) {
 // Share of claim lines (bullets, numbered steps, table rows) that carry an anchor, directly or via a
 // "Source: [anchor: …]" line in the same section. Lines under "Unverified" are not claims.
 function anchoredShare(text) {
-  let claims = 0, anchored = 0, sectionSourced = false, unverified = false, prev = '';
+  let claims = 0, anchored = 0, sectionSourced = false, unverified = false, prev = '', inGen = false, genSourced = false;
   const body = text.replace(/^---\r?\n[\s\S]*?\r?\n---/, '');
   for (const line of body.split(/\r?\n/)) {
+    // A generated block is traceable as a whole when its Source line is anchored (schema-import writes one).
+    if (line.includes('<!-- generated:start')) { inGen = true; genSourced = false; continue; }
+    if (line.includes('<!-- generated:end')) { inGen = false; continue; }
+    if (inGen && /^\s*(Source|Sources):.*\[anchor:/i.test(line)) genSourced = true;
     if (/^#{1,6}\s/.test(line)) { sectionSourced = false; unverified = /unverified/i.test(line); prev = line; continue; }
     if (/^\s*(Source|Sources):.*\[anchor:/i.test(line)) sectionSourced = true;
     const isRow = /^\s*\|/.test(line) && !/^\s*\|\s*:?-{3}/.test(line);
     const isHeaderRow = isRow && !/^\s*\|/.test(prev);
     const isClaim = !unverified && !/^\s*>/.test(line) && !/<[^>]+>/.test(line) &&
       (/^\s*([-*]|\d+\.)\s+\S/.test(line) || (isRow && !isHeaderRow));
-    if (isClaim) { claims++; if (/\[anchor:/.test(line) || sectionSourced) anchored++; }
+    if (isClaim) { claims++; if (/\[anchor:/.test(line) || sectionSourced || (inGen && genSourced)) anchored++; }
     prev = line;
   }
   return { claims, anchored };
@@ -896,7 +900,155 @@ function cmdPagesFor() {
   }
 }
 
-// ---------------------------------------------------------------- schema-import (tbls schema.json)
+// ---------------------------------------------------------------- DDL reader (.sql schema dumps)
+// Reads PostgreSQL schema DDL: pg_dump --schema-only, and "generate DDL" exports from DB viewers (DBeaver,
+// pgAdmin, DataGrip). Simple MySQL and SQL Server CREATE TABLE statements mostly work too. It reads tables,
+// columns, defaults, keys, foreign keys, unique and check constraints, indexes, comments, views, enum types
+// and triggers into the same shape as a tbls schema.json. It never runs SQL.
+const MIGRATION_TABLES = /^(flyway_schema_history|databasechangelog|databasechangeloglock|schema_migrations)$/i;
+function splitSqlStatements(sql) {
+  const out = []; let cur = ''; let i = 0; const n = sql.length;
+  while (i < n) {
+    const c = sql[i], d = sql[i + 1];
+    if (c === '-' && d === '-') { const e = sql.indexOf('\n', i); i = e < 0 ? n : e; continue; }
+    if (c === '/' && d === '*') { const e = sql.indexOf('*/', i + 2); i = e < 0 ? n : e + 2; cur += ' '; continue; }
+    if (c === "'") { let j = i + 1; while (j < n) { if (sql[j] === "'") { if (sql[j + 1] === "'") { j += 2; continue; } break; } j++; } cur += sql.slice(i, j + 1); i = j + 1; continue; }
+    if (c === '"' || c === '`' || c === '[') { const close = c === '[' ? ']' : c; const e = sql.indexOf(close, i + 1); const end = e < 0 ? n : e + 1; cur += sql.slice(i, end); i = end; continue; }
+    if (c === '$') { const m = /^\$[A-Za-z_0-9]*\$/.exec(sql.slice(i, i + 64)); if (m) { const e = sql.indexOf(m[0], i + m[0].length); const end = e < 0 ? n : e + m[0].length; cur += sql.slice(i, end); i = end; continue; } }
+    if (c === ';') { if (cur.trim()) out.push(cur.trim()); cur = ''; i++; continue; }
+    cur += c; i++;
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out.map(s => s.replace(/\s+/g, ' ')).filter(s => !/^GO$/i.test(s));
+}
+// Same length, with quoted text and the inside of brackets blanked, so keywords can be found at the top level.
+function maskSql(s) {
+  let out = ''; let depth = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === "'" || c === '"' || c === '`') { const e = s.indexOf(c, i + 1); const end = e < 0 ? s.length - 1 : e; out += c + ' '.repeat(end - i - 1) + (e < 0 ? '' : c); i = end; continue; }
+    if (c === '(') { depth++; out += depth === 1 ? '(' : ' '; continue; }
+    if (c === ')') { out += depth === 1 ? ')' : ' '; depth = Math.max(0, depth - 1); continue; }
+    out += depth > 0 ? ' ' : c;
+  }
+  return out;
+}
+function splitTop(s, sep = ',') {
+  const m = maskSql(s); const parts = []; let last = 0;
+  for (let i = 0; i < m.length; i++) if (m[i] === sep) { parts.push(s.slice(last, i).trim()); last = i + 1; }
+  parts.push(s.slice(last).trim());
+  return parts.filter(Boolean);
+}
+function closingParen(s, open) {
+  let depth = 0;
+  const m = maskSql(s.slice(open)); // depth-1 parens survive the mask
+  for (let i = 0; i < m.length; i++) { if (m[i] === '(') depth++; else if (m[i] === ')') { depth--; if (!depth) return open + i; } }
+  return -1;
+}
+const IDENT = '(?:"[^"]+"|`[^`]+`|\\[[^\\]]+\\]|[\\w$]+)';
+const QNAME = `${IDENT}(?:\\s*\\.\\s*${IDENT})*`;
+const unq = name => name.split(/\s*\.\s*(?=(?:[^"]*"[^"]*")*[^"]*$)/).map(p => p.trim().replace(/^["`[]|["`\]]$/g, '')).join('.');
+const bareName = name => unq(name).split('.').pop();
+const cols = list => splitTop(list).map(c => unq(c.replace(/\s+(ASC|DESC)\b.*$/i, '')));
+const sqlString = s => s.replace(/^E?'/, '').replace(/'$/, '').replace(/''/g, "'");
+
+function parseDdl(sql) {
+  const tables = new Map(); const enums = new Map(); const relations = []; const skipped = new Set(); let unread = 0;
+  const table = (name, type = 'BASE TABLE') => {
+    const key = unq(name);
+    if (MIGRATION_TABLES.test(bareName(key))) { skipped.add(key); return null; }
+    if (!tables.has(key)) tables.set(key, { name: key, type, comment: '', columns: [], constraints: [], indexes: [], triggers: [] });
+    return tables.get(key);
+  };
+  const addConstraint = (t, text, cname) => {
+    const m = /^(?:CONSTRAINT\s+(\S+)\s+)?(PRIMARY\s+KEY|UNIQUE|FOREIGN\s+KEY|CHECK|EXCLUDE)\b\s*(.*)$/i.exec(text);
+    if (!m) return false;
+    const name = unq(m[1] || cname || ''), kind = m[2].toUpperCase().replace(/\s+/g, ' '), rest = m[3];
+    const lp = rest.indexOf('('), rp = lp >= 0 ? closingParen(rest, lp) : -1;
+    const inner = lp >= 0 && rp > lp ? rest.slice(lp + 1, rp) : '';
+    const k = { name: name || `${bareName(t.name)}_${kind.split(' ')[0].toLowerCase()}`, type: kind, def: `${kind} ${rest}`.trim(), table: t.name, columns: [] };
+    if (kind === 'PRIMARY KEY' || kind === 'UNIQUE') k.columns = cols(inner);
+    if (kind === 'FOREIGN KEY') {
+      k.columns = cols(inner);
+      const ref = new RegExp(`REFERENCES\\s+(${QNAME})\\s*(?:\\(([^)]*)\\))?`, 'i').exec(rest);
+      if (ref) relations.push({ table: t.name, columns: k.columns, parent_table: unq(ref[1]), parent_columns: ref[2] ? cols(ref[2]) : [], def: k.def });
+    }
+    t.constraints.push(k);
+    return true;
+  };
+  const addColumn = (t, text) => {
+    const nm = new RegExp(`^(${IDENT})\\s*(.*)$`).exec(text);
+    if (!nm) return;
+    const name = unq(nm[1]); const rest = nm[2]; const masked = maskSql(rest);
+    const kw = /\b(NOT\s+NULL|NULL|DEFAULT|CONSTRAINT|PRIMARY\s+KEY|UNIQUE|REFERENCES|CHECK|GENERATED|COLLATE|AUTO_INCREMENT|IDENTITY|COMMENT)\b/i.exec(masked);
+    const type = (kw ? rest.slice(0, kw.index) : rest).trim();
+    const attrs = kw ? rest.slice(kw.index) : '';
+    const am = kw ? masked.slice(kw.index) : '';
+    const c = { name, type, nullable: !/\bNOT\s+NULL\b/i.test(am) && !/\bPRIMARY\s+KEY\b/i.test(am), default: null, comment: '' };
+    const dm = /(?<!\bBY\s+)\bDEFAULT\s+/i.exec(am); // not the DEFAULT in "GENERATED BY DEFAULT AS IDENTITY"
+    if (dm) { const after = am.slice(dm.index + dm[0].length); const stop = /\s(NOT\s+NULL|NULL|CONSTRAINT|PRIMARY\s+KEY|UNIQUE|REFERENCES|CHECK|GENERATED|COLLATE|COMMENT)\b/i.exec(after); c.default = attrs.slice(dm.index + dm[0].length, dm.index + dm[0].length + (stop ? stop.index : after.length)).trim(); }
+    if (/\bGENERATED\b[^,]*\bAS\s+IDENTITY\b|\bAUTO_INCREMENT\b|\bIDENTITY\b/i.test(am)) c.default = c.default || 'identity';
+    if (/\b(big|small)?serial\b/i.test(type)) c.default = c.default || 'serial';
+    const cm = /\bCOMMENT\s+('(?:[^']|'')*')/i.exec(attrs); if (cm) c.comment = sqlString(cm[1]);
+    t.columns.push(c);
+    if (/\bPRIMARY\s+KEY\b/i.test(am)) t.constraints.push({ name: `${bareName(t.name)}_pkey`, type: 'PRIMARY KEY', def: `PRIMARY KEY (${name})`, table: t.name, columns: [name] });
+    if (/\bUNIQUE\b/i.test(am)) t.constraints.push({ name: `${bareName(t.name)}_${name}_key`, type: 'UNIQUE', def: `UNIQUE (${name})`, table: t.name, columns: [name] });
+    const ref = new RegExp(`REFERENCES\\s+(${QNAME})\\s*(?:\\(([^)]*)\\))?`, 'i').exec(attrs);
+    if (ref) { const def = `FOREIGN KEY (${name}) ${attrs.slice(ref.index).replace(/\s+(CHECK|DEFAULT|NOT NULL)\b.*$/i, '')}`; relations.push({ table: t.name, columns: [name], parent_table: unq(ref[1]), parent_columns: ref[2] ? cols(ref[2]) : [], def }); t.constraints.push({ name: `${bareName(t.name)}_${name}_fkey`, type: 'FOREIGN KEY', def, table: t.name, columns: [name] }); }
+    const ck = /\bCHECK\s*\(/i.exec(am); if (ck) { const lp = attrs.indexOf('(', ck.index); const rp = closingParen(attrs, lp); t.constraints.push({ name: `${bareName(t.name)}_${name}_check`, type: 'CHECK', def: `CHECK ${attrs.slice(lp, rp + 1)}`, table: t.name, columns: [name] }); }
+  };
+
+  for (const st of splitSqlStatements(sql)) {
+    let m;
+    if ((m = new RegExp(`^CREATE\\s+(?:OR\\s+REPLACE\\s+)?(?:(?:GLOBAL|LOCAL)\\s+)?(?:TEMP(?:ORARY)?\\s+|UNLOGGED\\s+)?TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(${QNAME})\\s*(.*)$`, 'i').exec(st))) {
+      const rest = m[2];
+      if (/^PARTITION\s+OF\b/i.test(rest)) { const t = table(m[1], 'PARTITION'); if (t) t.comment = rest.slice(0, 160); continue; }
+      if (/^AS\b/i.test(rest)) { table(m[1]); continue; }
+      const lp = rest.indexOf('('); const rp = lp >= 0 ? closingParen(rest, lp) : -1;
+      const t = table(m[1]); if (!t || rp < 0) continue;
+      for (const item of splitTop(rest.slice(lp + 1, rp))) {
+        if (/^(LIKE|PERIOD|INDEX|KEY|FULLTEXT|SPATIAL)\b/i.test(item)) { if (/^(INDEX|KEY)\b/i.test(item)) t.indexes.push({ name: (/^\w+\s+(\S+)/.exec(item) || [])[1] || '', def: item }); continue; }
+        if (!addConstraint(t, item)) addColumn(t, item);
+      }
+      const after = rest.slice(rp + 1).trim();
+      if (/^PARTITION\s+BY/i.test(after)) t.type = 'BASE TABLE (partitioned)';
+      const tc = /COMMENT\s*=?\s*('(?:[^']|'')*')/i.exec(after); if (tc) t.comment = sqlString(tc[1]);
+    } else if ((m = new RegExp(`^ALTER\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:ONLY\\s+)?(${QNAME})\\s+(.*)$`, 'i').exec(st))) {
+      const t = table(m[1]); if (!t) continue;
+      for (const action of splitTop(m[2])) {
+        let a;
+        if ((a = /^ADD\s+((?:CONSTRAINT\s+\S+\s+)?(?:PRIMARY\s+KEY|UNIQUE|FOREIGN\s+KEY|CHECK|EXCLUDE)\b.*)$/i.exec(action))) addConstraint(t, a[1]);
+        else if ((a = new RegExp(`^ALTER\\s+(?:COLUMN\\s+)?(${IDENT})\\s+SET\\s+DEFAULT\\s+(.*)$`, 'i').exec(action))) { const c = t.columns.find(x => x.name === unq(a[1])); if (c) c.default = a[2]; }
+        else if ((a = new RegExp(`^ALTER\\s+(?:COLUMN\\s+)?(${IDENT})\\s+ADD\\s+GENERATED\\b`, 'i').exec(action))) { const c = t.columns.find(x => x.name === unq(a[1])); if (c) c.default = 'identity'; }
+        else if ((a = new RegExp(`^ALTER\\s+(?:COLUMN\\s+)?(${IDENT})\\s+SET\\s+NOT\\s+NULL`, 'i').exec(action))) { const c = t.columns.find(x => x.name === unq(a[1])); if (c) c.nullable = false; }
+        else if ((a = /^ADD\s+(?:COLUMN\s+)?(?:IF\s+NOT\s+EXISTS\s+)?(.*)$/i.exec(action))) { if (!addConstraint(t, a[1])) addColumn(t, a[1]); }
+      }
+    } else if ((m = new RegExp(`^CREATE\\s+(UNIQUE\\s+)?(?:CLUSTERED\\s+|NONCLUSTERED\\s+)?INDEX\\s+(?:CONCURRENTLY\\s+)?(?:IF\\s+NOT\\s+EXISTS\\s+)?(${QNAME})?\\s*ON\\s+(?:ONLY\\s+)?(${QNAME})`, 'i').exec(st))) {
+      const t = table(m[3]); if (t) t.indexes.push({ name: m[2] ? bareName(m[2]) : '', def: st, table: t.name });
+    } else if ((m = new RegExp(`^COMMENT\\s+ON\\s+(TABLE|VIEW|MATERIALIZED\\s+VIEW|COLUMN)\\s+(${QNAME})\\s+IS\\s+('(?:[^']|'')*'|NULL)`, 'i').exec(st))) {
+      const text = /^NULL$/i.test(m[3]) ? '' : sqlString(m[3]);
+      if (/^COLUMN$/i.test(m[1])) { const parts = unq(m[2]).split('.'); const col = parts.pop(); const t = table(parts.join('.')); const c = t && t.columns.find(x => x.name === col); if (c) c.comment = text; }
+      else { const t = table(m[2]); if (t) t.comment = text; }
+    } else if ((m = new RegExp(`^CREATE\\s+(?:OR\\s+REPLACE\\s+)?(?:(?:ALGORITHM|DEFINER|SQL\\s+SECURITY)\\s*=?\\s*\\S+\\s+)*(MATERIALIZED\\s+)?VIEW\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(${QNAME})`, 'i').exec(st))) {
+      const t = table(m[2], m[1] ? 'MATERIALIZED VIEW' : 'VIEW'); if (t) t.def = st;
+    } else if ((m = new RegExp(`^CREATE\\s+TYPE\\s+(${QNAME})\\s+AS\\s+ENUM\\s*\\((.*)\\)$`, 'i').exec(st))) {
+      enums.set(bareName(m[1]).toLowerCase(), splitTop(m[2]).map(sqlString));
+    } else if ((m = new RegExp(`^CREATE\\s+(?:OR\\s+REPLACE\\s+)?(?:CONSTRAINT\\s+)?TRIGGER\\s+(${QNAME})\\s.*?\\bON\\s+(${QNAME})`, 'i').exec(st))) {
+      const t = table(m[2]); if (t) t.triggers.push({ name: unq(m[1]), def: st });
+    } else if (/^(CREATE|ALTER)\s+TABLE\b/i.test(st)) unread++;
+  }
+  // References written without the schema, or without the column list, are resolved to the tables found.
+  const all = [...tables.values()];
+  const resolve = n => tables.has(n) ? n : (all.filter(t => bareName(t.name) === bareName(n)).length === 1 ? all.find(t => bareName(t.name) === bareName(n)).name : n);
+  for (const r of relations) {
+    r.parent_table = resolve(r.parent_table);
+    if (!r.parent_columns.length) { const p = tables.get(r.parent_table); const pk = p && p.constraints.find(k => k.type === 'PRIMARY KEY'); r.parent_columns = pk ? pk.columns : []; }
+  }
+  for (const t of all) for (const c of t.columns) { const e = enums.get(bareName(c.type.replace(/\[\]$/, '')).toLowerCase()); if (e) c.enum = e; }
+  return { tables: all, relations, enums: Object.fromEntries(enums), skipped: [...skipped], unread };
+}
+
+// ---------------------------------------------------------------- schema-import (tbls schema.json or a .sql DDL dump)
 const GEN_START = '<!-- generated:start schema-import: do not edit between these markers -->';
 const GEN_END = '<!-- generated:end -->';
 function replaceGenerated(text, block) {
@@ -909,12 +1061,22 @@ const safeName = n => n.replace(/[^A-Za-z0-9_.-]/g, '_');
 function cmdSchemaImport() {
   const repo = resolveRepo({});
   const file = argv[1] && !argv[1].startsWith('--') ? argv[1] : null;
-  if (!file) { console.log('Usage: node .ai-kit/context-tools.cjs schema-import <schema.json from tbls> [--out docs/context/data] [--dry-run]'); process.exitCode = 2; return; }
-  const schema = readJson(path.resolve(file));
-  if (!schema || !Array.isArray(schema.tables)) { console.log(`schema-import: ${file} is not a tbls schema.json (expected a "tables" list). Create one with: tbls out -t json -o schema.json <dsn>`); process.exitCode = 2; return; }
+  if (!file) { console.log('Usage: node .ai-kit/context-tools.cjs schema-import <schema.sql (DDL dump) | schema.json (tbls)> [--out docs/context/data] [--dry-run]'); process.exitCode = 2; return; }
+  let schema, ddlNote = '';
+  // A relative path is taken from the current folder, or else from the repo (handy with --repo).
+  const absFile = !path.isAbsolute(file) && !exists(path.resolve(file)) && exists(path.join(repo, file)) ? path.join(repo, file) : path.resolve(file);
+  if (/\.(sql|ddl)$/i.test(file)) {
+    let sql = ''; try { sql = fs.readFileSync(absFile, 'utf8'); } catch { console.log(`schema-import: cannot read ${file}`); process.exitCode = 2; return; }
+    schema = parseDdl(sql);
+    if (!schema.tables.length) { console.log(`schema-import: no CREATE TABLE statements found in ${file}. Export the schema as DDL (pg_dump --schema-only, or your DB viewer's "Generate DDL").`); process.exitCode = 2; return; }
+    ddlNote = `  Read from DDL: ${schema.tables.length} table(s)/view(s), ${schema.relations.length} reference(s), ${Object.keys(schema.enums).length} enum type(s)` +
+      (schema.skipped.length ? `; skipped migration-tool tables: ${schema.skipped.join(', ')}` : '') + (schema.unread ? `; ${schema.unread} table statement(s) not understood (check by hand)` : '');
+  } else {
+    schema = readJson(absFile);
+    if (!schema || !Array.isArray(schema.tables)) { console.log(`schema-import: ${file} is neither a .sql DDL dump nor a tbls schema.json (expected a "tables" list).`); process.exitCode = 2; return; }
+  }
   const dry = flag('--dry-run');
   const outDir = toPosix(opt('--out') || 'docs/context/data');
-  const absFile = path.resolve(file);
   const relFile = toPosix(path.relative(repo, absFile));
   const inRepo = !relFile.startsWith('..') && !path.isAbsolute(relFile);
   const sourceLine = inRepo ? `Source: [anchor: ${relFile}]` : `Source: ${path.basename(file)} (outside the repo: copy it in and import again to make this traceable)`;
@@ -922,6 +1084,7 @@ function cmdSchemaImport() {
   const relations = schema.relations || [];
   const created = [], updated = [], same = [];
   const tableNames = new Set(schema.tables.map(t => t.name));
+  const pageOf = new Map();
 
   for (const t of schema.tables) {
     const cols = t.columns || [];
@@ -937,19 +1100,33 @@ function cmdSchemaImport() {
     if (fks.length) g.push('', '### References', ...fks.map(r => `- (${(r.columns || []).join(', ')}) → ${r.parent_table} (${(r.parent_columns || []).join(', ')})${r.virtual ? ' (declared in tbls, no foreign key)' : ''}`));
     if (refBy.length) g.push('', '### Referenced by', ...refBy.map(r => `- ${r.table} (${(r.columns || []).join(', ')})`));
     if (lookalikes.length) g.push('', '### Look like references but have no foreign key', ...lookalikes.map(c => `- ${c.name}`));
+    const enumCols = cols.filter(c => Array.isArray(c.enum) && c.enum.length);
+    if (enumCols.length) g.push('', '### Allowed values', ...enumCols.map(c => `- ${c.name}: ${c.enum.join(', ')}`));
     if ((t.indexes || []).length) g.push('', '### Indexes', ...t.indexes.map(i => `- ${cell(i.name)}: ${cell(i.def)}`));
     if ((t.triggers || []).length) g.push('', '### Triggers', ...t.triggers.map(x => `- ${cell(x.name)}: ${cell(x.def)}`));
     if (t.def) g.push('', '### Definition', '```sql', String(t.def).trim(), '```');
     g.push(GEN_END);
     const block = g.join('\n');
 
-    const rel = `${outDir}/tables/${safeName(t.name)}.md`;
+    // An existing page for this table may be named with or without the schema (public.orders.md or orders.md).
+    const candidates = [...new Set([safeName(t.name), safeName(t.name.split('.').pop())])].map(n => `${outDir}/tables/${n}.md`);
+    const rel = candidates.find(c => exists(path.join(repo, ...c.split('/')))) || candidates[0];
     const abs = path.join(repo, ...rel.split('/'));
+    pageOf.set(t.name, rel.slice(outDir.length + 1));
     let text;
     if (exists(abs)) {
       const cur = fs.readFileSync(abs, 'utf8');
-      const next = replaceGenerated(cur, block);
-      if (next === null) { same.push(rel + ' (no generated markers: left unchanged)'); continue; }
+      let next = replaceGenerated(cur, block);
+      if (next === null) {
+        // A page people wrote before: add the generated section, keep every word they wrote.
+        const at = cur.search(/^## (Rules and traps|Code that reads or writes it|Unverified)\b/m);
+        const section = `## Generated from the schema\n${block}\n\n`;
+        next = at >= 0 ? cur.slice(0, at) + section + cur.slice(at) : cur.replace(/\s*$/, '\n\n') + section;
+        if (/^---\r?\n/.test(next) && !/^generated:/m.test(frontmatter(next))) next = next.replace(/^---\r?\n/, `---\ngenerated: { by: "context-tools/schema-import", at: ${JSON.stringify(today)} }\n`);
+        text = next; updated.push(rel + ' (generated section added; your text kept)');
+        if (!dry) fs.writeFileSync(abs, text);
+        continue;
+      }
       if (next === cur) { same.push(rel); continue; }
       // The structure changed: record when, so reviews older than this stop counting (OKF rule).
       text = next.replace(/^generated:.*$/m, `generated: { by: "context-tools/schema-import", at: ${JSON.stringify(today)} }`);
@@ -969,7 +1146,7 @@ function cmdSchemaImport() {
   // Pages for tables that are no longer in the schema are reported, never deleted.
   const tablesDir = path.join(repo, ...outDir.split('/'), 'tables');
   const gone = [];
-  try { for (const f of fs.readdirSync(tablesDir)) if (f.endsWith('.md') && ![...tableNames].some(n => safeName(n) + '.md' === f)) gone.push(`${outDir}/tables/${f}`); } catch { /* none */ }
+  try { for (const f of fs.readdirSync(tablesDir)) if (f.endsWith('.md') && ![...tableNames].some(n => safeName(n) + '.md' === f || safeName(n.split('.').pop()) + '.md' === f)) gone.push(`${outDir}/tables/${f}`); } catch { /* none */ }
   // Index of tables, regenerated between markers.
   const idxRel = `${outDir}/index.md`;
   const idxAbs = path.join(repo, ...idxRel.split('/'));
@@ -977,17 +1154,18 @@ function cmdSchemaImport() {
   const list = [GEN_START, sourceLine, '',
     ...schema.tables.map(t => {
       const refs = relations.filter(r => r.table === t.name).map(r => r.parent_table), by = relations.filter(r => r.parent_table === t.name).map(r => r.table);
-      return `- [${t.name}](tables/${safeName(t.name)}.md): ${(t.columns || []).length} columns${refs.length ? `; references ${refs.join(', ')}` : ''}${by.length ? `; referenced by ${by.join(', ')}` : ''}${t.comment ? `. ${cell(t.comment)}` : ''}`;
+      return `- [${t.name}](${pageOf.get(t.name) || `tables/${safeName(t.name)}.md`}): ${(t.columns || []).length} columns${refs.length ? `; references ${refs.join(', ')}` : ''}${by.length ? `; referenced by ${by.join(', ')}` : ''}${t.comment ? `. ${cell(t.comment)}` : ''}`;
     }),
     GEN_END].join('\n');
   let idx = exists(idxAbs) ? fs.readFileSync(idxAbs, 'utf8') : null;
   const idxNext = idx === null
     ? ['# Data: tables', '', 'One page per table. The generated part of each page comes from the schema file; the rest is written by people.', '',
       '## Tables', list, ''].join('\n')
-    : replaceGenerated(idx, list);
+    : (replaceGenerated(idx, list) ?? idx.replace(/\s*$/, '\n\n') + '## Tables\n' + list + '\n');
   if (idxNext !== null && idxNext !== idx) { if (!dry) { fs.mkdirSync(path.dirname(idxAbs), { recursive: true }); fs.writeFileSync(idxAbs, idxNext); } (idx === null ? created : updated).push(idxRel); }
 
   console.log(`Schema import: ${schema.tables.length} table(s) from ${file}${dry ? ' (dry run)' : ''}`);
+  if (ddlNote) console.log(ddlNote);
   if (created.length) { console.log('  Added:'); created.forEach(f => console.log('    + ' + f)); }
   if (updated.length) { console.log('  Generated part refreshed:'); updated.forEach(f => console.log('    ~ ' + f)); }
   if (same.length) console.log(`  Unchanged: ${same.length}`);
@@ -1199,7 +1377,7 @@ else if (hooks[command]) {
   process.exitCode = 0; // a hook must never break the agent
 } else {
   console.log('Usage: node .ai-kit/context-tools.cjs check [--base <ref>] [--staged] [--strict] | status | doctor | readiness [--json]\n' +
-    '       | pages-for <file>... | migrate [--dry-run] | schema-import <schema.json> [--out <dir>] | ci [--base <ref>] | mcp\n' +
+    '       | pages-for <file>... | migrate [--dry-run] | schema-import <schema.sql|schema.json> [--out <dir>] | ci [--base <ref>] | mcp\n' +
     '       | session-start | post-edit | stop | guard   (agent hooks)');
   process.exitCode = command ? 2 : 0;
 }

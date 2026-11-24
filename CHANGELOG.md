@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.1.1 (November 2026)
+
+- `schema-import` reads a **DDL dump** (`.sql`) directly: PostgreSQL `pg_dump --schema-only` and DB
+  viewer exports (DBeaver, pgAdmin, DataGrip); simple MySQL and SQL Server tables mostly work. Tables,
+  columns, defaults, keys, foreign keys (inline or `ALTER TABLE`), unique and check constraints, indexes,
+  comments, views, enum values and triggers. Flyway and Liquibase history tables are skipped. No database
+  connection and no extra tool needed.
+- A table page that already exists (for example from `/context-create deep`) keeps every word; the
+  importer adds a "Generated from the schema" section, and finds pages named with or without the schema.
+- Rows inside a generated block count as anchored when its `Source:` line is anchored.
+- A relative schema path works together with `--repo`.
+
 ## 2.1.0 (November 2026)
 
 Two ways to set the kit up, OpenSpec back to its default documents, and a user guide inside the kit.

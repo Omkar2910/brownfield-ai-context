@@ -34,8 +34,9 @@ testing, operations, decisions. With `deep <page>`, do only that page.
   integration clients and config.
 - Domain and screens: services named after business concepts, validation and calculation code, enums and
   status lifecycles, `openspec/specs/`, routes and components, how form fields map to API fields and columns.
-- Data: follow `data-sources.md`. Overview page from `pages/data.md`. If the team has a schema file, run
-  `node .ai-kit/context-tools.cjs schema-import <schema.json>` for the table pages, then fill "Meaning",
+- Data: follow `data-sources.md`. Overview page from `pages/data.md`. If the team has a schema file (a
+  DDL dump `.sql`, or a tbls `schema.json`), run `node .ai-kit/context-tools.cjs schema-import <file>` for
+  the table pages, then fill "Meaning",
   "Rules and traps" and "Code that reads or writes it" for the tables the main flows use. Without a schema
   file, write table pages only for those tables, from migrations, entities and query constants.
 - API: the OpenAPI file or controllers and DTOs (generate the endpoint table from them), HTTP clients for

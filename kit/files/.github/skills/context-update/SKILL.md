@@ -13,9 +13,9 @@ Goal: change only the context lines whose facts changed. Never rewrite context f
    else. Mention it in the summary.
 2. **Code map.** If `graphify-out/graph.json` exists, run `graphify update .` (local, no API key). For a
    moved or renamed class, `graphify query "<old name>"` helps find where it went.
-3. **Table pages.** If `docs/context/data/schema.json` exists and the user has a newer schema file (after a
-   migration), run `node .ai-kit/context-tools.cjs schema-import <schema.json>`: only the generated parts
-   change. Pages it lists as "no longer in the schema" need a decision from the user.
+3. **Table pages.** If `docs/context/data/schema.sql` (or `schema.json`) exists and the user has a newer
+   export (after a migration), replace the file and run `node .ai-kit/context-tools.cjs schema-import
+   <file>`: only the generated parts change, and the diff shows what moved. Pages it lists as "no longer in the schema" need a decision from the user.
 4. **Find what is out of date.** Run `node .ai-kit/context-tools.cjs check --base origin/<main-branch>`
    (ask for the branch if unsure; `main`, `master` and `develop` are common). ERROR: an anchor points at a
    file that no longer exists. WARN: anchored code changed but the context file did not.

@@ -110,4 +110,18 @@ $I "$T/w-old" --workspace "$T/w-home" --upgrade >/dev/null
 [ ! -d "$T/w-old/.claude/skills/story-start" ] && ! grep -q context-tools "$T/w-old/.claude/settings.json" 2>/dev/null && ok "join with --upgrade removes the copies" || bad "join with --upgrade"
 has "$(cat "$T/w-old/openspec/config.yaml")" "schema: spec-driven" "old story-tdd workflow switched back to OpenSpec default"
 
+echo "11. schema-import from a DDL dump (.sql)"
+mkrepo "$T/d"; mkdir -p "$T/d/docs/context/data/tables"; cp "$KIT/tools/fixtures/pg-dump-schema.sql" "$T/d/docs/context/data/schema.sql"
+printf -- '---\ntype: Context Page\nstatus: stable\ndimension: data\nowner: x\nverified:\n  - { by: "human:a", at: "2026-11-01" }\n---\n# reports\n\n## Meaning\nOne row per report.\n\n## Unverified\n- maybe\n' > "$T/d/docs/context/data/tables/reports.md"
+out=$(cd "$T/d" && node "$KIT/kit/files/.ai-kit/context-tools.cjs" schema-import docs/context/data/schema.sql)
+has "$out" "skipped migration-tool tables: public.flyway_schema_history" "flyway history table skipped"
+f="$T/d/docs/context/data/tables/reports.md"
+grep -q "One row per report." "$f" && grep -q "| customer_id | bigint | no |" "$f" && ok "existing page kept, generated section added" || bad "existing page merge"
+has "$(cat "$f")" "status: DRAFT, QUEUED, DONE, FAILED" "enum values listed"
+has "$(cat "$f")" "(customer_id) → public.customers (id)" "foreign key from ALTER TABLE read"
+has "$(cat "$f")" "template_id" "reference without a foreign key listed"
+has "$(cat "$T/d/docs/context/data/tables/reporting.report_runs.md")" "trg_touch" "trigger read"
+out=$(cd "$T/d" && node "$KIT/kit/files/.ai-kit/context-tools.cjs" schema-import docs/context/data/schema.sql); has "$out" "Unchanged: 4" "second import changes nothing"
+out=$(cd "$T/d" && node "$KIT/kit/files/.ai-kit/context-tools.cjs" schema-import "$KIT/tools/fixtures/dbeaver-ddl.sql" --out docs/context/dbv --dry-run); has "$out" "2 table(s)/view(s), 1 reference(s)" "DB viewer DDL export read"
+
 echo ""; echo "Passed: $pass, failed: $fail"; [ "$fail" -eq 0 ]

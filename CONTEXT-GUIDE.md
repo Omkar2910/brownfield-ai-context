@@ -294,12 +294,13 @@ references no entity maps. The kit combines them:
 
 1. **From code (always):** migrations (Flyway, Liquibase or scripts), entities and repositories, and
    query constants or native SQL, which show joins the entities do not.
-2. **From a schema file (when you can get one):** a person runs tbls once with a read-only user against a
-   development or QA database (`tbls out -t json -o docs/context/data/schema.json`, with the database
-   address in `TBLS_DSN`), then
-   `node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.json`. It writes one page per
-   table in `docs/context/data/tables/` (columns, keys, references, "looks like a reference but has no
-   foreign key", indexes, triggers) and an index. Later imports replace only the generated part; what
+2. **From a schema file (when you can get one):** a person exports the schema once, with a read-only user,
+   from a development or QA database: a DDL dump (`pg_dump --schema-only`, or a DB viewer's "Generate
+   DDL") saved as `docs/context/data/schema.sql`, or a tbls `schema.json`. Then
+   `node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql`. It writes one page per
+   table in `docs/context/data/tables/` (columns, defaults, keys, references, "looks like a reference but
+   has no foreign key", allowed enum values, indexes, triggers, comments) and an index. A table page that
+   already exists keeps every word; the importer adds a generated section to it. Later imports replace only the generated part; what
    people wrote (meaning, rules, which code reads or writes the table) is kept.
 3. **From a data catalogue (if you have one):** link the table's catalogue entry; do not copy it.
 4. **A database MCP server** is optional and only for local or development databases with a read-only

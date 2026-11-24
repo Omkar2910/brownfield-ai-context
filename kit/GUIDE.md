@@ -210,7 +210,7 @@ scenarios in its house format, run it after step 2 and keep its output next to t
 | While the agent works | The hooks tell the agent which context line describes the file it just edited, and ask it once at the end to check those lines | Nothing, unless it asks |
 | When you commit | The commit is stopped if a context line points at a file that no longer exists | Fix that line, or run `/context-update` |
 | On every pull request | The pull request check lists lines whose code changed | Fix them in the same pull request |
-| After a database migration | — | Run tbls again, then `/context-update` (only the generated part of each table page changes) |
+| After a database migration | — | Export the DDL again over `docs/context/data/schema.sql`, then `/context-update` (only the generated part of each table page changes) |
 | A new repo joins the workspace | The home repo's session note says "no context yet" | `/context-create` for it, then `/product-context update` |
 | Each sprint or quarter | — | Run the context-steward agent in "sprint-digest" or "quarterly-review" mode, about 30 minutes |
 
