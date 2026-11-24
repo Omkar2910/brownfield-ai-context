@@ -598,7 +598,9 @@ verified: []
 </code></pre></div>
 <p>After review it becomes <code>status: stable</code> with a line under <code>verified:</code>, for example
 <code>- { by: "human:asha", at: "2026-11-20" }</code>; when a second person who did not write it has checked it, they
-add their own line (an independent review). These fields follow the Open Knowledge Format (OKF v0.3), with
+add their own line (an independent review). The reviewer runs
+<code>node .ai-kit/context-tools.cjs review &lt;page or folder&gt; --by &lt;name&gt;</code> in their own terminal instead of
+editing the YAML; it refuses to run without a terminal, so an agent cannot sign off its own pages. These fields follow the Open Knowledge Format (OKF v0.3), with
 <code>dimension</code> and <code>owner</code> as the kit's own keys, so tools that read OKF can read these pages. Pages written with kit 1.x used a one-line header instead; <code>context-tools.cjs migrate</code>
 converts them without an agent.</p>
 <p><strong>Where each dimension comes from, and where it lives.</strong> The kit keeps the reviewed, anchored version in
@@ -685,9 +687,13 @@ references no entity maps. The kit combines them:</p>
    DDL") saved as <code>docs/context/data/schema.sql</code>, or a tbls <code>schema.json</code>. Then
    <code>node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql</code>. It writes one page per
    table in <code>docs/context/data/tables/</code> (columns, defaults, keys, references, "looks like a reference but
-   has no foreign key", allowed enum values, indexes, triggers, comments) and an index. A table page that
-   already exists keeps every word; the importer adds a generated section to it. Later imports replace only the generated part; what
-   people wrote (meaning, rules, which code reads or writes the table) is kept.</li>
+   has no foreign key", allowed enum values, indexes, triggers, comments) and an index. It also reads the
+   code: the entity, repository, SQL and migrations for each table, references and enum values the
+   database does not declare, enums stored as numbers, and places where the code and the schema
+   disagree. A table page that already exists keeps every word; the importer adds a generated section
+   to it. Later imports replace only the generated part; what people wrote (meaning, rules) is kept.
+   The commit check, CI and the agent hooks say when the pages no longer match the schema file or the
+   code, or when a migration is newer than the export.</li>
 <li><strong>From a data catalogue (if you have one):</strong> link the table's catalogue entry; do not copy it.</li>
 <li><strong>A database MCP server</strong> is optional and only for local or development databases with a read-only
    user. Never point an agent at production.</li>

@@ -50,7 +50,7 @@ just less well.
 | **design-reviewer agent** | Fresh-eyes, read-only review of the plan before code | `.github/agents/` | Starts with no memory of the chat that wrote the plan |
 | **Agent hooks** | Session-start note, post-edit reminders, one check before finishing | `.github/hooks/`, `.claude/settings.json` | Preview in VS Code; `doctor` shows whether they run; git hook and PR check cover the gap |
 | **Git hooks** | Block commits with broken context; refresh the code map | `.githooks/` | Work for every developer, with or without an agent |
-| **context-tools.cjs** | `check`, `status`, `doctor`, `readiness`, `pages-for`, `migrate`, `schema-import`, `ci`, `mcp` | `.ai-kit/` | Node, no dependencies |
+| **context-tools.cjs** | `check`, `status`, `doctor`, `readiness`, `pages-for`, `migrate`, `schema-import`, `review`, `ci`, `mcp` | `.ai-kit/` | Node, no dependencies |
 | **Pull request check** | The context check on every PR, whoever wrote it | `.ai-kit/ci/` | Warnings first, then a required check |
 
 ### Recommended — use for real stories

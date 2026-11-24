@@ -8,9 +8,12 @@ How to convince yourself (and others) that kit 2.0 works, before and during the 
 bash tools/test-kit.sh
 ```
 
-49 checks on throwaway repos: fresh install per tool, all tools at once, upgrade from 1.6.1 and `migrate`,
-`doctor`, hooks (dedupe, post-edit, stop, guard), `schema-import` (create, refresh, keep human text),
-readiness caps, `ci`, `mcp`, org sync for two tools, hub map, product workspace (home, members, commit check, hooks across repos, joining with --upgrade). Run it on Windows (Git Bash) once too.
+84 checks on throwaway repos: fresh install per tool, all tools at once, upgrade from 1.6.1 and `migrate`,
+`doctor`, hooks (dedupe, post-edit, stop, guard), `schema-import` (tbls JSON and DDL dumps; create, refresh,
+keep human text; the code map from JPA entities, repositories, SQL and migrations), the data checks in
+`check`, the hooks and `doctor`, `review`, readiness caps, `ci`, `mcp`, org sync for two tools, hub map,
+product workspace (home, members, commit check, hooks across repos, joining with --upgrade). Run it on
+Windows (Git Bash) once too.
 
 ## 2. Manual checks in real tools (once per tool, on your machine)
 
@@ -33,6 +36,9 @@ readiness caps, `ci`, `mcp`, org sync for two tools, hub map, product workspace 
 | 16 | OpenSpec in a workspace | `/opsx-propose <id>` "in report-service" | The change folder is created in report-service, not in the home repo |
 | 17 | Claude Code in a workspace | `node scripts/hub.mjs claude` | Skills from the home repo; each repo's `CLAUDE.md` loaded |
 | 13 | Upgrade of a real 1.x repo | `--upgrade --dry-run`, `--upgrade`, `migrate`, `doctor` | No team file edited; pages converted; doctor clean |
+| 18 | Code map on a real service | `schema-import` on a service with its DDL export; compare the "Code: N entities" line with the entity count in the code; open five table pages | Every entity found; no wrong repository or SQL file on the five pages; each "Code and schema disagree" line is real |
+| 19 | Review in real terminals | `review <page> --by <name>` in the VS Code terminal (PowerShell and Git Bash) and in Windows Terminal; then ask an agent to run it | People can run it; the agent's attempt is refused |
+| 20 | Commit check speed | `git commit` in the largest service after the import | Under a second when no data code changed |
 
 Record results in a short table with the date, tool version and outcome; anything that fails becomes an
 issue before the wider pilot.

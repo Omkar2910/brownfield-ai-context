@@ -45,9 +45,11 @@ applyTo: '**/src/main/java/**/{entity,entities,model,domain,repository,repositor
 # Data access
 - Before changing a table, entity, repository or query, open its page in docs/context/data/tables/ (list:
   docs/context/data/index.md). Respect its "Rules and traps" and "Allowed values".
-- After a migration, the schema file docs/context/data/schema.sql is exported again and
-  `node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql` refreshes the pages.
-- If the change alters what a table page says (meaning, rules, which code uses it), update that page in
+- After changing an entity, repository, query or migration, run
+  `node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql`: it refreshes the generated
+  part of the table pages. Never edit between the generated markers. After a migration, ask for a new
+  schema export.
+- If the change alters what people wrote on a table page (meaning, rules and traps), update that part in
   the same change.
 ```
 

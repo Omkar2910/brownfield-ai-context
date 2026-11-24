@@ -1,5 +1,40 @@
 # Changelog
 
+## 2.2.0 (November 2026)
+
+The database context needs less hand work and catches its own mistakes.
+
+**Added**
+- `schema-import` reads the code without running it (JPA entities in Java and Kotlin, `@MappedSuperclass`
+  fields, Spring Data repositories, SQL strings, MyBatis mappers, migrations; not test code). Each table
+  page lists its entity, repository, SQL and migrations with anchors, the fields named differently from
+  their column, references that exist only as `@JoinColumn`, and allowed values from Java enums.
+  It flags enums stored as numbers (ORDINAL) and lists where the code and the schema disagree: a column
+  or table the export does not have, enum values that differ. `--no-code` skips this.
+- The import prints only the questions the code cannot answer: references without a foreign key that no
+  entity explains.
+- `check`, `ci` and the commit check say when table pages are out of date with the schema file or the
+  code, and when a migration changed but the schema file did not. They do this only when a schema file,
+  table page, migration or data-access code changed.
+- Agent hooks: editing an entity, repository or migration asks the agent to run `schema-import`, not to
+  edit the generated part; the end-of-task check lists only problems in files the agent touched.
+- `context-tools review <page|folder> --by <name>`: a person marks pages reviewed (status `stable`, the OKF
+  review event), unused template lines are removed, and pages with broken anchors or no "Meaning" are
+  refused. It runs only in a terminal a person types in, so an agent cannot sign off its own pages.
+- `doctor` shows the data context: schema file, table pages, how many are linked to code and reviewed, and
+  whether a rule file sends agents to the pages.
+- `kit/GUIDE.md`: database context, step by step.
+
+**Changed**
+- A refresh that changes only the code lines on a table page keeps the owner's review; a change to the
+  table's structure still resets it.
+- New table pages have "Other code that reads or writes it" (only what the import cannot see) instead of
+  "Code that reads or writes it".
+- Anchors inside generated parts no longer raise "is this line still true?" warnings; the import check
+  covers them.
+- The commit check reads files from disk unless they have unstaged edits: about ten times faster with
+  hundreds of table pages.
+
 ## 2.1.1 (November 2026)
 
 - `schema-import` reads a **DDL dump** (`.sql`) directly: PostgreSQL `pg_dump --schema-only` and DB

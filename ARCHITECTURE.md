@@ -1,6 +1,6 @@
 # AI Context Kit: Architecture
 
-Kit 2.1.1 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
+Kit 2.2.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
 in [GUIDE.md](GUIDE.md); how to roll it out across an organisation is in [ORG-LEVEL.md](ORG-LEVEL.md).
 
 ## Summary

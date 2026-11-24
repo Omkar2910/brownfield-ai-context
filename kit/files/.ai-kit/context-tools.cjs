@@ -152,8 +152,14 @@ function changedFiles(repo, base) {
   return [...out].map(toPosix);
 }
 
+// With --staged, a file without unstaged edits is the same on disk as in the commit: read it from disk
+// (one git call per file made the commit check slow with hundreds of table pages).
+const unstagedCache = new Map();
 function readText(repo, rel) {
-  if (STAGED) { const t = git(repo, ['show', ':' + rel]); if (t !== null) return t; }
+  if (STAGED) {
+    if (!unstagedCache.has(repo)) unstagedCache.set(repo, new Set((git(repo, ['diff', '--name-only', '-z']) || '').split('\0').filter(Boolean).map(toPosix)));
+    if (unstagedCache.get(repo).has(rel) || !exists(path.join(repo, rel))) { const t = git(repo, ['show', ':' + rel]); if (t !== null) return t; }
+  }
   return fs.readFileSync(path.join(repo, rel), 'utf8');
 }
 
@@ -180,12 +186,15 @@ function readContext(repo, files) {
   for (const cf of contextFiles) {
     let text = '';
     try { text = readText(repo, cf); } catch { continue; }
+    let gen = false;   // inside a block a tool writes (schema-import): the tool keeps it current, not people
     text.split(/\r?\n/).forEach((line, idx) => {
+      if (line.includes('<!-- generated:start')) gen = true;
       for (const m of line.matchAll(/\[anchor:\s*([^\]]+)\]/g)) {
         for (const { pattern, re } of anchorPatterns(repo, m[1])) {
-          anchors.push({ file: cf, line: idx + 1, text: line.trim().slice(0, 140), pattern, re });
+          anchors.push({ file: cf, line: idx + 1, text: line.trim().slice(0, 140), pattern, re, generated: gen });
         }
       }
+      if (line.includes('<!-- generated:end')) gen = false;
     });
   }
   return { contextFiles, anchors };
@@ -223,7 +232,7 @@ function analyse(repo, base) {
   const broken = ctx.anchors.filter(a => !files.some(f => a.re.test(f)));
   const stale = [];
   for (const a of ctx.anchors) {
-    if (changed.includes(a.file)) continue;
+    if (changed.includes(a.file) || a.generated) continue;   // generated anchors: see dataFreshness
     const hit = changed.find(c => a.re.test(c));
     if (hit) stale.push({ ...a, hit });
   }
@@ -282,6 +291,7 @@ function runCheck(repo, { base, strict } = {}) {
   if (a.agents.tokens > ALWAYS_ON_TOKENS) warnings.push(`Always-on context is about ${a.agents.tokens} tokens (budget ${ALWAYS_ON_TOKENS}): ${a.agents.items.map(i => i.file).join(', ')}.`);
   const old = oldFormatPages(repo, a.ctx.contextFiles);
   if (old.length) warnings.push(`${old.length} page(s) use the 1.x status line (${old.slice(0, 3).join(', ')}${old.length > 3 ? ' …' : ''}). Run: ${toolCmd} migrate`);
+  for (const d of dataFreshness(repo, a, { changedOnly: !!(STAGED || base) })) warnings.push(...(d.warn ? [d.warn] : d.warns));
   return { a, errors, warnings, failed: errors.length > 0 || (strict && warnings.length > 0) };
 }
 function printCheck(repo, r, { base } = {}) {
@@ -537,11 +547,17 @@ function hookPostEdit(input) {
     if (!contexts.has(repo)) contexts.set(repo, readContext(repo, listFiles(repo)));
     const label = repo === sessionRepo ? rel : `${path.basename(repo)}/${rel}`;
     for (const a of contexts.get(repo).anchors.filter(x => x.re.test(rel))) {
+      if (a.generated) {
+        const src = schemaSources(repo, contexts.get(repo).contextFiles).find(x => a.file.startsWith(x.outDir + '/'));
+        const n = `${label} appears in the generated part of ${a.file}. If this edit changes entities, columns, queries or migrations, run ${toolCmd} schema-import ${src ? src.file : '<schema file>'} before you finish (it rewrites only the generated parts). Never edit between the generated markers.`;
+        if (!notes.some(x => x.startsWith(`${label} appears in the generated part`))) notes.push(n);
+        continue;
+      }
       notes.push(`${label} is referenced by ${repo === sessionRepo ? '' : path.basename(repo) + '/'}${a.file}:${a.line} ("${a.text}").`);
     }
   }
   saveTouched(input, touched.slice(-500));
-  if (notes.length) addContext('PostToolUse', notes.slice(0, 5).join('\n') + '\nIf this edit changed what that line describes, update the line in the same change; otherwise no action is needed.');
+  if (notes.length) addContext('PostToolUse', notes.slice(0, 5).join('\n') + (notes.some(n => / is referenced by /.test(n)) ? '\nIf this edit changed what that line describes, update the line in the same change; otherwise no action is needed.' : ''));
   return { notes: notes.length };
 }
 
@@ -558,14 +574,21 @@ function hookStop(input) {
     const ctx = readContext(repo, files);
     const label = f => repo === sessionRepo ? f : `${path.basename(repo)}/${f}`;
     for (const a of ctx.anchors) {
+      if (a.generated && !mine.has(a.file)) continue;
       if (!files.some(f => a.re.test(f))) {
         // broken: report it when the agent touched its context file or (likely) moved/deleted its target
         if (mine.has(a.file) || [...mine].some(r => a.re.test(r))) items.push(`- BROKEN ${label(a.file)}:${a.line} anchors ${a.pattern}, which no longer exists.`);
         continue;
       }
+      if (a.generated) continue;                 // schema-import keeps these; see the data check below
       if (mine.has(a.file)) continue;            // the agent already revisited this context file
       const hit = [...mine].find(r => !isContextFile(r) && a.re.test(r));
       if (hit) items.push(`- CHECK ${label(a.file)}:${a.line} ("${a.text.slice(0, 80)}") is anchored to ${label(hit)}, which you edited.`);
+    }
+    // Table pages: re-plan the import for the files this session changed (no writing).
+    for (const d of dataFreshness(repo, { files, ctx, changed: [...mine] }, { changedOnly: true })) {
+      if (d.stale && d.stale.length) items.push(`- RUN ${toolCmd} schema-import ${d.src.file}${repo === sessionRepo ? '' : ` --repo ${path.basename(repo)}`}: ${d.stale.length} table page(s) no longer match the code you changed. It rewrites only the generated parts; show the diff.`);
+      for (const x of (d.mismatches || []).filter(m => mine.has(m.file)).slice(0, 3)) items.push(`- MISMATCH ${x.text}: fix the mapping, or tell the user the schema file may be out of date.`);
     }
   }
   if (!items.length) return { notes: 0 };
@@ -797,7 +820,7 @@ function computeReadiness(repo) {
     const broken = a.broken.filter(x => x.file === f).length;
     const age = h.verified ? Math.floor((now - Date.parse(h.verified)) / DAY) : null;
     const since = h.verified ? changedSince(repo, h.verified) : null;
-    const stale = since ? anchors.filter(x => [...since].some(c => x.re.test(c))).length : 0;
+    const stale = since ? anchors.filter(x => !x.generated && [...since].some(c => x.re.test(c))).length : 0;
     let cap = 2;
     if (h.reviewed) cap = age > cfg.reviewMaxAgeDays ? 3 : (h.independent ? 5 : 4);
     else if (h.generated && h.status !== 'draft') cap = 3; // generated from code or schema: traceable, not reviewed
@@ -1048,6 +1071,195 @@ function parseDdl(sql) {
   return { tables: all, relations, enums: Object.fromEntries(enums), skipped: [...skipped], unread };
 }
 
+// ---------------------------------------------------------------- code map for table pages
+// Reads code without running it: JPA entities (Java fully; Kotlin entities and properties), Spring Data
+// repositories, SQL in string literals, MyBatis mapper XML, and migrations (SQL, Liquibase XML/YAML,
+// Flyway Java). Test code is left out. The result goes into the generated part of each table page.
+const MIGRATION_RE = /(^|\/)(db\/migration|db\/changelog|migrations?|changelogs?|liquibase|flyway)(\/|$)/i;
+const TEST_RE = /(^|\/)(src\/test|src\/it|src\/testFixtures|test|tests|__tests__|e2e)\/|(Test|Tests|IT|Spec)\.(java|kt)$/;
+const SKIP_CODE_RE = /(^|\/)(docs|node_modules|target|build|dist|out|graphify-out|\.ai-kit|\.github|\.claude|\.agents|openspec)\//;
+const snakeCase = s => s.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2').toLowerCase();
+const unquoteId = s => String(s || '').replace(/\\"/g, '').replace(/[`"[\]]/g, '');
+const JPA_REPO_RE = /\b(?:JpaRepository|CrudRepository|ListCrudRepository|PagingAndSortingRepository|ListPagingAndSortingRepository|ReactiveCrudRepository|R2dbcRepository|CoroutineCrudRepository|JpaSpecificationExecutor|QuerydslPredicateExecutor|Repository)\s*<\s*([\w.]+)/;
+const ANN = String.raw`@[\w.:]+(?:\s*\((?:[^()]|\((?:[^()]|\([^()]*\))*\))*\))?`;
+const JAVA_FIELD_RE = new RegExp(String.raw`((?:${ANN}\s*)*)((?:(?:private|protected|public|static|final|transient|volatile)\s+)*)([\w.]+(?:\s*<[^;=(){}]*>)?(?:\s*\[\s*\])*)\s+(\w+)\s*(?:=[^;]*)?;`, 'g');
+const KT_PROP_RE = new RegExp(String.raw`((?:${ANN}\s*)*)(?:(?:private|protected|public|internal|override|open|lateinit|final)\s+)*va[lr]\s+(\w+)\s*:\s*([\w.]+)`, 'g');
+const SQL_REF_RE = /\b(?:from|join|into|update|table|truncate)\s+(?:only\s+|if\s+(?:not\s+)?exists\s+)?((?:[`"[]?[A-Za-z_][\w$]*[`"\]]?\.)?[`"[]?[A-Za-z_][\w$]*[`"\]]?)/gi;
+const TABLE_ATTR_RE = /\b(?:tableName|baseTableName|referencedTableName)\s*[=:]\s*["']?([\w.]+)/g;
+
+// Comments removed; braces and parentheses inside strings blanked, so nesting can be counted.
+function maskJvm(src) {
+  return src.replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+    .replace(/"""[\s\S]*?"""|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)'/g, m => m.replace(/[{}()]/g, ' '))
+    .replace(/(^|[^:"\w])\/\/[^\n]*/g, '$1');
+}
+const stringLiterals = m => [...m.matchAll(/"""([\s\S]*?)"""|"((?:[^"\\\n]|\\.)*)"/g)].map(x => x[1] != null ? x[1] : x[2]).join('\n');
+// The text directly inside the first class body after `from`; nested bodies are dropped.
+function classLevel(m, from) {
+  let i = m.indexOf('{', from); if (i < 0) return '';
+  let depth = 0, paren = 0, out = '';
+  for (; i < m.length; i++) {
+    const ch = m[i];
+    if (ch === '(') paren++; else if (ch === ')') paren = Math.max(0, paren - 1);
+    if (ch === '{' && paren === 0) { depth++; if (depth === 2) out += ' '; continue; }
+    if (ch === '}' && paren === 0) { depth--; if (depth === 0) break; if (depth === 1) out += ';'; continue; }
+    if (depth === 1) out += ch;
+  }
+  return out;
+}
+// A Kotlin primary constructor: the parentheses right after `class Name`.
+function ktConstructor(m, from) {
+  const h = /\bclass\s+\w+\s*(?:<[^>]*>)?\s*(?:@\w+\s*)*(?:(?:private|protected|internal|public)\s+)?(?:constructor\s*)?\(/.exec(m.slice(from));
+  if (!h) return '';
+  let i = from + h.index + h[0].length, d = 1, out = '';
+  for (; i < m.length && d > 0; i++) { const ch = m[i]; if (ch === '(') d++; else if (ch === ')') d--; if (d > 0) out += ch === ',' && d === 1 ? ';' : ch; }
+  return out;
+}
+function enumConstants(m, from) {
+  let i = m.indexOf('{', from); if (i < 0) return [];
+  let depth = 0, paren = 0, s = '';
+  for (i++; i < m.length; i++) {
+    const ch = m[i];
+    if (ch === '(') { paren++; continue; } if (ch === ')') { paren--; continue; }
+    if (ch === '{') { depth++; continue; } if (ch === '}') { if (depth === 0) break; depth--; continue; }
+    if (ch === ';' && depth === 0 && paren === 0) break;
+    if (depth === 0 && paren === 0) s += ch;
+  }
+  return s.split(',').map(x => x.replace(/@[\w.]+/g, '').trim()).filter(x => /^[A-Za-z_]\w*$/.test(x));
+}
+function readField(anns, mods, type, name) {
+  const has = a => new RegExp(String.raw`@(?:\w+:)?(?:[\w.]*\.)?${a}\b`).test(anns);
+  const arg = (a, k) => {
+    const m = new RegExp(String.raw`@(?:\w+:)?(?:[\w.]*\.)?${a}\s*\(((?:[^()]|\([^()]*\))*)\)`).exec(anns); if (!m) return null;
+    const v = new RegExp(String.raw`\b${k}\s*=\s*"((?:[^"\\]|\\.)*)"`).exec(m[1]) || (k === 'name' ? /^\s*"((?:[^"\\]|\\.)*)"\s*$/.exec(m[1]) : null);
+    return v ? unquoteId(v[1]) : null;
+  };
+  if (/\b(static|transient)\b/.test(mods) || ['Transient', 'OneToMany', 'ManyToMany', 'ElementCollection', 'Formula'].some(has)) return null;
+  const t = type.replace(/<[\s\S]*$/, '').trim().split('.').pop();
+  if (has('Embedded') || has('EmbeddedId')) return { name, type: t, embedded: true };
+  if (has('ManyToOne') || has('OneToOne') || has('JoinColumn')) {
+    if (/mappedBy\s*=/.test(anns)) return null;
+    const col = arg('JoinColumn', 'name');
+    return { name, type: t, column: col || snakeCase(name) + '_id', explicit: !!col, join: true };
+  }
+  const col = arg('Column', 'name');
+  const f = { name, type: t, column: col || snakeCase(name), alt: col ? null : name, explicit: !!col };
+  if (has('Enumerated')) f.enumMode = /ORDINAL/.test(anns) || !/STRING/.test(anns) ? 'ORDINAL' : 'STRING';
+  if (has('Convert') || has('Type') || has('JdbcTypeCode')) f.converted = true;
+  return f;
+}
+function scanCode(repo, files, skipFile) {
+  const entities = [], supers = new Map(), repos = [], enums = new Map(), refs = [];
+  const want = f => !SKIP_CODE_RE.test(f) && !TEST_RE.test(f) && f !== skipFile &&
+    (/\.(java|kt|sql)$/i.test(f) || (/\.xml$/i.test(f)) || (MIGRATION_RE.test(f) && /\.ya?ml$/i.test(f)));
+  for (const f of files.filter(want).sort().slice(0, 30000)) {
+    let src;
+    try { if (fs.statSync(path.join(repo, f)).size > 1.5e6) continue; src = fs.readFileSync(path.join(repo, f), 'utf8'); } catch { continue; }
+    const mig = MIGRATION_RE.test(f), jvm = /\.(java|kt)$/i.test(f), xml = /\.xml$/i.test(f);
+    if (xml && !mig && !/<mapper\b/.test(src)) continue;      // only MyBatis mappers and migrations
+    const m = jvm ? maskJvm(src) : xml ? src.replace(/<!--[\s\S]*?-->/g, ' ') : src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--[^\n]*/g, ' ');
+    if (jvm) {
+      for (const e of m.matchAll(/\benum\s+(?:class\s+)?(\w+)/g)) { const c = enumConstants(m, e.index); if (c.length) enums.set(e[1], enums.has(e[1]) ? null : { file: f, values: c }); }
+      for (const r of m.matchAll(/\binterface\s+(\w+)(?:\s*<[^>{]*>)?\s*(?:extends|:)\s*([^{]+)/g)) { const e = JPA_REPO_RE.exec(r[2]); if (e) repos.push({ file: f, cls: r[1], entity: e[1].split('.').pop() }); }
+      const ei = m.search(/@(?:[\w.]*\.)?(Entity|MappedSuperclass)\b/);
+      if (ei >= 0) {
+        const rest = m.slice(ei), cm = /\bclass\s+(\w+)/.exec(rest);
+        if (cm) {
+          const header = rest.slice(0, cm.index), at = ei + cm.index;
+          const kw = (s, k) => { const v = s && new RegExp(String.raw`\b${k}\s*=\s*"((?:[^"\\]|\\.)*)"`).exec(s); return v ? unquoteId(v[1]) : null; };
+          const tArgs = (/@(?:[\w.]*\.)?Table\s*\(((?:[^()]|\([^()]*\))*)\)/.exec(header) || [])[1];
+          const fields = [];
+          if (/\.java$/i.test(f)) {
+            for (const x of classLevel(m, at).matchAll(JAVA_FIELD_RE)) {
+              if (/^(return|throw|new|else|case|package|import|yield)$/.test(x[3])) continue;
+              const fl = readField(x[1], x[2], x[3], x[4]); if (fl) fields.push(fl);
+            }
+          } else {
+            for (const x of (ktConstructor(m, at) + ';' + classLevel(m, at)).matchAll(KT_PROP_RE)) { const fl = readField(x[1], '', x[3], x[2]); if (fl) fields.push(fl); }
+          }
+          const ext = (/\bclass\s+\w+\s*(?:<[^>{]*>)?\s*extends\s+([\w.]+)/.exec(rest) || /\bclass\s+\w+[^{:]*\)\s*:\s*([\w.]+)\s*\(/.exec(rest) || [])[1];
+          const rec = { file: f, cls: cm[1], fields, ext: ext ? ext.split('.').pop() : null };
+          if (/MappedSuperclass/.test(header) && !/@(?:[\w.]*\.)?Entity\b/.test(header)) supers.set(cm[1], rec);
+          else entities.push({ ...rec, name: kw((/@(?:[\w.]*\.)?Entity\s*\(([^)]*)\)/.exec(header) || [])[1], 'name') || cm[1], table: kw(tArgs, 'name'), schema: kw(tArgs, 'schema') });
+        }
+      }
+    }
+    const names = new Set();
+    const sqlText = jvm ? stringLiterals(m) : m;
+    for (const x of sqlText.matchAll(SQL_REF_RE)) names.add(unquoteId(x[1]));
+    if (!jvm) for (const x of m.matchAll(TABLE_ATTR_RE)) names.add(unquoteId(x[1]));
+    if (names.size) refs.push({ file: f, names: [...names], migration: mig });
+  }
+  // Fields inherited from a @MappedSuperclass in this repo; a superclass from elsewhere makes the map partial.
+  for (const e of entities) {
+    let s = e.ext, guard = 0; e.partial = false;
+    while (s && guard++ < 5) { const p = supers.get(s); if (!p) { e.partial = !/^(Object|Any)$/.test(s); break; } e.fields = [...p.fields, ...e.fields]; s = p.ext; }
+    if (e.fields.some(x => x.embedded)) e.partial = true;
+  }
+  return { entities, repos, enums, refs };
+}
+
+// Matches the code to the schema's tables. Returns, per table name: entities, repositories, SQL files,
+// migrations, field names that differ, references and allowed values known only from code, mismatches.
+function codeMap(repo, files, schema, skipFile) {
+  const scan = scanCode(repo, files, skipFile);
+  const byBare = new Map();
+  for (const t of schema.tables) { const b = bareName(t.name).toLowerCase(); if (!byBare.has(b)) byBare.set(b, []); byBare.get(b).push(t); }
+  const find = (name, sch) => {
+    if (!name) return null;
+    const c = byBare.get(bareName(name).toLowerCase()) || [];
+    const s = sch || (name.includes('.') ? name.split('.')[0] : null);
+    if (s) { const x = c.find(t => t.name.toLowerCase() === `${s}.${bareName(name)}`.toLowerCase()); if (x) return x; }
+    return c.length === 1 ? c[0] : c.find(t => !t.name.includes('.') || /^public\./i.test(t.name)) || null;
+  };
+  const per = new Map(schema.tables.map(t => [t.name, { entities: [], repos: [], sql: new Set(), migrations: new Set(), joins: [], values: [], diffs: [], mismatches: [], unmapped: [] }]));
+  const entityTable = new Map(), orphanEntities = [];
+  for (const e of scan.entities) {
+    const t = e.table ? find(e.table, e.schema) : (find(snakeCase(e.name)) || find(e.name));
+    if (t) entityTable.set(e.cls, t); else orphanEntities.push({ file: e.file, cls: e.cls, table: e.table || snakeCase(e.name) });
+  }
+  for (const e of scan.entities) {
+    const t = entityTable.get(e.cls); if (!t) continue;
+    const p = per.get(t.name); p.entities.push(e);
+    const cols = new Map((t.columns || []).map(c => [c.name.toLowerCase(), c]));
+    const seen = new Set();
+    for (const fl of e.fields.filter(x => !x.embedded)) {
+      const col = cols.get(fl.column.toLowerCase()) || (fl.alt && cols.get(fl.alt.toLowerCase()));
+      if (!col) { p.mismatches.push(`\`${e.cls}.${fl.name}\` maps column ${fl.column}${fl.explicit ? '' : ' (name taken from the field)'}, which this table does not have [anchor: ${e.file}]`); continue; }
+      seen.add(col.name.toLowerCase());
+      if (fl.explicit && fl.column.toLowerCase() !== snakeCase(fl.name) + (fl.join ? '_id' : '')) p.diffs.push(`${fl.name} → ${col.name}`);
+      if (fl.join) { const tt = entityTable.get(fl.type); p.joins.push({ column: col.name, text: `${col.name} → ${tt ? tt.name : `entity ${fl.type} (its table is not in the schema)`} (\`${e.cls}.${fl.name}\`) [anchor: ${e.file}]` }); }
+      const en = scan.enums.get(fl.type);
+      if (en && !fl.converted && !fl.join) {
+        const mode = fl.enumMode || 'ORDINAL';
+        const dbv = Array.isArray(col.enum) ? col.enum : null;
+        if (dbv && dbv.join() !== en.values.join() && mode === 'STRING') {
+          const onlyCode = en.values.filter(v => !dbv.includes(v)), onlyDb = dbv.filter(v => !en.values.includes(v));
+          p.mismatches.push(`column ${col.name}: enum \`${fl.type}\` and the database type differ${onlyCode.length ? `; only in code: ${onlyCode.join(', ')}` : ''}${onlyDb.length ? `; only in the database: ${onlyDb.join(', ')}` : ''} [anchor: ${en.file}]`);
+        }
+        p.values.push({ column: col.name, text: mode === 'ORDINAL'
+          ? `${col.name}: stored as a number, ${en.values.map((v, i) => `${i} = ${v}`).join(', ')} (enum \`${fl.type}\`, ${fl.enumMode ? 'ORDINAL' : 'ORDINAL because there is no @Enumerated'}: reordering or inserting values changes what stored rows mean) [anchor: ${en.file}]`
+          : `${col.name}: ${en.values.join(', ')} (enum \`${fl.type}\`, stored as text) [anchor: ${en.file}]` });
+      }
+    }
+    if (!e.partial) p.unmapped.push(...(t.columns || []).map(c => c.name).filter(n => !seen.has(n.toLowerCase())));
+  }
+  const entityByCls = new Map(scan.entities.map(e => [e.cls, e]));
+  for (const r of scan.repos) { const e = entityByCls.get(r.entity); const t = e && entityTable.get(e.cls); if (t) per.get(t.name).repos.push(r); }
+  for (const r of scan.refs) {
+    for (const n of r.names) {
+      const t = find(n) || (entityByCls.get(n) && entityTable.get(n)) || null;   // a table name, or an entity name in JPQL
+      if (!t) continue;
+      const p = per.get(t.name);
+      if (p.entities.some(e => e.file === r.file)) continue;               // the entity itself is listed already
+      (r.migration ? p.migrations : p.sql).add(r.file);
+    }
+  }
+  for (const p of per.values()) { for (const x of p.repos) p.sql.delete(x.file); p.unmapped = [...new Set(p.unmapped)].filter(n => !p.entities.length || p.entities.every(e => !e.partial)); }
+  return { per, orphanEntities, counts: { entities: scan.entities.length, repos: scan.repos.length, matched: entityTable.size } };
+}
+const anchorList = (arr, max = 6) => `[anchor: ${arr.slice(0, max).join(', ')}]${arr.length > max ? ` and ${arr.length - max} more` : ''}`;
+
 // ---------------------------------------------------------------- schema-import (tbls schema.json or a .sql DDL dump)
 const GEN_START = '<!-- generated:start schema-import: do not edit between these markers -->';
 const GEN_END = '<!-- generated:end -->';
@@ -1058,119 +1270,302 @@ function replaceGenerated(text, block) {
 }
 const cell = v => String(v == null ? '' : v).replace(/\|/g, '\\|').replace(/\r?\n/g, ' ').trim();
 const safeName = n => n.replace(/[^A-Za-z0-9_.-]/g, '_');
-function cmdSchemaImport() {
-  const repo = resolveRepo({});
-  const file = argv[1] && !argv[1].startsWith('--') ? argv[1] : null;
-  if (!file) { console.log('Usage: node .ai-kit/context-tools.cjs schema-import <schema.sql (DDL dump) | schema.json (tbls)> [--out docs/context/data] [--dry-run]'); process.exitCode = 2; return; }
+// The part of a generated block that comes from the schema file, without the lines read from code.
+const CODE_SECTIONS = /^### (References in code only|Code that maps or queries it|Look like references)/;
+function schemaPart(block) {
+  const out = []; let skip = false;
+  for (const l of block.split(/\r?\n/)) {
+    if (/^### /.test(l)) skip = CODE_SECTIONS.test(l);
+    if (!skip && !/\(enum `[^`]+`/.test(l) && !l.includes('generated:end')) out.push(l.replace(/ \(database type; enum [^)]*\)$/, ''));
+  }
+  return out.join('\n').trim();
+}
+const localDate = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+// Works out every page the import would write, without writing. Used by schema-import, check, the hooks
+// and doctor, so they all agree on what "up to date" means.
+function planSchemaImport(repo, file, { outDir = 'docs/context/data', code = true, files = null } = {}) {
   let schema, ddlNote = '';
   // A relative path is taken from the current folder, or else from the repo (handy with --repo).
-  const absFile = !path.isAbsolute(file) && !exists(path.resolve(file)) && exists(path.join(repo, file)) ? path.join(repo, file) : path.resolve(file);
+  const absFile = path.isAbsolute(file) ? file : (!exists(path.resolve(file)) && exists(path.join(repo, file)) ? path.join(repo, file) : path.resolve(file));
   if (/\.(sql|ddl)$/i.test(file)) {
-    let sql = ''; try { sql = fs.readFileSync(absFile, 'utf8'); } catch { console.log(`schema-import: cannot read ${file}`); process.exitCode = 2; return; }
+    let sql; try { sql = fs.readFileSync(absFile, 'utf8'); } catch { return { error: `cannot read ${file}` }; }
     schema = parseDdl(sql);
-    if (!schema.tables.length) { console.log(`schema-import: no CREATE TABLE statements found in ${file}. Export the schema as DDL (pg_dump --schema-only, or your DB viewer's "Generate DDL").`); process.exitCode = 2; return; }
-    ddlNote = `  Read from DDL: ${schema.tables.length} table(s)/view(s), ${schema.relations.length} reference(s), ${Object.keys(schema.enums).length} enum type(s)` +
+    if (!schema.tables.length) return { error: `no CREATE TABLE statements found in ${file}. Export the schema as DDL (pg_dump --schema-only, or your DB viewer's "Generate DDL").` };
+    ddlNote = `Read from DDL: ${schema.tables.length} table(s)/view(s), ${schema.relations.length} reference(s), ${Object.keys(schema.enums).length} enum type(s)` +
       (schema.skipped.length ? `; skipped migration-tool tables: ${schema.skipped.join(', ')}` : '') + (schema.unread ? `; ${schema.unread} table statement(s) not understood (check by hand)` : '');
   } else {
     schema = readJson(absFile);
-    if (!schema || !Array.isArray(schema.tables)) { console.log(`schema-import: ${file} is neither a .sql DDL dump nor a tbls schema.json (expected a "tables" list).`); process.exitCode = 2; return; }
+    if (!schema || !Array.isArray(schema.tables)) return { error: `${file} is neither a .sql DDL dump nor a tbls schema.json (expected a "tables" list).` };
   }
-  const dry = flag('--dry-run');
-  const outDir = toPosix(opt('--out') || 'docs/context/data');
+  outDir = toPosix(outDir).replace(/\/$/, '');
   const relFile = toPosix(path.relative(repo, absFile));
   const inRepo = !relFile.startsWith('..') && !path.isAbsolute(relFile);
   const sourceLine = inRepo ? `Source: [anchor: ${relFile}]` : `Source: ${path.basename(file)} (outside the repo: copy it in and import again to make this traceable)`;
-  const today = (d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)(new Date()); // local date, like a reviewer's
+  const today = localDate(new Date());
   const relations = schema.relations || [];
-  const created = [], updated = [], same = [];
+  const cm = code ? codeMap(repo, files || listFiles(repo), schema, inRepo ? relFile : null) : null;
+  const writes = [], same = [], mismatches = [], questions = [];
   const tableNames = new Set(schema.tables.map(t => t.name));
   const pageOf = new Map();
 
   for (const t of schema.tables) {
     const cols = t.columns || [];
+    const c = cm && cm.per.get(t.name);
     const fks = relations.filter(r => r.table === t.name);
     const refBy = relations.filter(r => r.parent_table === t.name);
     const fkCols = new Set(fks.flatMap(r => r.columns || []));
-    const lookalikes = cols.filter(c => /(_id|Id)$/.test(c.name) && !fkCols.has(c.name) && !(t.constraints || []).some(k => /PRIMARY/i.test(k.type || '') && (k.columns || []).includes(c.name)));
+    const joined = new Set(c ? c.joins.map(j => j.column) : []);
+    const isPk = n => (t.constraints || []).some(k => /PRIMARY/i.test(k.type || '') && (k.columns || []).includes(n));
+    const lookalikes = cols.filter(x => /(_id|Id)$/.test(x.name) && !fkCols.has(x.name) && !isPk(x.name) && !joined.has(x.name));
     const g = [GEN_START, sourceLine, '', `${t.type ? `Type: ${t.type}. ` : ''}${t.comment ? `Comment: ${cell(t.comment)}` : ''}`.trim(), '',
       '### Columns', '| Column | Type | Null | Default | Comment |', '| --- | --- | --- | --- | --- |',
-      ...cols.map(c => `| ${cell(c.name)} | ${cell(c.type)} | ${c.nullable ? 'yes' : 'no'} | ${cell(c.default)} | ${cell(c.comment)} |`)];
+      ...cols.map(x => `| ${cell(x.name)} | ${cell(x.type)} | ${x.nullable ? 'yes' : 'no'} | ${cell(x.default)} | ${cell(x.comment)} |`)];
     const cons = (t.constraints || []);
     if (cons.length) g.push('', '### Keys and constraints', ...cons.map(k => `- ${cell(k.name)} (${cell(k.type)}): ${cell(k.def)}`));
     if (fks.length) g.push('', '### References', ...fks.map(r => `- (${(r.columns || []).join(', ')}) → ${r.parent_table} (${(r.parent_columns || []).join(', ')})${r.virtual ? ' (declared in tbls, no foreign key)' : ''}`));
+    const codeJoins = c ? c.joins.filter(j => !fkCols.has(j.column)) : [];
+    if (codeJoins.length) g.push('', '### References in code only (no foreign key in the database)', ...codeJoins.map(j => `- ${j.text}`));
     if (refBy.length) g.push('', '### Referenced by', ...refBy.map(r => `- ${r.table} (${(r.columns || []).join(', ')})`));
-    if (lookalikes.length) g.push('', '### Look like references but have no foreign key', ...lookalikes.map(c => `- ${c.name}`));
-    const enumCols = cols.filter(c => Array.isArray(c.enum) && c.enum.length);
-    if (enumCols.length) g.push('', '### Allowed values', ...enumCols.map(c => `- ${c.name}: ${c.enum.join(', ')}`));
+    if (lookalikes.length) g.push('', '### Look like references but have no foreign key', ...lookalikes.map(x => `- ${x.name}`));
+    const codeValues = new Map((c ? c.values : []).map(v => [v.column, v.text]));
+    const enumCols = cols.filter(x => Array.isArray(x.enum) && x.enum.length);
+    const valueLines = [...enumCols.map(x => codeValues.has(x.name) && !/stored as a number/.test(codeValues.get(x.name)) ? `- ${x.name}: ${x.enum.join(', ')} (database type; enum ${/enum `([^`]+)`/.exec(codeValues.get(x.name))[1]} in code)` : `- ${x.name}: ${x.enum.join(', ')}`),
+      ...[...codeValues].filter(([k, v]) => !enumCols.some(x => x.name === k) || /stored as a number/.test(v)).map(([, v]) => `- ${v}`)];
+    if (valueLines.length) g.push('', '### Allowed values', ...valueLines);
+    if (c && (c.entities.length || c.repos.length || c.sql.size || c.migrations.size || c.mismatches.length)) {
+      g.push('', '### Code that maps or queries it (found in the code)');
+      for (const e of c.entities) g.push(`- Entity \`${e.cls}\` [anchor: ${e.file}]${c.diffs.length ? `; fields named differently: ${c.diffs.join(', ')}` : ''}${e.partial ? ' (some fields come from code outside this repo or an embedded class: the column check is partial)' : ''}`);
+      for (const r of c.repos) g.push(`- Repository \`${r.cls}\` [anchor: ${r.file}]`);
+      if (c.sql.size) g.push(`- SQL that names it: ${anchorList([...c.sql])}`);
+      if (c.migrations.size) { const ms = [...c.migrations]; g.push(`- Migrations that name it: ${ms.length}, latest \`${path.basename(ms[ms.length - 1])}\` [anchor: ${ms[ms.length - 1]}]`); }
+      if (c.unmapped.length && c.entities.length) g.push(`- Columns no entity field maps: ${c.unmapped.join(', ')}`);
+      for (const x of c.mismatches) { g.push(`- Does not match the schema: ${x}`); mismatches.push({ text: `${t.name}: ${x.replace(/ \[anchor: [^\]]+\]$/, '')}`, file: (/\[anchor: ([^\]]+)\]$/.exec(x) || [])[1] }); }
+    }
     if ((t.indexes || []).length) g.push('', '### Indexes', ...t.indexes.map(i => `- ${cell(i.name)}: ${cell(i.def)}`));
     if ((t.triggers || []).length) g.push('', '### Triggers', ...t.triggers.map(x => `- ${cell(x.name)}: ${cell(x.def)}`));
     if (t.def) g.push('', '### Definition', '```sql', String(t.def).trim(), '```');
     g.push(GEN_END);
     const block = g.join('\n');
+    if (lookalikes.length) questions.push(`${t.name}: ${lookalikes.map(x => x.name).join(', ')} (reference without a foreign key?)`);
 
     // An existing page for this table may be named with or without the schema (public.orders.md or orders.md).
     const candidates = [...new Set([safeName(t.name), safeName(t.name.split('.').pop())])].map(n => `${outDir}/tables/${n}.md`);
-    const rel = candidates.find(c => exists(path.join(repo, ...c.split('/')))) || candidates[0];
+    const rel = candidates.find(x => exists(path.join(repo, ...x.split('/')))) || candidates[0];
     const abs = path.join(repo, ...rel.split('/'));
     pageOf.set(t.name, rel.slice(outDir.length + 1));
-    let text;
     if (exists(abs)) {
       const cur = fs.readFileSync(abs, 'utf8');
       let next = replaceGenerated(cur, block);
       if (next === null) {
         // A page people wrote before: add the generated section, keep every word they wrote.
-        const at = cur.search(/^## (Rules and traps|Code that reads or writes it|Unverified)\b/m);
+        const at = cur.search(/^## (Rules and traps|Code that reads or writes it|Other code that reads or writes it|Unverified)\b/m);
         const section = `## Generated from the schema\n${block}\n\n`;
         next = at >= 0 ? cur.slice(0, at) + section + cur.slice(at) : cur.replace(/\s*$/, '\n\n') + section;
         if (/^---\r?\n/.test(next) && !/^generated:/m.test(frontmatter(next))) next = next.replace(/^---\r?\n/, `---\ngenerated: { by: "context-tools/schema-import", at: ${JSON.stringify(today)} }\n`);
-        text = next; updated.push(rel + ' (generated section added; your text kept)');
-        if (!dry) fs.writeFileSync(abs, text);
+        writes.push({ rel, abs, text: next, how: 'merged' });
         continue;
       }
       if (next === cur) { same.push(rel); continue; }
-      // The structure changed: record when, so reviews older than this stop counting (OKF rule).
-      text = next.replace(/^generated:.*$/m, `generated: { by: "context-tools/schema-import", at: ${JSON.stringify(today)} }`);
-      updated.push(rel);
+      // The table's structure changed: record when, so reviews older than this stop counting (OKF rule).
+      // Code lines alone (a new query, a renamed entity) do not reset the review of what people wrote.
+      const old = cur.slice(cur.indexOf('<!-- generated:start'), cur.indexOf(GEN_END));
+      const structural = schemaPart(old) !== schemaPart(block);
+      writes.push({ rel, abs, text: structural ? next.replace(/^generated:.*$/m, `generated: { by: "context-tools/schema-import", at: ${JSON.stringify(today)} }`) : next, how: 'refreshed' });
     } else {
-      text = ['---', 'type: Database Table', `title: ${JSON.stringify(t.name)}`, 'status: draft', 'dimension: data', 'owner: ""',
+      writes.push({ rel, abs, how: 'added', text: ['---', 'type: Database Table', `title: ${JSON.stringify(t.name)}`, 'status: draft', 'dimension: data', 'owner: ""',
         `generated: { by: "context-tools/schema-import", at: ${JSON.stringify(today)} }`, 'verified: []', '---',
         `# ${t.name}`, '', '## Meaning', '<What one row represents, who writes it, who reads it. People write this part.>', '',
         '## Generated from the schema', block, '',
         '## Rules and traps', '<Values with special meaning, soft deletes, status lifecycles, columns that must change together.>', '',
-        '## Code that reads or writes it', '- <Repository, entity, query constant or migration> [anchor: <path>]', '',
-        '## Unverified', '- <Anything believed but not confirmed in code.>', ''].join('\n');
-      created.push(rel);
+        '## Other code that reads or writes it', '<Only what the generated part does not show: other services, batch jobs, reports. Delete this line if there is none.>', '',
+        '## Unverified', '- <Anything believed but not confirmed in code.>', ''].join('\n') });
     }
-    if (!dry) { fs.mkdirSync(path.dirname(abs), { recursive: true }); fs.writeFileSync(abs, text); }
   }
   // Pages for tables that are no longer in the schema are reported, never deleted.
   const tablesDir = path.join(repo, ...outDir.split('/'), 'tables');
   const gone = [];
   try { for (const f of fs.readdirSync(tablesDir)) if (f.endsWith('.md') && ![...tableNames].some(n => safeName(n) + '.md' === f || safeName(n.split('.').pop()) + '.md' === f)) gone.push(`${outDir}/tables/${f}`); } catch { /* none */ }
-  // Index of tables, regenerated between markers.
+  // Index of tables, regenerated between markers (OKF index style: no frontmatter, bulleted links).
   const idxRel = `${outDir}/index.md`;
   const idxAbs = path.join(repo, ...idxRel.split('/'));
-  // OKF index style: no frontmatter, headings grouping bulleted links with a short description.
+  const orphans = cm ? cm.orphanEntities : [];
   const list = [GEN_START, sourceLine, '',
     ...schema.tables.map(t => {
       const refs = relations.filter(r => r.table === t.name).map(r => r.parent_table), by = relations.filter(r => r.parent_table === t.name).map(r => r.table);
-      return `- [${t.name}](${pageOf.get(t.name) || `tables/${safeName(t.name)}.md`}): ${(t.columns || []).length} columns${refs.length ? `; references ${refs.join(', ')}` : ''}${by.length ? `; referenced by ${by.join(', ')}` : ''}${t.comment ? `. ${cell(t.comment)}` : ''}`;
+      const c = cm && cm.per.get(t.name);
+      return `- [${t.name}](${pageOf.get(t.name) || `tables/${safeName(t.name)}.md`}): ${(t.columns || []).length} columns${refs.length ? `; references ${refs.join(', ')}` : ''}${by.length ? `; referenced by ${by.join(', ')}` : ''}${c && c.entities.length ? `; entity ${c.entities.map(e => e.cls).join(', ')}` : ''}${t.comment ? `. ${cell(t.comment)}` : ''}`;
     }),
+    ...(orphans.length ? ['', '### Entities whose table is not in the schema', 'The schema file may be older than the code, or the entity maps a table in another database.',
+      ...orphans.map(o => `- \`${o.cls}\` (table ${o.table}) [anchor: ${o.file}]`)] : []),
     GEN_END].join('\n');
-  let idx = exists(idxAbs) ? fs.readFileSync(idxAbs, 'utf8') : null;
+  for (const o of orphans) mismatches.push({ text: `entity ${o.cls} maps table ${o.table}, which is not in the schema file`, file: o.file });
+  const idx = exists(idxAbs) ? fs.readFileSync(idxAbs, 'utf8') : null;
   const idxNext = idx === null
-    ? ['# Data: tables', '', 'One page per table. The generated part of each page comes from the schema file; the rest is written by people.', '',
+    ? ['# Data: tables', '', 'One page per table. The generated part of each page comes from the schema file and the code; the rest is written by people.', '',
       '## Tables', list, ''].join('\n')
     : (replaceGenerated(idx, list) ?? idx.replace(/\s*$/, '\n\n') + '## Tables\n' + list + '\n');
-  if (idxNext !== null && idxNext !== idx) { if (!dry) { fs.mkdirSync(path.dirname(idxAbs), { recursive: true }); fs.writeFileSync(idxAbs, idxNext); } (idx === null ? created : updated).push(idxRel); }
+  if (idxNext !== idx) writes.push({ rel: idxRel, abs: idxAbs, text: idxNext, how: idx === null ? 'added' : 'refreshed' });
+  const codeNote = cm ? `Code: ${cm.counts.entities} entit${cm.counts.entities === 1 ? 'y' : 'ies'} (${cm.counts.matched} matched to a table), ${cm.counts.repos} repositor${cm.counts.repos === 1 ? 'y' : 'ies'}` : '';
+  return { schema, ddlNote, codeNote, writes, same, gone, mismatches, questions, relFile: inRepo ? relFile : null, outDir };
+}
 
-  console.log(`Schema import: ${schema.tables.length} table(s) from ${file}${dry ? ' (dry run)' : ''}`);
-  if (ddlNote) console.log(ddlNote);
-  if (created.length) { console.log('  Added:'); created.forEach(f => console.log('    + ' + f)); }
-  if (updated.length) { console.log('  Generated part refreshed:'); updated.forEach(f => console.log('    ~ ' + f)); }
-  if (same.length) console.log(`  Unchanged: ${same.length}`);
-  if (gone.length) { console.log('  Pages for tables no longer in the schema (kept; check and remove by hand):'); gone.forEach(f => console.log('    ? ' + f)); }
-  console.log('  Next: fill "Meaning", "Rules and traps" and "Code that reads or writes it" for the tables your flows use (/context-create deep data does this with you).');
+function cmdSchemaImport() {
+  const repo = resolveRepo({});
+  const file = argv[1] && !argv[1].startsWith('--') ? argv[1] : null;
+  if (!file) { console.log('Usage: node .ai-kit/context-tools.cjs schema-import <schema.sql (DDL dump) | schema.json (tbls)> [--out docs/context/data] [--no-code] [--dry-run]'); process.exitCode = 2; return; }
+  const dry = flag('--dry-run');
+  const p = planSchemaImport(repo, file, { outDir: opt('--out') || 'docs/context/data', code: !flag('--no-code') });
+  if (p.error) { console.log(`schema-import: ${p.error}`); process.exitCode = 2; return; }
+  if (!dry) for (const w of p.writes) { fs.mkdirSync(path.dirname(w.abs), { recursive: true }); fs.writeFileSync(w.abs, w.text); }
+  const added = p.writes.filter(w => w.how === 'added'), changed = p.writes.filter(w => w.how !== 'added');
+  console.log(`Schema import: ${p.schema.tables.length} table(s) from ${file}${dry ? ' (dry run)' : ''}`);
+  if (p.ddlNote) console.log('  ' + p.ddlNote);
+  if (p.codeNote) console.log('  ' + p.codeNote);
+  if (added.length) { console.log('  Added:'); added.forEach(w => console.log('    + ' + w.rel)); }
+  if (changed.length) { console.log('  Generated part refreshed:'); changed.forEach(w => console.log('    ~ ' + w.rel + (w.how === 'merged' ? ' (generated section added; your text kept)' : ''))); }
+  if (p.same.length) console.log(`  Unchanged: ${p.same.length}`);
+  if (p.gone.length) { console.log('  Pages for tables no longer in the schema (kept; check and remove by hand):'); p.gone.forEach(f => console.log('    ? ' + f)); }
+  if (p.mismatches.length) { console.log('  Code and schema disagree (fix the code, or export the schema again):'); p.mismatches.slice(0, 20).forEach(x => console.log('    ! ' + x.text)); }
+  if (p.questions.length) { console.log(`  Questions for people (${p.questions.length} table(s)):`); p.questions.slice(0, 20).forEach(x => console.log('    ? ' + x)); }
+  if (!p.relFile) console.log('  The schema file is outside the repo: pages cannot be checked against it. Copy it to docs/context/data/schema.sql and import again.');
+  console.log('  Next: people write "Meaning" and "Rules and traps" for the tables the main flows use (/context-create deep data asks the questions above), then the owner runs `review`.');
+}
+
+// Every schema import recorded in the repo: an index page whose generated block names its schema file.
+function schemaSources(repo, contextFiles) {
+  const out = [];
+  for (const f of contextFiles.filter(x => /(^|\/)index\.md$/.test(x))) {
+    let t; try { t = fs.readFileSync(path.join(repo, f), 'utf8'); } catch { continue; }
+    const m = /<!-- generated:start schema-import[^\n]*\n\s*Source:\s*\[anchor:\s*([^\]]+)\]/.exec(t);
+    if (m) out.push({ file: m[1].trim(), outDir: path.posix.dirname(f), index: f });
+  }
+  return out;
+}
+const mentionsData = (repo, f) => { try { return /@Entity|@Table|@Column|@JoinColumn|@Query|Repository\b|<mapper\b|\b(select|insert|update|delete)\b/i.test(fs.readFileSync(path.join(repo, f), 'utf8')); } catch { return true; } };
+const lastCommit = (repo, paths) => Number((git(repo, ['log', '-1', '--format=%ct', '--', ...paths]) || '0').trim()) || 0;
+// Are the table pages still what the schema file and the code say? `changed` limits the work in the commit
+// check and CI: nothing runs unless a schema file, table page, migration or data-access code changed.
+function dataFreshness(repo, a, { changedOnly = false } = {}) {
+  const res = [];
+  for (const src of schemaSources(repo, a.ctx.contextFiles)) {
+    if (!a.files.includes(src.file)) continue;                     // broken anchor: reported elsewhere
+    const relevant = f => f === src.file || f.startsWith(src.outDir + '/') || (MIGRATION_RE.test(f) && !SKIP_CODE_RE.test(f)) || (/\.(java|kt|xml)$/i.test(f) && !TEST_RE.test(f) && mentionsData(repo, f));
+    if (changedOnly && !a.changed.some(relevant)) continue;
+    const p = planSchemaImport(repo, src.file, { outDir: src.outDir, files: a.files });
+    if (p.error) { res.push({ src, warn: `${src.file}: ${p.error}` }); continue; }
+    const r = { src, stale: p.writes.map(w => w.rel), mismatches: p.mismatches, warns: [] };
+    if (r.stale.length) r.warns.push(`${r.stale.length} table page(s) out of date with ${src.file} or the code (${r.stale.slice(0, 3).map(x => path.posix.basename(x, '.md')).join(', ')}${r.stale.length > 3 ? ' …' : ''}). Run: ${toolCmd} schema-import ${src.file}`);
+    for (const x of p.mismatches.slice(0, 5)) r.warns.push(`Code and schema disagree: ${x.text}`);
+    const migs = a.files.filter(f => MIGRATION_RE.test(f) && !SKIP_CODE_RE.test(f) && !TEST_RE.test(f));
+    const newMig = changedOnly ? a.changed.filter(f => migs.includes(f)) : [];
+    if (newMig.length && !a.changed.includes(src.file)) r.warns.push(`Migration changed (${path.posix.basename(newMig[0])}) but ${src.file} did not. Once it has run on your local or development database, export the schema again and run schema-import.`);
+    else if (!changedOnly && migs.length && !a.changed.includes(src.file) && lastCommit(repo, [src.file])) {
+      const dirs = [...new Set(migs.map(f => path.posix.dirname(f)))];
+      if (lastCommit(repo, dirs) > lastCommit(repo, [src.file])) r.warns.push(`A migration was committed after ${src.file}. Once it has run on your local or development database, export the schema again and run schema-import.`);
+    }
+    res.push(r);
+  }
+  return res;
+}
+
+// ---------------------------------------------------------------- review (a person signs off pages)
+// Records the OKF review event and sets the page to stable. Only in a terminal a person types in: a review
+// says a person checked the page against the code, so an agent must not run it for them.
+function positional() {
+  const takes = new Set(['--by', '--repo', '--out', '--base', '--format', '--date']);
+  const out = [];
+  for (let i = 1; i < argv.length; i++) { if (argv[i].startsWith('--')) { if (takes.has(argv[i])) i++; continue; } out.push(argv[i]); }
+  return out;
+}
+const PLACEHOLDER_RE = /^\s*(?:[-*]\s+)?<[^<>]{3,}>\s*$/;
+function reviewProblems(text) {
+  // Placeholder lines outside generated blocks, grouped by section.
+  const lines = text.split(/\r?\n/); let inGen = false, section = '';
+  const found = [];
+  lines.forEach((l, i) => {
+    if (l.includes('<!-- generated:start')) inGen = true;
+    if (/^#{1,6}\s/.test(l)) section = l.replace(/^#+\s*/, '');
+    if (!inGen && PLACEHOLDER_RE.test(l)) found.push({ i, section, line: l.trim() });
+    if (l.includes('<!-- generated:end')) inGen = false;
+  });
+  return found;
+}
+function dropPlaceholders(text, found) {
+  const drop = new Set(found.map(f => f.i));
+  let lines = text.split(/\r?\n/).filter((_, i) => !drop.has(i));
+  // A section left with nothing in it loses its heading too.
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (/^##\s/.test(lines[i])) { let j = i + 1; while (j < lines.length && !lines[j].trim()) j++; if (j >= lines.length || /^##\s/.test(lines[j])) { i = j - 1; continue; } }
+    out.push(lines[i]);
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n');
+}
+function addReview(text, who, date) {
+  const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(text); if (!m) return null;
+  let fm = m[1].split(/\r?\n/);
+  const ev = `{ by: ${JSON.stringify('human:' + who)}, at: ${JSON.stringify(date)} }`;
+  const si = fm.findIndex(l => /^status:/.test(l));
+  if (si >= 0) fm[si] = 'status: stable'; else fm.push('status: stable');
+  const vi = fm.findIndex(l => /^verified:/.test(l));
+  if (vi < 0) fm.push('verified:', `  - ${ev}`);
+  else {
+    const v = fm[vi].replace(/^verified:\s*/, '');
+    if (!v || v === '[]') { let j = vi + 1; while (j < fm.length && /^\s+-/.test(fm[j])) j++; fm[vi] = 'verified:'; fm.splice(j, 0, `  - ${ev}`); }
+    else if (/^\[.*\]$/.test(v)) fm[vi] = `verified: ${v.replace(/\s*\]$/, '')}, ${ev} ]`;
+    else return null;
+  }
+  return text.replace(m[0], `---\n${fm.join('\n')}\n---`);
+}
+function cmdReview() {
+  const repo = resolveRepo({});
+  const who = (opt('--by') || '').replace(/^human:/, '').trim();
+  const targets = positional();
+  if (!who || !targets.length) { console.log('Usage: node .ai-kit/context-tools.cjs review <page.md | folder> [...] --by <your name>\n  Marks pages as reviewed by you: status stable and a review entry with today\'s date. Run it after you have checked the pages against the code.'); process.exitCode = 2; return; }
+  if (!(process.stdin.isTTY && process.stdout.isTTY)) {
+    console.log('review: run this in your own terminal. A review records that a person checked the pages against the code, so an agent must not run it for you.' +
+      (process.platform === 'win32' ? ' (In Git Bash outside VS Code, start it with: winpty node …)' : ''));
+    process.exitCode = 2; return;
+  }
+  const date = opt('--date') || localDate(new Date());
+  const pages = [];
+  for (const t of targets) {
+    const abs = path.resolve(t);
+    let st; try { st = fs.statSync(abs); } catch { console.log(`  ? ${t}: not found`); continue; }
+    if (st.isDirectory()) walk(abs, repo, []).filter(f => f.endsWith('.md') && !/(^|\/)index\.md$|README\.md$/.test(f)).forEach(f => pages.push(f));
+    else pages.push(toPosix(path.relative(repo, abs)));
+  }
+  const a = analyse(repo);
+  const plan = [], refused = [];
+  for (const rel of [...new Set(pages)]) {
+    const text = fs.readFileSync(path.join(repo, rel), 'utf8');
+    const meta = pageMeta(text);
+    if (!/^---\r?\n/.test(text)) { refused.push(`${rel}: no frontmatter (run migrate first)`); continue; }
+    const broken = a.broken.filter(b => b.file === rel);
+    if (broken.length) { refused.push(`${rel}: ${broken.length} anchor(s) point at files that do not exist (line ${broken.map(b => b.line).join(', ')})`); continue; }
+    const ph = reviewProblems(text);
+    const meaning = ph.find(f => /^(Meaning|What it is|Purpose)\b/i.test(f.section));
+    if (meaning) { refused.push(`${rel}: "${meaning.section}" is still the template text; write it first`); continue; }
+    if (meta && meta.status !== 'draft' && (meta.reviewers || []).some(v => v.toLowerCase() === 'human:' + who.toLowerCase())) { refused.push(`${rel}: already reviewed by ${who}`); continue; }
+    const unv = (text.split(/^## Unverified\s*$/m)[1] || '').split(/^## /m)[0].split(/\r?\n/).filter(l => /^\s*[-*]\s+\S/.test(l) && !PLACEHOLDER_RE.test(l)).length;
+    plan.push({ rel, text, ph, unv });
+  }
+  console.log(`Review by ${who} on ${date}:`);
+  refused.forEach(r => console.log('  not marked  ' + r));
+  plan.forEach(p => console.log(`  will mark   ${p.rel}${p.ph.length ? ` (removes ${p.ph.length} unused template line(s))` : ''}${p.unv ? ` (keeps ${p.unv} Unverified line(s): they stay unconfirmed)` : ''}`));
+  if (!plan.length) { process.exitCode = refused.length ? 1 : 0; return; }
+  const rl = require('readline').createInterface({ input: process.stdin, output: process.stdout });
+  rl.question(`Did you check ${plan.length === 1 ? 'this page' : `these ${plan.length} pages`} against the code? Mark as reviewed [y/N] `, ans => {
+    rl.close();
+    if (!/^y(es)?$/i.test(ans.trim())) { console.log('Nothing changed.'); return; }
+    for (const p of plan) {
+      const next = addReview(p.ph.length ? dropPlaceholders(p.text, p.ph) : p.text, who, date);
+      if (next === null) { console.log(`  ! ${p.rel}: could not read its "verified:" field; add the line by hand`); continue; }
+      fs.writeFileSync(path.join(repo, p.rel), next);
+    }
+    console.log(`Marked ${plan.length} page(s). Commit them in a pull request; a second person who did not write them can run review too (needed for a 5).`);
+  });
 }
 
 // ---------------------------------------------------------------- doctor
@@ -1277,6 +1672,22 @@ function cmdDoctor() {
     const cfg = (() => { try { return fs.readFileSync(path.join(repo, 'openspec', 'config.yaml'), 'utf8'); } catch { return ''; } })();
     /^schema:\s*story-tdd/m.test(cfg) ? warn('openspec', 'openspec/config.yaml still uses the old story-tdd workflow: run install.mjs --upgrade to return to OpenSpec\'s default documents') : ok('openspec', 'OpenSpec with its default documents');
   }
+  // Data context: schema file, table pages, links to code, the rule that sends agents to the pages.
+  {
+    const files = listFiles(repo), ctx = readContext(repo, files);
+    const srcs = schemaSources(repo, ctx.contextFiles);
+    const rules = ctx.contextFiles.filter(f => /^(\.github\/instructions|\.claude\/rules)\//.test(f)).some(f => { try { return /docs\/context\/data/.test(fs.readFileSync(path.join(repo, f), 'utf8')); } catch { return false; } });
+    for (const d of dataFreshness(repo, { files, ctx, changed: [] })) {
+      if (d.warn) { warn('data', d.warn); continue; }
+      const pages = files.filter(f => f.startsWith(d.src.outDir + '/tables/') && f.endsWith('.md'));
+      const withCode = pages.filter(f => { try { return /^- (Entity|Repository|SQL that names it)/m.test(fs.readFileSync(path.join(repo, f), 'utf8')); } catch { return false; } });
+      const reviewed = pages.filter(f => { try { const m = pageMeta(fs.readFileSync(path.join(repo, f), 'utf8')); return m && m.reviewed; } catch { return false; } });
+      (d.stale.length || d.mismatches.length ? warn : ok)('data', `${d.src.file}: ${pages.length} table page(s), ${withCode.length} linked to code, ${reviewed.length} reviewed${d.stale.length ? `; ${d.stale.length} out of date (run schema-import ${d.src.file})` : ''}${d.mismatches.length ? `; ${d.mismatches.length} place(s) where code and schema disagree (schema-import lists them)` : ''}`);
+      for (const w of d.warns.filter(x => /^A migration was committed/.test(x))) warn('data', w);
+      rules ? ok('data', 'A rule file sends agents to docs/context/data when they touch data code') : warn('data', 'No rule file points agents at docs/context/data: add the "Data access" rule (/context-create deep data does this)');
+    }
+    if (!srcs.length && files.some(f => MIGRATION_RE.test(f) && !SKIP_CODE_RE.test(f))) info('data', 'Migrations found but no table pages. Export the schema to docs/context/data/schema.sql, then /context-create deep data');
+  }
   const g = graphState(repo);
   if (g) g.stale ? warn('code map', `Graphify map is older than HEAD: graphify update .`) : ok('code map', 'Graphify map current');
 
@@ -1359,7 +1770,7 @@ function cmdMcp() {
 // ---------------------------------------------------------------- main
 const hooks = { 'session-start': hookSessionStart, 'post-edit': hookPostEdit, stop: hookStop, guard: hookGuard };
 const commands = { check: cmdCheck, status: cmdStatus, readiness: cmdReadiness, migrate: cmdMigrate, doctor: cmdDoctor,
-  'pages-for': cmdPagesFor, 'schema-import': cmdSchemaImport, ci: cmdCi, mcp: cmdMcp };
+  'pages-for': cmdPagesFor, 'schema-import': cmdSchemaImport, review: cmdReview, ci: cmdCi, mcp: cmdMcp };
 if (commands[command]) commands[command]();
 else if (hooks[command]) {
   let input = {}, repo = null, result = null, duplicate = false;

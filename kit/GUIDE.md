@@ -210,12 +210,32 @@ scenarios in its house format, run it after step 2 and keep its output next to t
 | While the agent works | The hooks tell the agent which context line describes the file it just edited, and ask it once at the end to check those lines | Nothing, unless it asks |
 | When you commit | The commit is stopped if a context line points at a file that no longer exists | Fix that line, or run `/context-update` |
 | On every pull request | The pull request check lists lines whose code changed | Fix them in the same pull request |
-| After a database migration | — | Export the DDL again over `docs/context/data/schema.sql`, then `/context-update` (only the generated part of each table page changes) |
+| You change an entity, repository, query or migration | The hooks ask the agent to run `schema-import`; the commit check and the pull request check say which table pages are out of date | Nothing, or run `node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql` yourself |
+| After a database migration | The commit check says the migration changed but the schema file did not | Once the migration has run on your local or development database, export the DDL again over `docs/context/data/schema.sql` and run `schema-import` (only the generated part of each table page changes) |
+| You have checked a page against the code | — | In your own terminal: `node .ai-kit/context-tools.cjs review <page or folder> --by <your name>` (sets it reviewed; an agent cannot run it) |
 | A new repo joins the workspace | The home repo's session note says "no context yet" | `/context-create` for it, then `/product-context update` |
 | Each sprint or quarter | — | Run the context-steward agent in "sprint-digest" or "quarterly-review" mode, about 30 minutes |
 
 To see whether the hooks actually run, use `node .ai-kit/context-tools.cjs doctor`. It shows when each
 hook last ran. Hook notes go to the agent, not to you, so "I don't see anything" is normal.
+
+### Database context, step by step
+
+1. **Export the schema (a person, once).** Structure only, with a read-only user, from a development or QA
+   database: `pg_dump --schema-only --no-owner --no-privileges …`, or your DB viewer's "Generate DDL".
+   Save it as `docs/context/data/schema.sql`.
+2. **In the agent chat:** `/context-create deep data`. The agent runs the import: one page per table,
+   linked to its entity, repository, SQL and migrations. It shows you where the code and the schema
+   disagree and asks only what the code cannot answer.
+3. **Answer the questions:** what the main status values mean, where the `_id` columns without a foreign
+   key point, which flows write each main table.
+4. **Review:** check a page against the code, then in your own terminal:
+   `node .ai-kit/context-tools.cjs review docs/context/data/tables/<table>.md --by <your name>`
+   (or a whole folder).
+5. **Commit on a branch and open a pull request.**
+
+After that, the only thing you do by hand is export the schema again after a migration; the checks tell
+you when.
 
 ---
 

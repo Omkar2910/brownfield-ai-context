@@ -13,9 +13,12 @@ Goal: change only the context lines whose facts changed. Never rewrite context f
    else. Mention it in the summary.
 2. **Code map.** If `graphify-out/graph.json` exists, run `graphify update .` (local, no API key). For a
    moved or renamed class, `graphify query "<old name>"` helps find where it went.
-3. **Table pages.** If `docs/context/data/schema.sql` (or `schema.json`) exists and the user has a newer
-   export (after a migration), replace the file and run `node .ai-kit/context-tools.cjs schema-import
-   <file>`: only the generated parts change, and the diff shows what moved. Pages it lists as "no longer in the schema" need a decision from the user.
+3. **Table pages.** If `docs/context/data/schema.sql` (or `schema.json`) exists, run
+   `node .ai-kit/context-tools.cjs schema-import <file>` whenever the check says pages are out of date or
+   the code changed entities, queries or migrations; ask the user for a newer export after a migration.
+   Only the generated parts change, and the diff shows what moved. Never edit between the markers.
+   Pages it lists as "no longer in the schema" and lines under "Code and schema disagree" need a decision
+   from the user.
 4. **Find what is out of date.** Run `node .ai-kit/context-tools.cjs check --base origin/<main-branch>`
    (ask for the branch if unsure; `main`, `master` and `develop` are common). ERROR: an anchor points at a
    file that no longer exists. WARN: anchored code changed but the context file did not.
@@ -27,8 +30,9 @@ Goal: change only the context lines whose facts changed. Never rewrite context f
    anchor (the code moved, the fact is the same), delete the line (no longer true or needed), or leave it
    (still true; say so). Add a new line only if it passes the `context-create` skill's
    `references/prune-checklist.md`.
-7. **Review state.** A reviewed page whose lines you rewrote goes back to `status: draft` unless a reviewer
-   checks it in this pull request and adds a `verified` line.
+7. **Review state.** A reviewed page whose lines you rewrote goes back to `status: draft`, and its owner
+   runs `node .ai-kit/context-tools.cjs review <page> --by <name>` in their own terminal after checking it.
+   Never run `review` or write a `verified` entry yourself.
 8. Run the check again until there are no ERROR lines.
 
 **Product workspace:** when this repo has no `.ai-kit/context-tools.cjs`, the tool is in the home repo:

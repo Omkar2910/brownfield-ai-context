@@ -428,9 +428,19 @@ scenarios in its house format, run it after step 2 and keep its output next to t
 <td>Fix them in the same pull request</td>
 </tr>
 <tr>
+<td>You change an entity, repository, query or migration</td>
+<td>The hooks ask the agent to run <code>schema-import</code>; the commit check and the pull request check say which table pages are out of date</td>
+<td>Nothing, or run <code>node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql</code> yourself</td>
+</tr>
+<tr>
 <td>After a database migration</td>
+<td>The commit check says the migration changed but the schema file did not</td>
+<td>Once the migration has run on your local or development database, export the DDL again over <code>docs/context/data/schema.sql</code> and run <code>schema-import</code> (only the generated part of each table page changes)</td>
+</tr>
+<tr>
+<td>You have checked a page against the code</td>
 <td>—</td>
-<td>Export the DDL again over <code>docs/context/data/schema.sql</code>, then <code>/context-update</code> (only the generated part of each table page changes)</td>
+<td>In your own terminal: <code>node .ai-kit/context-tools.cjs review &lt;page or folder&gt; --by &lt;your name&gt;</code> (sets it reviewed; an agent cannot run it)</td>
 </tr>
 <tr>
 <td>A new repo joins the workspace</td>
@@ -446,6 +456,23 @@ scenarios in its house format, run it after step 2 and keep its output next to t
 </table></div>
 <p>To see whether the hooks actually run, use <code>node .ai-kit/context-tools.cjs doctor</code>. It shows when each
 hook last ran. Hook notes go to the agent, not to you, so "I don't see anything" is normal.</p>
+<h3 id="database-context-step-by-step">Database context, step by step</h3>
+<ol>
+<li><strong>Export the schema (a person, once).</strong> Structure only, with a read-only user, from a development or QA
+   database: <code>pg_dump --schema-only --no-owner --no-privileges …</code>, or your DB viewer's "Generate DDL".
+   Save it as <code>docs/context/data/schema.sql</code>.</li>
+<li><strong>In the agent chat:</strong> <code>/context-create deep data</code>. The agent runs the import: one page per table,
+   linked to its entity, repository, SQL and migrations. It shows you where the code and the schema
+   disagree and asks only what the code cannot answer.</li>
+<li><strong>Answer the questions:</strong> what the main status values mean, where the <code>_id</code> columns without a foreign
+   key point, which flows write each main table.</li>
+<li><strong>Review:</strong> check a page against the code, then in your own terminal:
+   <code>node .ai-kit/context-tools.cjs review docs/context/data/tables/&lt;table&gt;.md --by &lt;your name&gt;</code>
+   (or a whole folder).</li>
+<li><strong>Commit on a branch and open a pull request.</strong></li>
+</ol>
+<p>After that, the only thing you do by hand is export the schema again after a migration; the checks tell
+you when.</p>
 <hr />
 <h2 id="10-adding-moving-and-removing-repos">10. Adding, moving and removing repos</h2>
 <ul>

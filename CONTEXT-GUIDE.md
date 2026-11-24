@@ -262,7 +262,9 @@ verified: []
 
 After review it becomes `status: stable` with a line under `verified:`, for example
 `- { by: "human:asha", at: "2026-11-20" }`; when a second person who did not write it has checked it, they
-add their own line (an independent review). These fields follow the Open Knowledge Format (OKF v0.3), with
+add their own line (an independent review). The reviewer runs
+`node .ai-kit/context-tools.cjs review <page or folder> --by <name>` in their own terminal instead of
+editing the YAML; it refuses to run without a terminal, so an agent cannot sign off its own pages. These fields follow the Open Knowledge Format (OKF v0.3), with
 `dimension` and `owner` as the kit's own keys, so tools that read OKF can read these pages. Pages written with kit 1.x used a one-line header instead; `context-tools.cjs migrate`
 converts them without an agent.
 
@@ -299,9 +301,13 @@ references no entity maps. The kit combines them:
    DDL") saved as `docs/context/data/schema.sql`, or a tbls `schema.json`. Then
    `node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql`. It writes one page per
    table in `docs/context/data/tables/` (columns, defaults, keys, references, "looks like a reference but
-   has no foreign key", allowed enum values, indexes, triggers, comments) and an index. A table page that
-   already exists keeps every word; the importer adds a generated section to it. Later imports replace only the generated part; what
-   people wrote (meaning, rules, which code reads or writes the table) is kept.
+   has no foreign key", allowed enum values, indexes, triggers, comments) and an index. It also reads the
+   code: the entity, repository, SQL and migrations for each table, references and enum values the
+   database does not declare, enums stored as numbers, and places where the code and the schema
+   disagree. A table page that already exists keeps every word; the importer adds a generated section
+   to it. Later imports replace only the generated part; what people wrote (meaning, rules) is kept.
+   The commit check, CI and the agent hooks say when the pages no longer match the schema file or the
+   code, or when a migration is newer than the export.
 3. **From a data catalogue (if you have one):** link the table's catalogue entry; do not copy it.
 4. **A database MCP server** is optional and only for local or development databases with a read-only
    user. Never point an agent at production.

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # End-to-end test of the kit on throwaway repos. Needs git and Node 18+. Usage: bash tools/test-kit.sh
 # Covers: fresh install per tool, all tools, 1.x upgrade + migrate, doctor, hooks (dedupe, stop, guard),
-# schema-import (create, refresh, keep human text), readiness caps, ci, mcp, org sync, hub, product workspace.
+# schema-import (create, refresh, keep human text, code map), readiness caps, ci, mcp, org sync, hub, product workspace,
+# data checks in check, hooks and doctor, review.
 set -euo pipefail
 KIT="$(cd "$(dirname "$0")/.." && pwd)"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
@@ -123,5 +124,57 @@ has "$(cat "$f")" "template_id" "reference without a foreign key listed"
 has "$(cat "$T/d/docs/context/data/tables/reporting.report_runs.md")" "trg_touch" "trigger read"
 out=$(cd "$T/d" && node "$KIT/kit/files/.ai-kit/context-tools.cjs" schema-import docs/context/data/schema.sql); has "$out" "Unchanged: 4" "second import changes nothing"
 out=$(cd "$T/d" && node "$KIT/kit/files/.ai-kit/context-tools.cjs" schema-import "$KIT/tools/fixtures/dbeaver-ddl.sql" --out docs/context/dbv --dry-run); has "$out" "2 table(s)/view(s), 1 reference(s)" "DB viewer DDL export read"
+
+echo "12. Code map, check and hooks for table pages, review"
+J="$T/j"; mkdir -p "$J"; cp -r "$KIT/tools/fixtures/jpa-repo/." "$J"; git -C "$J" init -q; git -C "$J" config user.email t@e; git -C "$J" config user.name T; git -C "$J" add -A; git -C "$J" commit -qm init
+TOOL="$KIT/kit/files/.ai-kit/context-tools.cjs"
+out=$(cd "$J" && node "$TOOL" schema-import docs/context/data/schema.sql)
+has "$out" "4 entities (3 matched to a table), 1 repository" "entities and repositories found"
+has "$out" "public.orders: coupon_id" "only the unanswered reference is a question"
+o="$(cat "$J/docs/context/data/tables/public.orders.md")"; c="$(cat "$J/docs/context/data/tables/public.customers.md")"
+has "$o" 'Entity `Order` \[anchor: src/main/java/com/ex/orders/Order.java\]' "entity linked with an anchor"
+has "$o" 'Repository `OrderRepository`' "repository linked"
+has "$o" 'customer_id → public.customers (`Order.customer`)' "reference known only from code"
+grep -A3 "### Look like references" <<<"$o" | grep -q customer_id && bad "code reference no longer asked about" || ok "code reference no longer asked about"
+has "$o" 'status: NEW, PAID, CANCELLED (enum `OrderStatus`, stored as text)' "allowed values from a Java enum"
+has "$c" 'tier: stored as a number, 0 = BRONZE' "ORDINAL enum flagged"
+has "$c" 'emailAddress → email' "field named differently"
+has "$o" 'maps column discount_code, which this table does not have' "entity column missing from the schema"
+has "$o" 'SQL that names it: \[anchor: src/main/java/com/ex/orders/ReportService.java\]' "SQL string found"
+grep -q OrderTest "$J/docs/context/data/tables/public.orders.md" && bad "test code left out" || ok "test code left out"
+has "$(cat "$J/docs/context/data/tables/public.order_lines.md")" 'Entity `OrderLine` \[anchor: src/main/kotlin' "Kotlin entity"
+has "$(cat "$J/docs/context/data/index.md")" '`ArchivedOrder` (table archived_orders)' "entity without a table listed"
+git -C "$J" add -A; git -C "$J" commit -qm pages
+python3 - "$J/src/main/java/com/ex/orders/Order.java" <<'PY'
+import sys; p=sys.argv[1]; s=open(p).read()
+s=s.replace('    @Column(name = "discount_code")\n    private String discount;    // the column is not in the schema export','    @Column(name = "legacy_ref")\n    private String legacyRef;')
+open(p,'w').write(s)
+PY
+git -C "$J" add -A; out=$(cd "$J" && node "$TOOL" check --staged); has "$out" "1 table page(s) out of date" "commit check: page out of date with the code"
+out=$(echo "{\"hook_event_name\":\"PostToolUse\",\"session_id\":\"j1-$$\",\"cwd\":\"$J\",\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$J/src/main/java/com/ex/orders/Order.java\"}}" | node "$TOOL" post-edit)
+has "$out" "run node .ai-kit/context-tools.cjs schema-import" "post-edit: run the import, not a hand edit"
+out=$(echo "{\"hook_event_name\":\"Stop\",\"session_id\":\"j1-$$\",\"cwd\":\"$J\"}" | node "$TOOL" stop)
+has "$out" "RUN node .ai-kit/context-tools.cjs schema-import" "stop: asks the agent to run the import"
+grep -q "ArchivedOrder" <<<"$out" && bad "stop: only problems in edited files" || ok "stop: only problems in edited files"
+sed -i 's/^status: draft/status: stable/; s/^generated: .*/generated: { by: "context-tools\/schema-import", at: "2026-01-01" }/; s/^verified: \[\]/verified:\n  - { by: "human:a", at: "2026-01-02" }/' "$J/docs/context/data/tables/public.orders.md"
+(cd "$J" && node "$TOOL" schema-import docs/context/data/schema.sql >/dev/null)
+grep -q 'at: "2026-01-01" }' "$J/docs/context/data/tables/public.orders.md" && grep -q "legacy_ref" "$J/docs/context/data/tables/public.orders.md" && ok "code change refreshes the page, keeps the review" || bad "code change keeps the review"
+sed -i 's/^    status character varying(20) NOT NULL,/    status character varying(30) NOT NULL,/' "$J/docs/context/data/schema.sql"
+(cd "$J" && node "$TOOL" schema-import docs/context/data/schema.sql >/dev/null)
+grep -q 'at: "2026-01-01" }' "$J/docs/context/data/tables/public.orders.md" && bad "structure change resets the review" || ok "structure change resets the review"
+git -C "$J" add -A; git -C "$J" commit -qm export
+printf 'alter table orders add column note text;\n' > "$J/src/main/resources/db/migration/V3__note.sql"; git -C "$J" add -A
+out=$(cd "$J" && node "$TOOL" check --staged); has "$out" "Migration changed (V3__note.sql) but docs/context/data/schema.sql did not" "migration without a new export"
+out=$(cd "$J" && node "$TOOL" review docs/context/data/tables --by a 2>&1 || true); has "$out" "run this in your own terminal" "review refuses without a terminal"
+if command -v script >/dev/null; then
+  sed -i 's/<What one row represents, who writes it, who reads it. People write this part.>/One customer./' "$J/docs/context/data/tables/public.customers.md"
+  out=$(cd "$J" && script -qec "node $TOOL review docs/context/data/tables --by 'B K'" /dev/null <<< "y")
+  has "$out" 'order_lines.md: "Meaning" is still the template text' "review refuses an unwritten page"
+  f="$(cat "$J/docs/context/data/tables/public.customers.md")"
+  has "$f" '  - { by: "human:B K", at: ' "review records the event"
+  has "$f" "^status: stable" "review sets stable"
+  grep -q "<Values with special meaning" <<<"$f" && bad "review removes unused template lines" || ok "review removes unused template lines"
+fi
+out=$(cd "$J" && node "$TOOL" doctor); has "$out" "3 table page(s), 3 linked to code" "doctor: data line"
 
 echo ""; echo "Passed: $pass, failed: $fail"; [ "$fail" -eq 0 ]

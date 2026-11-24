@@ -42,20 +42,28 @@ testing, operations, decisions. With `deep <page>`, do only that page.
      export one: data-sources.md)." If they give a path elsewhere, suggest moving it to
      `docs/context/data/schema.sql` so the pages can anchor to it.
      Then run `node .ai-kit/context-tools.cjs schema-import <file>`. It writes `data/tables/<table>.md` and
-     `data/index.md`. Never edit between the `generated` markers.
-  2. For each table the main flows use, fill "Code that reads or writes it": the entity, repository, native
-     queries and SQL constants, one line each ending with `[anchor: <file>]`, and the entity field for
-     each column whose name differs.
-  3. Ask the user, in one message, about every column under "Look like references but have no foreign
-     key" and every column under "Allowed values". Write the answers into "Meaning" and "Rules and
-     traps"; anything not confirmed goes under "Unverified".
+     `data/index.md`, and reads the code itself: JPA entities and their columns, Spring Data repositories,
+     SQL in strings and MyBatis mappers, migrations, references that exist only as `@JoinColumn`, and
+     allowed values from Java enums (it flags enums stored as numbers). Never edit between the
+     `generated` markers: run the import again instead.
+  2. Read the import's output. **"Code and schema disagree"** lines are real findings (an entity maps a
+     column or table the export does not have): show them to the user; either the code is wrong or the
+     export is old. Do not hide them.
+  3. Ask the user, in one message, only the **"Questions for people"** the import printed (references
+     without a foreign key that the code does not explain), plus what the main status values mean and
+     which flows write each main table. Write the answers into "Meaning" and "Rules and traps"; anything
+     not confirmed goes under "Unverified". Fill "Other code that reads or writes it" only with what the
+     generated part cannot show (other services, batch jobs, reports, code in other languages), with anchors.
   4. In `data.md`, link each table to its page and describe how the main flows read and write data, with
      anchors. Make sure `AGENTS.md` has "Changing tables, queries or migrations → docs/context/data.md".
      If the repo has no data-access rule file, create it from `instructions-examples.md` ("Data access"),
      so agents open the table page whenever they touch entities, repositories or migrations.
-  5. Run `check` (0 errors) and `pages-for <an entity or repository>` to show the links work.
+  5. Run `check` (0 errors) and `pages-for <an entity or repository>` to show the links work, and
+     `doctor` for the data line (pages, pages linked to code, rule file).
   Without a schema file (the user has none), write table pages only for the main tables, from migrations,
   entities and query constants, and say in the Finish block that a schema export would make them exact.
+  From then on the commit check, CI and the agent hooks say when a table page no longer matches the
+  schema file or the code, and the fix is always to run the import again, never to edit the generated part.
 - API: the OpenAPI file or controllers and DTOs (generate the endpoint table from them), HTTP clients for
   outbound calls, the error handler.
 - Dependencies: the build file (versions stay there), internal libraries, config for services and
@@ -87,10 +95,13 @@ testing, operations, decisions. With `deep <page>`, do only that page.
   "Where to look", add one line per page: "Changing <what> → docs/context/<page>.md". Keep `AGENTS.md`
   under 150 lines.
 - Run `node .ai-kit/context-tools.cjs check` (fix every broken anchor), then `readiness`.
-- Each page stays `draft` (counts at most 2 out of 5) until its owner reviews it against the code, resolves
-  the Unverified lines, then sets `status: stable` and adds a line under `verified:` (`- { by: "human:<name>", at: "<date>" }`). A second person who did not
-  write it adds their own line (needed for a 5). Pages go through a
-  normal pull request, like code.
+- Each page stays `draft` (counts at most 2 out of 5) until its owner reviews it against the code and
+  resolves the Unverified lines. The owner then runs, in their own terminal,
+  `node .ai-kit/context-tools.cjs review <page or folder> --by <name>`: it sets `status: stable`, adds the
+  review entry, removes unused template lines, and refuses pages with broken anchors or no "Meaning". A
+  second person who did not write the page runs it too (needed for a 5). **Never run `review` yourself**,
+  and never write a `verified` entry: a review is a person's statement. Pages go through a normal pull
+  request, like code.
 
 **Product workspace:** when this repo has no `.ai-kit/context-tools.cjs`, the tool is in the home repo:
 run `node <home>/.ai-kit/context-tools.cjs <command> --repo <this repo>` instead.
@@ -99,5 +110,5 @@ run `node <home>/.ai-kit/context-tools.cjs <command> --repo <this repo>` instead
 End your reply with this block, filled in:
 - **What changed:** each page created or edited, as a link, with its line count and Unverified count.
 - **Checks:** `check` result and the readiness score and band.
-- **Next:** 1) the owner reviews the draft pages and sets them to reviewed; 2) the next page to write; 3)
+- **Next:** 1) the owner reviews the draft pages and runs `review` on them; 2) the next page to write; 3)
   `/context-assess` once the pages are reviewed.

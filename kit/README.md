@@ -36,7 +36,7 @@ optional: run `openspec init` first so the installer can add the story workflow.
 
 | Kit file | Installed to | Purpose |
 | --- | --- | --- |
-| `files/.ai-kit/context-tools.cjs` | `.ai-kit/` (every tool) | The context tool: check, status, doctor, readiness, pages-for, migrate, schema-import, ci, mcp, and the agent hooks. Node 18+, no dependencies |
+| `files/.ai-kit/context-tools.cjs` | `.ai-kit/` (every tool) | The context tool: check, status, doctor, readiness, pages-for, migrate, schema-import, review, ci, mcp, and the agent hooks. Node 18+, no dependencies |
 | `files/.ai-kit/ci/` | `.ai-kit/ci/` | Pull request check templates (Azure Pipelines, GitHub Actions) |
 | (generated) | `.ai-kit/kit.json` | Kit version, tools, org rules carried (with their fingerprints) |
 | `files/.github/skills/*` | Copilot `.github/skills/`, Claude Code `.claude/skills/`, Codex `.agents/skills/` | `context-create` (quick and deep), `context-update`, `context-assess`, `context-learn`, `story-start`, `story-finish`, `onboard-me` |
@@ -113,7 +113,8 @@ node .ai-kit/context-tools.cjs check [--base origin/main] [--staged] [--strict]
 node .ai-kit/context-tools.cjs readiness [--json]         # readiness score 0-100 over 12 dimensions
 node .ai-kit/context-tools.cjs pages-for <file> ...       # which context lines describe these files
 node .ai-kit/context-tools.cjs migrate [--dry-run]        # upgrade page format after a kit upgrade
-node .ai-kit/context-tools.cjs schema-import <schema.sql|schema.json> [--out docs/context/data]   # table pages from a DDL dump or tbls
+node .ai-kit/context-tools.cjs schema-import <schema.sql|schema.json> [--out docs/context/data] [--no-code]   # table pages from a DDL dump or tbls, linked to the code
+node .ai-kit/context-tools.cjs review <page|folder> --by <name>   # a person marks pages reviewed (own terminal only)
 node .ai-kit/context-tools.cjs ci --base origin/main      # the pull request check
 node .ai-kit/context-tools.cjs mcp                        # MCP server on stdio (preview)
 ```
@@ -160,7 +161,19 @@ provenance and freshness are measured. Weights and bands: `.ai-kit/readiness.jso
 viewer's DDL export; simple MySQL and SQL Server tables mostly work) or a tbls `schema.json`, and writes one page per table in
 `docs/context/data/tables/` plus `docs/context/data/index.md`. Only the part between the `generated`
 markers is replaced on a later import; what people wrote is kept. Tables that disappeared are reported,
-never deleted. An existing page without markers keeps every word and gets a generated section added. See the `context-create` skill's `references/data-sources.md`.
+never deleted. An existing page without markers keeps every word and gets a generated section added.
+It also reads the code without running it (JPA entities in Java and Kotlin, Spring Data repositories,
+SQL strings, MyBatis mappers, migrations; not test code): each page lists its entity, repository, SQL
+and migrations with anchors, references and allowed values known only from code, enums stored as
+numbers, and where the code and the schema disagree. `check`, `ci`, the hooks and `doctor` re-plan the
+import without writing, so they say when pages are out of date with the schema file or the code, and
+when a migration changed without a new export. A change to the code lines alone keeps the owner's
+review; a change to the table's structure does not. See the `context-create` skill's
+`references/data-sources.md`.
+
+**review.** Sets `status: stable` and adds the OKF review event (`human:<name>`, today), removes unused
+template lines, and refuses pages with broken anchors or an unwritten "Meaning". It runs only in a
+terminal a person types in, so an agent cannot sign off pages.
 
 **ci.** Runs `check --base`, notes code changes that arrive without an OpenSpec change folder (in repos that
 use OpenSpec), and prints the readiness score. On GitHub Actions it also writes the job summary.
