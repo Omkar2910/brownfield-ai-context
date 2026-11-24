@@ -11,6 +11,8 @@
   importer adds a "Generated from the schema" section, and finds pages named with or without the schema.
 - Rows inside a generated block count as anchored when its `Source:` line is anchored.
 - A relative schema path works together with `--repo`.
+- `/context-create deep data` spells out the data steps: import, link tables to code with anchors, ask about
+  references without a foreign key and status values, link from `data.md`, add a data-access rule file.
 
 ## 2.1.0 (November 2026)
 

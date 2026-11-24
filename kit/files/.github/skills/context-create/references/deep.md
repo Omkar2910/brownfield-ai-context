@@ -34,11 +34,23 @@ testing, operations, decisions. With `deep <page>`, do only that page.
   integration clients and config.
 - Domain and screens: services named after business concepts, validation and calculation code, enums and
   status lifecycles, `openspec/specs/`, routes and components, how form fields map to API fields and columns.
-- Data: follow `data-sources.md`. Overview page from `pages/data.md`. If the team has a schema file (a
-  DDL dump `.sql`, or a tbls `schema.json`), run `node .ai-kit/context-tools.cjs schema-import <file>` for
-  the table pages, then fill "Meaning",
-  "Rules and traps" and "Code that reads or writes it" for the tables the main flows use. Without a schema
-  file, write table pages only for those tables, from migrations, entities and query constants.
+- Data: follow `data-sources.md`. Overview page from `pages/data.md`. In this order:
+  1. If there is a schema file (`docs/context/data/schema.sql` DDL dump, or a tbls `schema.json`), run
+     `node .ai-kit/context-tools.cjs schema-import <file>`. It writes `data/tables/<table>.md` and
+     `data/index.md`. Never edit between the `generated` markers.
+  2. For each table the main flows use, fill "Code that reads or writes it": the entity, repository, native
+     queries and SQL constants, one line each ending with `[anchor: <file>]`, and the entity field for
+     each column whose name differs.
+  3. Ask the user, in one message, about every column under "Look like references but have no foreign
+     key" and every column under "Allowed values". Write the answers into "Meaning" and "Rules and
+     traps"; anything not confirmed goes under "Unverified".
+  4. In `data.md`, link each table to its page and describe how the main flows read and write data, with
+     anchors. Make sure `AGENTS.md` has "Changing tables, queries or migrations → docs/context/data.md".
+     If the repo has no data-access rule file, create it from `instructions-examples.md` ("Data access"),
+     so agents open the table page whenever they touch entities, repositories or migrations.
+  5. Run `check` (0 errors) and `pages-for <an entity or repository>` to show the links work.
+  Without a schema file, write table pages only for the main tables, from migrations, entities and query
+  constants.
 - API: the OpenAPI file or controllers and DTOs (generate the endpoint table from them), HTTP clients for
   outbound calls, the error handler.
 - Dependencies: the build file (versions stay there), internal libraries, config for services and

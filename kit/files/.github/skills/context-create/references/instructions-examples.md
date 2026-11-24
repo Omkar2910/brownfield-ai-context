@@ -33,6 +33,24 @@ applyTo: '**/src/main/resources/db/migration/**'
 - Large tables: create indexes in a separate migration, outside a transaction.
 ```
 
+## Data access — `.github/instructions/data-access.instructions.md`
+
+Loads when the agent touches entities, repositories or migrations, so it opens the table page first and
+keeps it current. (Claude Code: `.claude/rules/data-access.md` with `paths:` instead of `applyTo`.)
+
+```markdown
+---
+applyTo: '**/src/main/java/**/{entity,entities,model,domain,repository,repositories}/**/*.java,**/src/main/resources/db/**'
+---
+# Data access
+- Before changing a table, entity, repository or query, open its page in docs/context/data/tables/ (list:
+  docs/context/data/index.md). Respect its "Rules and traps" and "Allowed values".
+- After a migration, the schema file docs/context/data/schema.sql is exported again and
+  `node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql` refreshes the pages.
+- If the change alters what a table page says (meaning, rules, which code uses it), update that page in
+  the same change.
+```
+
 ## Angular components — `.github/instructions/angular-components.instructions.md`
 
 ```markdown
