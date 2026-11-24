@@ -24,8 +24,12 @@ The database context needs less hand work and catches its own mistakes.
 - `doctor` shows the data context: schema file, table pages, how many are linked to code and reviewed, and
   whether a rule file sends agents to the pages.
 - `kit/GUIDE.md`: database context, step by step.
+- `install.mjs --source <url>`: records where your team keeps its copy of the kit in `.ai-kit/kit.json`
+  (a user name or token in the URL is removed).
 
 **Changed**
+- `.ai-kit/kit.json` no longer records the public kit repo's address, and names the kit `ai-context-kit`.
+  `--upgrade` removes the old address from existing repos; an address set with `--source` is kept.
 - A refresh that changes only the code lines on a table page keeps the owner's review; a change to the
   table's structure still resets it.
 - New table pages have "Other code that reads or writes it" (only what the import cannot see) instead of

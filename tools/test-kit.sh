@@ -177,4 +177,12 @@ if command -v script >/dev/null; then
 fi
 out=$(cd "$J" && node "$TOOL" doctor); has "$out" "3 table page(s), 3 linked to code" "doctor: data line"
 
+echo "13. Version stamp records no address unless asked"
+S="$T/src"; mkrepo "$S"; node "$KIT/kit/install.mjs" "$S" --tool copilot >/dev/null; [ -f "$S/.ai-kit/kit.json" ] && ok "stamp written" || bad "stamp written"
+grep -q '"source"' "$S/.ai-kit/kit.json" && bad "no address by default" || ok "no address by default"
+node "$KIT/kit/install.mjs" "$S" --upgrade --source "https://u:secret@git.example.com/team/ai-context-kit" >/dev/null
+has "$(cat "$S/.ai-kit/kit.json")" '"source": "https://git.example.com/team/ai-context-kit"' "--source recorded without credentials"
+node "$KIT/kit/install.mjs" "$S" --upgrade >/dev/null
+has "$(cat "$S/.ai-kit/kit.json")" 'git.example.com/team/ai-context-kit' "--source kept on upgrade"
+
 echo ""; echo "Passed: $pass, failed: $fail"; [ "$fail" -eq 0 ]

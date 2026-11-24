@@ -38,7 +38,7 @@ optional: run `openspec init` first so the installer can add the story workflow.
 | --- | --- | --- |
 | `files/.ai-kit/context-tools.cjs` | `.ai-kit/` (every tool) | The context tool: check, status, doctor, readiness, pages-for, migrate, schema-import, review, ci, mcp, and the agent hooks. Node 18+, no dependencies |
 | `files/.ai-kit/ci/` | `.ai-kit/ci/` | Pull request check templates (Azure Pipelines, GitHub Actions) |
-| (generated) | `.ai-kit/kit.json` | Kit version, tools, org rules carried (with their fingerprints) |
+| (generated) | `.ai-kit/kit.json` | Kit version, tools, org rules carried (with their fingerprints). No address unless you pass `--source <url>` (for example your internal copy of the kit) |
 | `files/.github/skills/*` | Copilot `.github/skills/`, Claude Code `.claude/skills/`, Codex `.agents/skills/` | `context-create` (quick and deep), `context-update`, `context-assess`, `context-learn`, `story-start`, `story-finish`, `onboard-me` |
 | `files/.github/agents/context-steward.agent.md` | `.github/agents/`, `.claude/agents/context-steward.md` | Agent that edits context files only (a guard hook enforces it) |
 | `files/.github/agents/design-reviewer.agent.md` | `.github/agents/`, `.claude/agents/design-reviewer.md`, Codex: `.agents/skills/design-review/` | Fresh-eyes, read-only review of a story's plan before code |

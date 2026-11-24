@@ -28,6 +28,8 @@
 //   --workspace <home>    register this repo in a product workspace (see above)
 //   --org <path>          copy the organisation context repo's rules/ into this repo (stamped, org-owned) and its
 //                         readiness weights; --upgrade re-syncs from the path recorded in .ai-kit/kit.json
+//   --source <url>        optional: where your team keeps its copy of the kit (an internal repo), recorded in
+//                         .ai-kit/kit.json so people know where upgrades come from. Nothing is recorded without it.
 //   --dry-run             show what would happen, change nothing
 //   --no-git-hook         do not set up the git hooks
 //
@@ -47,7 +49,7 @@ const filesDir = path.join(kitDir, 'files');
 const args = process.argv.slice(2).flatMap(a => /^--[a-z-]+=/.test(a) ? a.split(/=(.*)/s).slice(0, 2) : [a]);
 const opt = n => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 const has = n => args.includes(n);
-const VALUE_FLAGS = ['--tool', '--create-hub', '--create-org', '--org', '--ci', '--create-workspace', '--workspace'];
+const VALUE_FLAGS = ['--tool', '--create-hub', '--create-org', '--org', '--ci', '--create-workspace', '--workspace', '--source'];
 const dry = has('--dry-run');
 let target = args.find((a, i) => !a.startsWith('--') && !VALUE_FLAGS.includes(args[i - 1]));
 let homeMode = false; // true while setting up a product workspace's home repo
@@ -495,7 +497,7 @@ if (memberOf) {
     } else notes.push(`This repo uses its own git hooks (${hp || '.git/hooks'}). Add this line to its pre-commit hook to get the context check:\n      node ${relPath(root, path.join(memberOf, '.ai-kit', 'context-tools.cjs'))} check --staged --repo . || exit 1`);
   }
   // d) a small stamp so the tools know where the home repo is
-  const mstamp = { kit: 'brownfield-ai-context', version: homeStamp.version, mode: 'member', workspace: relPath(root, memberOf), tools };
+  const mstamp = { kit: 'ai-context-kit', version: homeStamp.version, mode: 'member', workspace: relPath(root, memberOf), tools };
   if (orgRecord) mstamp.org = orgRecord;
   const stampText = JSON.stringify(mstamp, null, 2) + '\n';
   const stampFile = path.join(root, '.ai-kit', 'kit.json');
@@ -518,8 +520,16 @@ const writeVersion = !previous || upgrade || previous === kitVersion;
 const toolsChanged = JSON.stringify([...new Set([...previousTools, ...tools])].sort()) !== JSON.stringify([...previousTools].sort());
 const orgChanged = orgArg && orgRecord && JSON.stringify(orgRecord) !== JSON.stringify(stampObj && stampObj.org);
 const isHome = homeMode || (stampObj && stampObj.mode === 'workspace');
-if (!memberOf && ((writeVersion && (previous !== kitVersion || stampFrom !== '.ai-kit/kit.json')) || toolsChanged || orgChanged || (homeMode && !(stampObj && stampObj.mode)))) {
-  const next = { kit: 'brownfield-ai-context', version: writeVersion ? kitVersion : previous, tools: [...new Set([...previousTools, ...tools])], source: 'https://github.com/Omkar2910/brownfield-ai-context' };
+// Where the kit came from is recorded only when the team says (--source), never a default address. Earlier
+// versions wrote the public repo's address; an upgrade drops it. A user name or token in the URL is removed.
+const cleanUrl = u => String(u).trim().replace(/^(\w+:\/\/)[^@/]+@/, '$1');
+const OLD_SOURCE = /github\.com\/[^/]+\/brownfield-ai-context/i;
+const keptSource = stampObj && stampObj.source && !OLD_SOURCE.test(stampObj.source) ? stampObj.source : null;
+const sourceNext = opt('--source') ? cleanUrl(opt('--source')) : keptSource;
+const sourceChanged = (stampObj && stampObj.source || null) !== sourceNext || (stampObj && stampObj.kit && stampObj.kit !== 'ai-context-kit');
+if (!memberOf && ((writeVersion && (previous !== kitVersion || stampFrom !== '.ai-kit/kit.json')) || toolsChanged || orgChanged || (homeMode && !(stampObj && stampObj.mode)) || (stampObj && sourceChanged && (upgrade || opt('--source'))))) {
+  const next = { kit: 'ai-context-kit', version: writeVersion ? kitVersion : previous, tools: [...new Set([...previousTools, ...tools])] };
+  if (sourceNext) next.source = sourceNext;
   if (isHome) next.mode = 'workspace';
   if (orgRecord) next.org = orgRecord;
   write('.ai-kit/kit.json', JSON.stringify(next, null, 2) + '\n');
