@@ -35,8 +35,13 @@ testing, operations, decisions. With `deep <page>`, do only that page.
 - Domain and screens: services named after business concepts, validation and calculation code, enums and
   status lifecycles, `openspec/specs/`, routes and components, how form fields map to API fields and columns.
 - Data: follow `data-sources.md`. Overview page from `pages/data.md`. In this order:
-  1. If there is a schema file (`docs/context/data/schema.sql` DDL dump, or a tbls `schema.json`), run
-     `node .ai-kit/context-tools.cjs schema-import <file>`. It writes `data/tables/<table>.md` and
+  1. Find the schema file. Look for `docs/context/data/schema.sql` or `schema.json` first, then for other
+     `.sql` files with `CREATE TABLE` outside the migrations folder. If you find none, ask the user once:
+     "Do you have a schema export (a DDL .sql dump or a tbls schema.json)? If yes, tell me where it is, or
+     put it at docs/context/data/schema.sql. If not, I'll work from migrations and entities only (how to
+     export one: data-sources.md)." If they give a path elsewhere, suggest moving it to
+     `docs/context/data/schema.sql` so the pages can anchor to it.
+     Then run `node .ai-kit/context-tools.cjs schema-import <file>`. It writes `data/tables/<table>.md` and
      `data/index.md`. Never edit between the `generated` markers.
   2. For each table the main flows use, fill "Code that reads or writes it": the entity, repository, native
      queries and SQL constants, one line each ending with `[anchor: <file>]`, and the entity field for
@@ -49,8 +54,8 @@ testing, operations, decisions. With `deep <page>`, do only that page.
      If the repo has no data-access rule file, create it from `instructions-examples.md` ("Data access"),
      so agents open the table page whenever they touch entities, repositories or migrations.
   5. Run `check` (0 errors) and `pages-for <an entity or repository>` to show the links work.
-  Without a schema file, write table pages only for the main tables, from migrations, entities and query
-  constants.
+  Without a schema file (the user has none), write table pages only for the main tables, from migrations,
+  entities and query constants, and say in the Finish block that a schema export would make them exact.
 - API: the OpenAPI file or controllers and DTOs (generate the endpoint table from them), HTTP clients for
   outbound calls, the error handler.
 - Dependencies: the build file (versions stay there), internal libraries, config for services and
