@@ -62,6 +62,9 @@ testing, operations, decisions. With `deep <page>`, do only that page.
   `design.md` files), from `pages/decision.md`, in `docs/context/decisions/`.
 
 ## 3. Writing rules for every page
+- **If the page already exists, update it; never start it again from the template.** Keep what is there,
+  correct what the code or schema shows is wrong, add what is missing, and show the diff before saving.
+  The same goes for table pages: only the part between the `generated` markers belongs to the import.
 - Save as `docs/context/<page>.md`. Keep the template's frontmatter: `status: draft`, `verified: []`, and the
   owner the user named.
 - Every statement about the code ends with `[anchor: <path>]` (a file, folder or glob). A section whose
