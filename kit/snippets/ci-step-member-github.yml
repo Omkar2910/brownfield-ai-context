@@ -1,0 +1,25 @@
+# AI context check: add to the pull request workflow a repo in a product workspace ALREADY has.
+# The check lives in the home repo, so it needs a second checkout; as its own job it does not change
+# the paths your existing jobs use. Add this job under your workflow's jobs: and set <owner>/<home-repo>.
+# If the home repo is private, add a token with read access to it as the secret HOME_REPO_TOKEN.
+# continue-on-error keeps it a warning; remove that line to block merges.
+
+  ai-context-check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: repo
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: <owner>/<home-repo>
+          path: home
+          token: ${{ secrets.HOME_REPO_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node ../home/.ai-kit/context-tools.cjs ci --repo . --base "origin/${{ github.base_ref }}"
+        working-directory: repo

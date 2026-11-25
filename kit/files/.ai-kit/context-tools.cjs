@@ -1666,8 +1666,17 @@ function cmdDoctor() {
   }
 
   // CI, OpenSpec, code map
-  const ci = ['.github/workflows/ai-context.yml', 'azure-pipelines.ai-context.yml', '.ai-kit/ci/azure-pipelines.yml'].filter(p => exists(path.join(repo, p)));
-  ci.some(p => p.startsWith('.github/workflows')) ? ok('ci', 'GitHub workflow present') : ci.length ? info('ci', `Pipeline template at ${ci[0]}: create a pipeline from it and add it as a pull request check`) : warn('ci', 'No pull request check. Install with --ci azure or --ci github');
+  // The check counts wherever it runs: the kit's own pipeline file, or a step added to the team's pipeline.
+  const pipeFiles = [];
+  try { for (const f of fs.readdirSync(repo)) if (/^(\.)?azure-pipelines.*\.ya?ml$/i.test(f)) pipeFiles.push(f); } catch { /* none */ }
+  for (const d of ['.azure-pipelines', '.pipelines', 'pipelines', '.azuredevops', '.github/workflows']) {
+    try { for (const f of fs.readdirSync(path.join(repo, ...d.split('/')))) if (/\.ya?ml$/i.test(f)) pipeFiles.push(`${d}/${f}`); } catch { /* none */ }
+  }
+  const runsCheck = pipeFiles.filter(f => { try { return /context-tools\.cjs\s+ci\b/.test(fs.readFileSync(path.join(repo, f), 'utf8')); } catch { return false; } });
+  const tpl = exists(path.join(repo, '.ai-kit', 'ci', 'azure-pipelines.yml')) ? '.ai-kit/ci/azure-pipelines.yml' : null;
+  if (runsCheck.length) ok('ci', `Pull request check in ${runsCheck.join(', ')} (make sure the pipeline runs for pull requests)`);
+  else if (tpl) info('ci', `No pull request check yet. Either add the step from the kit's snippets/ci-step-*.yml to your own pipeline, or create a pipeline from ${tpl}`);
+  else info('ci', 'No pull request check yet (optional). Add the step from the kit\'s snippets/ci-step-member-*.yml to your own pipeline, or install with --ci azure|github for a separate one');
   if (exists(path.join(repo, 'openspec'))) {
     const cfg = (() => { try { return fs.readFileSync(path.join(repo, 'openspec', 'config.yaml'), 'utf8'); } catch { return ''; } })();
     /^schema:\s*story-tdd/m.test(cfg) ? warn('openspec', 'openspec/config.yaml still uses the old story-tdd workflow: run install.mjs --upgrade to return to OpenSpec\'s default documents') : ok('openspec', 'OpenSpec with its default documents');

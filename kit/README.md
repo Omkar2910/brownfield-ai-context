@@ -6,10 +6,26 @@ This page is the reference for the installer and the files it adds.
 **Two setups.** A **product workspace** (one home repo holds every tool and the product context; each repo
 holds only its own knowledge), or **one repo** with its own copy of everything.
 
+**Easiest: the setup planner.** It works out these commands from what is in the folder, so you rarely type them.
+
+```bash
+node kit/setup.mjs                    # in a terminal: asks, shows the plan, runs it after your yes
+node kit/setup.mjs scan               # what it found: each repo, its kit version, its context
+node kit/setup.mjs plan  [choices]    # the steps it would run (--json for agents)
+node kit/setup.mjs apply [choices] --yes
+```
+
+Choices: `--setup workspace|repo --repos a,b --home <name> --tools copilot,claude,codex --product-context yes|no
+--ci none|existing|azure|github --openspec init|skip --graphify yes|no --upgrade yes|no --org <path> --source <url>
+--context a,b --allow-dirty --root <folder>`. An agent follows `SETUP-AGENT.md` to ask you and run it.
+`--ci existing` installs nothing: it points you to `snippets/ci-step-*.yml` to add to the pipeline you already have.
+
+By hand:
+
 ```bash
 # Product workspace
 node kit/install.mjs --create-workspace ../product-context --tool copilot,claude   # the home repo
-node kit/install.mjs <repo> --workspace ../product-context [--graphify] [--ci azure]   # each repo
+node kit/install.mjs <repo> --workspace ../product-context [--graphify] [--ci azure|github]   # each repo
 node kit/install.mjs <repo> --workspace ../product-context --upgrade   # move a one-repo install in
 
 # One repo
@@ -18,7 +34,7 @@ node kit/install.mjs <repo> --tool claude            # Claude Code
 node kit/install.mjs <repo> --tool codex             # OpenAI Codex
 node kit/install.mjs <repo> --tool copilot,claude    # several tools; --tool all = copilot, claude, codex
 node kit/install.mjs <repo> --graphify               # also connect the Graphify code map (recommended)
-node kit/install.mjs <repo> --ci azure               # pull request check (Azure Pipelines); --ci github for Actions
+node kit/install.mjs <repo> --ci azure               # optional: a separate pull request pipeline file (--ci github for Actions)
 node kit/install.mjs <repo> --mcp                    # register the kit's MCP server (preview)
 node kit/install.mjs <repo> --org ../org-context     # copy the org's rules and readiness weights in, stamped
 node kit/install.mjs <repo> --upgrade                # replace the kit's own files; moves a 1.x repo to 2.x

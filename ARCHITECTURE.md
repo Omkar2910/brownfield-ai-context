@@ -1,6 +1,6 @@
 # AI Context Kit: Architecture
 
-Kit 2.2.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
+Kit 2.3.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
 in [GUIDE.md](GUIDE.md); how to roll it out across an organisation is in [ORG-LEVEL.md](ORG-LEVEL.md).
 
 ## Summary
@@ -253,7 +253,8 @@ worse agent results, not better. `hub.mjs status` shows every repo's score and t
 | `node kit/install.mjs <repo>` | Adds the kit files for Copilot. Never overwrites an existing file; lists what to merge by hand. Running it twice changes nothing. |
 | `… --graphify` | Also connects the code map and keeps its output out of git |
 | `… --tool claude`, `codex`, `all` | Same kit for Claude Code (`.claude/`, `/opsx:` command names) or Codex (`.agents/skills/`); several tools at once |
-| `… --ci azure` / `--ci github` | Pull request check |
+| `… --ci azure` / `--ci github` | Optional: a separate pull request pipeline file (never edits an existing pipeline; `kit/snippets/ci-step-*.yml` adds the check to one) |
+| `node kit/setup.mjs` | The setup planner: finds the repos, asks (in a terminal) or takes choices, shows the plan, runs these commands. `kit/SETUP-AGENT.md` lets any agent drive it |
 | `… --mcp` | Registers the kit's MCP server for the chosen tools |
 | `… --org <org-context>` | Copies the organisation's rules and readiness weights into the repo, stamped |
 | `… --upgrade` | Replaces kit-owned files with this version, moves a 1.x layout to 2.x, re-syncs org rules; team files untouched. Then `context-tools migrate` updates page format, with no AI and no tokens |

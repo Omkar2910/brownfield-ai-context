@@ -38,6 +38,9 @@ Windows (Git Bash) once too.
 | 13 | Upgrade of a real 1.x repo | `--upgrade --dry-run`, `--upgrade`, `migrate`, `doctor` | No team file edited; pages converted; doctor clean |
 | 18 | Code map on a real service | `schema-import` on a service with its DDL export; compare the "Code: N entities" line with the entity count in the code; open five table pages | Every entity found; no wrong repository or SQL file on the five pages; each "Code and schema disagree" line is real |
 | 19 | Review in real terminals | `review <page> --by <name>` in the VS Code terminal (PowerShell and Git Bash) and in Windows Terminal; then ask an agent to run it | People can run it; the agent's attempt is refused |
+| 21 | Setup agent in each tool | In Copilot, Claude Code and Codex: open a folder with the kit and three repos (one with its own older kit, one with uncommitted changes), say "Set up the AI context kit… Follow <kit>/kit/SETUP-AGENT.md" | It scans, asks once, shows the plan, waits for yes, skips the dirty repo, ends with doctor results; nothing committed |
+| 22 | Setup agent, vague requests | After setup: "add repo X", "we also use Codex", "upgrade the kit", "is it working?", "push it" | Each goes through the planner; the last is refused |
+| 23 | Pull request step in an existing pipeline | Add `kit/snippets/ci-step-member-azure.yml` to a real repo's pull request pipeline | The team's build still passes; the check job runs; `doctor` shows it |
 | 20 | Commit check speed | `git commit` in the largest service after the import | Under a second when no data code changed |
 
 Record results in a short table with the date, tool version and outcome; anything that fails becomes an

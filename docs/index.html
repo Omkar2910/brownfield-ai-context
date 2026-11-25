@@ -227,9 +227,14 @@ Git Bash or macOS/Linux: <code>openspec config set profile custom</code> then
 <code>openspec config set workflows '["propose","explore","apply","update","sync","archive","verify"]'</code>.)</p>
 <h3 id="step-4-install-the-kit">Step 4 — Install the kit</h3>
 <p>From the folder where you cloned this kit:</p>
-<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs &lt;your-service-repo&gt; --graphify --ci azure
+<p>Easiest: let the setup agent do it (open the folder that holds the kit and your repos in your agent and say
+"Set up the AI context kit for the repos in this folder. Follow brownfield-ai-context/kit/SETUP-AGENT.md"), or
+run <code>node brownfield-ai-context/kit/setup.mjs</code> in a terminal. By hand:</p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs &lt;your-service-repo&gt; --graphify
 </code></pre></div>
-<p><code>--ci azure</code> adds the pull request check template (<code>--ci github</code> for GitHub Actions). Other tools:
+<p>Optional: <code>--ci azure</code> adds a separate pull request pipeline file (<code>--ci github</code> for GitHub Actions); if your
+repo already has a pull request pipeline, add the step from <code>kit/snippets/ci-step-azure.yml</code> to it instead.
+Other tools:
 add <code>--tool claude</code>, <code>--tool codex</code>, <code>--tool copilot,claude</code> or <code>--tool all</code>; each tool gets its own folders.</p>
 <p>It <strong>only adds files</strong> and never overwrites. It prints what it added, what it skipped, and anything
 you need to do by hand (for example, if your repo already uses Husky for git hooks, it tells you the
@@ -401,8 +406,8 @@ contracts, cross-repo story notes, a script that builds the right VS Code window
 <ol>
 <li>
 <p><strong>Install the kit in each repo</strong>, each on its own setup branch and setup PR:</p>
-<div class="code"><button type="button" class="copy">Copy</button><pre><code>node brownfield-ai-context/kit/install.mjs ../report-service --graphify --ci azure
-node brownfield-ai-context/kit/install.mjs ../report-ui --graphify --ci azure
+<div class="code"><button type="button" class="copy">Copy</button><pre><code>node brownfield-ai-context/kit/install.mjs ../report-service --graphify
+node brownfield-ai-context/kit/install.mjs ../report-ui --graphify
 </code></pre></div>
 <p>Then run <code>/context-create</code> in each and build each code map (Step 4b) inside each repo.
 2. <strong>What each repo ends up with:</strong></p>

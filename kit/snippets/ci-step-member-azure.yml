@@ -1,0 +1,36 @@
+# AI context check: add to the pull request pipeline a repo in a product workspace ALREADY has.
+# The check lives in the home repo, so it needs a second checkout. It runs as its own job, so the extra
+# checkout does not change the paths your existing build steps use.
+#
+# 1. Merge this into your pipeline's resources: block (create the block if there is none) and set the
+#    home repo's Azure Repos project and name:
+resources:
+  repositories:
+    - repository: ai_context_home
+      type: git
+      name: <project>/<home-repo>
+
+# 2. Add this job under your pipeline's jobs: (inside a stage if your pipeline uses stages).
+#    If your pipeline lists only steps:, move them under a job first, or use install.mjs --ci azure for a
+#    separate pipeline instead. continueOnError keeps it a warning; remove that line to block merges.
+jobs:
+  - job: ai_context_check
+    displayName: AI context check
+    condition: eq(variables['Build.Reason'], 'PullRequest')
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+      - checkout: self
+        path: s/repo
+        fetchDepth: 0
+      - checkout: ai_context_home
+        path: s/home
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '20.x'
+      - script: |
+          TARGET="origin/${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}"
+          node ../home/.ai-kit/context-tools.cjs ci --repo . --base "$TARGET"
+        workingDirectory: $(Pipeline.Workspace)/s/repo
+        displayName: AI context check
+        continueOnError: true

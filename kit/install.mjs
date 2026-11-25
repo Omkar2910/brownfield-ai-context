@@ -152,7 +152,7 @@ const write = (rel, text) => { const dest = path.join(root, ...rel.split('/')); 
 const rm = rel => { const p = path.join(root, ...rel.split('/')); if (!fs.existsSync(p)) return false; if (!dry) fs.rmSync(p, { recursive: true, force: true }); removed.push(rel); return true; };
 
 // Files the kit owns: safe to replace on --upgrade. Everything a team writes or customises is not listed.
-const KIT_SKILLS = ['context-create', 'context-update', 'context-assess', 'context-learn', 'story-start', 'story-finish', 'onboard-me', 'design-review', 'product-context', 'cross-repo-story'];
+const KIT_SKILLS = ['context-create', 'kit-setup', 'context-update', 'context-assess', 'context-learn', 'story-start', 'story-finish', 'onboard-me', 'design-review', 'product-context', 'cross-repo-story'];
 const OLD_SKILLS = ['context-bootstrap', 'context-baseline', 'context-refresh', 'story-to-change'];
 const SKILL_DIRS = { copilot: '.github/skills', claude: '.claude/skills', codex: '.agents/skills' };
 const kitOwned = rel => /^\.(github|claude|agents)\/skills\/([^/]+)\//.test(rel) && KIT_SKILLS.includes(rel.split('/')[2])

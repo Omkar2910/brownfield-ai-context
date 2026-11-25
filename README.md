@@ -33,20 +33,15 @@ keeps the parts that matter in plain files any agent can read:
 
 ## Quick start
 
-```bash
-git clone https://github.com/Omkar2910/brownfield-ai-context.git
-cd <your-service-repo> && git checkout -b ai/context-setup
-npm install -g @fission-ai/openspec@latest
-openspec init --tools github-copilot --no-copilot-cloud
-node ../brownfield-ai-context/kit/install.mjs . --graphify --ci azure     # add --tool claude, codex or all as needed
-pip install "graphifyy[mcp]" && graphify extract . --code-only && graphify cluster-only . --no-label
-node .ai-kit/context-tools.cjs doctor
-```
+Put the kit next to your repos, open that folder in your agent (GitHub Copilot agent mode, Claude Code or
+Codex) and type:
 
-Then open the repo in VS Code, switch Chat to agent mode and type `/context-create`.
+> Set up the AI context kit for the repos in this folder. Follow brownfield-ai-context/kit/SETUP-AGENT.md.
 
-For a product with several repos, use a **product workspace** instead: one home repo holds every skill, hook
-and the product context, and each repo holds only its own knowledge. See [kit/GUIDE.md](kit/GUIDE.md).
+The setup agent looks at every repo, asks once what you want (a product workspace or each repo on its own,
+which repos and agents, product context, a pull request check), shows the plan and runs it after your yes. In
+a terminal, `node brownfield-ai-context/kit/setup.mjs` asks the same questions. Then type `/context-create` in
+each repo. Everything else is in [kit/GUIDE.md](kit/GUIDE.md).
 
 ## Repository layout
 
@@ -69,7 +64,7 @@ internal/           working notes for the maintainer (briefing, strategy, valida
 
 ## Status
 
-Kit 2.2.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 22 on Linux (Node 18 or newer is required); written for Windows, macOS and Linux.
+Kit 2.3.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 22 on Linux (Node 18 or newer is required); written for Windows, macOS and Linux.
 Agent hooks are preview features in VS Code; the git hook, the pull request check and the skills work without
 them, and `context-tools.cjs doctor` shows whether they run. The MCP server is a preview.
 Last updated November 2026. MIT licence.

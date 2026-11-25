@@ -1,0 +1,17 @@
+# AI context check: add to the pull request workflow your repo ALREADY has (one repo set up on its own).
+# Use this instead of install.mjs --ci github when you do not want a separate workflow.
+#
+# 1. Your checkout must fetch history, or the check cannot compare with the target branch:
+#      - uses: actions/checkout@v4
+#        with:
+#          fetch-depth: 0
+# 2. Add these steps to the job that runs on pull_request (after the checkout).
+#    continue-on-error keeps it a warning; remove that line to block merges.
+
+- uses: actions/setup-node@v4
+  with:
+    node-version: '20'
+- name: AI context check
+  if: github.event_name == 'pull_request'
+  run: node .ai-kit/context-tools.cjs ci --base "origin/${{ github.base_ref }}"
+  continue-on-error: true

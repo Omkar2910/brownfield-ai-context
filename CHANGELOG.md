@@ -1,5 +1,33 @@
 # Changelog
 
+## 2.3.0 (November 2026)
+
+Setting up the kit is one sentence to an agent, or one command in a terminal.
+
+**Added**
+- **Setup agent** (`kit/SETUP-AGENT.md`): put the kit next to your repos and tell any agent "Set up the AI
+  context kit for the repos in this folder. Follow <kit>/kit/SETUP-AGENT.md." It looks at every repo, asks
+  once (a product workspace or each repo on its own, which repos, which agents, product context or not, the
+  pull request check, OpenSpec, Graphify, which repos get context now), shows the plan, runs it after a yes,
+  then offers context repo by repo, database pages, product pages and the pipeline step.
+- **`kit/setup.mjs`**, the planner behind it: `scan`, `plan` (`--json` for agents), `apply --yes`, or no
+  command for questions in a terminal. The plan comes from what is on disk each time, so running it again shows
+  only what is left; it moves repos with their own copy into a workspace, upgrades older repos (with the
+  follow-up steps a version needs), links a teammate's clone, skips repos with uncommitted changes, never
+  commits or pushes, and ends with each repo's `doctor` result.
+- **`/kit-setup` skill** in every set-up repo: "add repo X", "we also use Codex", "upgrade the kit", "is it
+  working?".
+- **Pull request check in the pipeline you already have:** `kit/snippets/ci-step-azure.yml`,
+  `ci-step-member-azure.yml` (its own job, so the home repo checkout does not change your build's paths) and
+  GitHub versions.
+
+**Changed**
+- `--ci` is optional everywhere and no longer in the example commands. It never edits an existing pipeline:
+  it writes a separate pipeline file.
+- `doctor` finds the pull request check in any pipeline file that runs it, and no longer warns when there is
+  none (it is optional).
+- `kit/GUIDE.md`: setup with the agent first, then by hand; a section on the pull request check.
+
 ## 2.2.0 (November 2026)
 
 The database context needs less hand work and catches its own mistakes.

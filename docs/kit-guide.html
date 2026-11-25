@@ -85,16 +85,17 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
 <li><a href="#1-what-the-kit-does">1. What the kit does</a></li>
 <li><a href="#2-choose-your-setup">2. Choose your setup</a></li>
 <li><a href="#3-what-you-need">3. What you need</a></li>
-<li><a href="#4-set-up-a-product-workspace">4. Set up a product workspace</a></li>
-<li><a href="#5-set-up-one-repo">5. Set up one repo</a></li>
-<li><a href="#6-open-it-in-your-agent">6. Open it in your agent</a></li>
-<li><a href="#7-the-skills">7. The skills</a></li>
-<li><a href="#8-a-story-start-to-finish">8. A story, start to finish</a></li>
-<li><a href="#9-keeping-context-current">9. Keeping context current</a></li>
-<li><a href="#10-adding-moving-and-removing-repos">10. Adding, moving and removing repos</a></li>
-<li><a href="#11-upgrading-the-kit">11. Upgrading the kit</a></li>
-<li><a href="#12-when-something-goes-wrong">12. When something goes wrong</a></li>
-<li><a href="#13-words-used-in-this-guide">13. Words used in this guide</a></li>
+<li><a href="#4-set-up-with-the-setup-agent-easiest">4. Set up with the setup agent (easiest)</a></li>
+<li><a href="#5-set-up-a-product-workspace-by-hand">5. Set up a product workspace by hand</a></li>
+<li><a href="#6-set-up-one-repo-by-hand">6. Set up one repo by hand</a></li>
+<li><a href="#7-open-it-in-your-agent">7. Open it in your agent</a></li>
+<li><a href="#8-the-skills">8. The skills</a></li>
+<li><a href="#9-a-story-start-to-finish">9. A story, start to finish</a></li>
+<li><a href="#10-keeping-context-current">10. Keeping context current</a></li>
+<li><a href="#11-adding-moving-and-removing-repos">11. Adding, moving and removing repos</a></li>
+<li><a href="#12-upgrading-the-kit">12. Upgrading the kit</a></li>
+<li><a href="#13-when-something-goes-wrong">13. When something goes wrong</a></li>
+<li><a href="#14-words-used-in-this-guide">14. Words used in this guide</a></li>
 </ul>
 </div>
 
@@ -106,7 +107,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
       <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a>
     </header>
     
-<p>Kit 2.1 · for developers and tech leads · plain language</p>
+<p>Kit 2.3 · for developers and tech leads · plain language</p>
 <p>This guide covers everything you need to use the kit: setting it up, the skills, and running a story from
 start to finish in GitHub Copilot, Claude Code or OpenAI Codex. It assumes you have the kit's folder on
 your machine (the folder that contains this guide and <code>install.mjs</code>). Below, <code>&lt;kit&gt;</code> means that folder.</p>
@@ -170,7 +171,7 @@ with three things:</p>
 </table></div>
 <p><strong>Why knowledge stays in each repo, even in a workspace:</strong> a cloud agent or a pipeline sees only one repo,
 and a page should change in the same pull request as the code it describes.</p>
-<p>You can switch a repo from "one repo" to the workspace later (section 10).</p>
+<p>You can switch a repo from "one repo" to the workspace later (section 11).</p>
 <hr />
 <h2 id="3-what-you-need">3. What you need</h2>
 <ul>
@@ -182,8 +183,83 @@ and a page should change in the same pull request as the code it describes.</p>
 <li><strong>Graphify</strong> for a code map the agent can search: <code>pip install "graphifyy[mcp]"</code>.</li>
 </ul>
 <hr />
-<h2 id="4-set-up-a-product-workspace">4. Set up a product workspace</h2>
-<p>Put the home repo and your repos side by side in one folder:</p>
+<h2 id="4-set-up-with-the-setup-agent-easiest">4. Set up with the setup agent (easiest)</h2>
+<p>Put the kit's folder next to your repos, open that folder in your agent, and type one sentence:</p>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code>projects/
+  ai-context-kit/      ← the kit (the folder that holds kit/setup.mjs)
+  report-service/
+  report-ui/
+</code></pre></div>
+<blockquote>
+<p>Set up the AI context kit for the repos in this folder. Follow ai-context-kit/kit/SETUP-AGENT.md.</p>
+</blockquote>
+<p>The agent looks at every repo, asks you once what you want, shows the plan, and runs it after you say yes:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>It asks</th>
+<th>Your choices</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What to do</td>
+<td>Set up or update · only check · upgrade only</td>
+</tr>
+<tr>
+<td>Setup</td>
+<td>One home repo for the product (recommended for two or more repos) · each repo on its own</td>
+</tr>
+<tr>
+<td>Repos</td>
+<td>All it found, or the ones you pick</td>
+</tr>
+<tr>
+<td>Agents</td>
+<td>GitHub Copilot, Claude Code, Codex</td>
+</tr>
+<tr>
+<td>Product context</td>
+<td>Write the product pages (system map, flows across repos), or not</td>
+</tr>
+<tr>
+<td>Pull request check</td>
+<td>Not now · add it to the pipeline each repo already has · a separate Azure pipeline · a GitHub workflow</td>
+</tr>
+<tr>
+<td>OpenSpec, Graphify</td>
+<td>Set them up, or not (asked only if they are installed)</td>
+</tr>
+<tr>
+<td>Context now</td>
+<td>Which repos to write context for after the install</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then it offers, one at a time: context for each repo (services first), database pages where there is a schema
+export, the product pages, and the pull request step for your pipeline. It never commits or pushes, and it
+skips repos with uncommitted changes. Run it again at any time: it shows only what is left. After setup the
+same agent is the <code>/kit-setup</code> skill: "add repo X", "we also use Codex", "upgrade the kit", "is it working?".</p>
+<p><strong>Without an agent:</strong> <code>node ai-context-kit/kit/setup.mjs</code> in a terminal asks the same questions and runs the
+same plan. <code>node ai-context-kit/kit/setup.mjs scan</code> only shows what it found.</p>
+<h3 id="the-pull-request-check-ci">The pull request check (<code>--ci</code>)</h3>
+<p>The check is optional. It runs the same check as the commit check, on every pull request, whoever (or
+whichever agent) wrote it. You choose where it runs:</p>
+<ul>
+<li><strong>In the pipeline each repo already has</strong> (recommended when you have one): add the step from
+  <code>kit/snippets/ci-step-member-azure.yml</code> (workspace) or <code>ci-step-azure.yml</code> (repo on its own); GitHub
+  versions sit next to them. In a workspace it is its own job, so the extra checkout of the home repo does not
+  change your build's paths. Nothing else in your pipeline changes.</li>
+<li><strong>A separate pipeline:</strong> <code>--ci azure</code> writes <code>azure-pipelines.ai-context.yml</code> into the repo. It does nothing
+  until someone creates a pipeline from it in Azure DevOps and adds it as build validation. <code>--ci github</code> writes
+  <code>.github/workflows/ai-context.yml</code>, which runs on every pull request.</li>
+<li><strong>Not now:</strong> leave it out. The commit check and the agent hooks still work.</li>
+</ul>
+<p><code>--ci</code> never edits a pipeline you already have. <code>doctor</code> shows whether the check runs, wherever it is.</p>
+<hr />
+<h2 id="5-set-up-a-product-workspace-by-hand">5. Set up a product workspace by hand</h2>
+<p>These are the commands the setup agent runs for you. Put the home repo and your repos side by side in one
+folder:</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>projects/
   product-context/     ← the home repo (created below)
   report-service/
@@ -199,14 +275,13 @@ and a page should change in the same pull request as the code it describes.</p>
 <p>This creates the home repo with every skill, both helper agents, the hooks, the context tool, the commit
 check, <code>catalog.json</code> (the list of repos), <code>product.code-workspace</code>, and the product context pages.</p>
 <p><strong>Step 2: add each repo.</strong></p>
-<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node &lt;kit&gt;/install.mjs report-service --workspace product-context --graphify --ci azure
-node &lt;kit&gt;/install.mjs report-ui      --workspace product-context --graphify --ci azure
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node &lt;kit&gt;/install.mjs report-service --workspace product-context
+node &lt;kit&gt;/install.mjs report-ui      --workspace product-context
 </code></pre></div>
 <p>Each command registers the repo in the home repo's catalogue and workspace file, links its commit check
 to the home repo, and adds a small stamp (<code>.ai-kit/kit.json</code>) and a pull request template. It adds no
-skills or hooks to the repo. <code>--graphify</code> prepares the repo for a code map; <code>--ci azure</code> (or <code>github</code>) adds
-a pull request pipeline file: put the home repo's project and name in it, then create the pipeline from it
-and add it as a build validation on the main branch (warnings first).</p>
+skills or hooks to the repo. Optional: <code>--graphify</code> prepares the repo for a code map; <code>--ci azure</code> (or
+<code>github</code>) adds a separate pull request pipeline file (see "The pull request check" above).</p>
 <p><strong>Step 3: OpenSpec (if you use it).</strong> Once, in the home repo, so its commands exist once:</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">cd product-context &amp;&amp; openspec init --tools github-copilot,claude      # your tools
 cd ../report-service &amp;&amp; openspec init --tools none                    # each repo: folder only
@@ -228,14 +303,14 @@ Commit each repo's new files on a branch through a normal pull request.</p>
 <p>(It only links the commit check on their clone; everything else is already committed. Without the kit
 folder, the same thing is one command: <code>git config core.hooksPath ../product-context/.githooks</code>.)</p>
 <hr />
-<h2 id="5-set-up-one-repo">5. Set up one repo</h2>
-<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node &lt;kit&gt;/install.mjs &lt;repo&gt; --tool copilot --graphify --ci azure
+<h2 id="6-set-up-one-repo-by-hand">6. Set up one repo by hand</h2>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node &lt;kit&gt;/install.mjs &lt;repo&gt; --tool copilot
 node &lt;repo&gt;/.ai-kit/context-tools.cjs doctor
 </code></pre></div>
 <p>The repo gets its own copy of the skills, agents, hooks, context tool and checks. If you use OpenSpec, run
 <code>openspec init --tools github-copilot</code> (or your tool) in the repo first, then the installer.</p>
 <hr />
-<h2 id="6-open-it-in-your-agent">6. Open it in your agent</h2>
+<h2 id="7-open-it-in-your-agent">7. Open it in your agent</h2>
 <div class="tablebox"><table>
 <thead>
 <tr>
@@ -265,7 +340,7 @@ node &lt;repo&gt;/.ai-kit/context-tools.cjs doctor
 <p>Type <code>/</code> in the chat to see the skills. In Claude Code, OpenSpec's commands are written <code>/opsx:propose</code>
 instead of <code>/opsx-propose</code>.</p>
 <hr />
-<h2 id="7-the-skills">7. The skills</h2>
+<h2 id="8-the-skills">8. The skills</h2>
 <div class="tablebox"><table>
 <thead>
 <tr>
@@ -325,6 +400,11 @@ instead of <code>/opsx-propose</code>.</p>
 <td>A story across several repos</td>
 <td>One plan that links each repo's change</td>
 </tr>
+<tr>
+<td><code>/kit-setup</code></td>
+<td>Adding a repo or an agent, the pull request check, an upgrade, "is it working?"</td>
+<td>The setup agent: it asks, shows the plan, runs it after your yes</td>
+</tr>
 </tbody>
 </table></div>
 <p>Two helper agents: <strong>context-steward</strong> (can only edit knowledge files) and <strong>design-reviewer</strong> (reviews a
@@ -332,7 +412,7 @@ plan with no memory of the chat that wrote it, and changes nothing).</p>
 <p><strong>Every skill ends with the same three lines,</strong> so you always see what happened:
 <strong>What changed</strong> (files, as links) · <strong>Checks</strong> (what was run, and the result) · <strong>Next</strong> (your next step).</p>
 <hr />
-<h2 id="8-a-story-start-to-finish">8. A story, start to finish</h2>
+<h2 id="9-a-story-start-to-finish">9. A story, start to finish</h2>
 <p>The work item number (for example <code>48213</code>) names the story everywhere. A change id is the number plus a
 few words: <code>48213-add-report-export</code>.</p>
 <div class="tablebox"><table>
@@ -402,7 +482,7 @@ then the UI against the finished API. One pull request per repo, each linking th
 <p><strong>Your own design or test format:</strong> if your team has a skill for a technical design document or test
 scenarios in its house format, run it after step 2 and keep its output next to the plan.</p>
 <hr />
-<h2 id="9-keeping-context-current">9. Keeping context current</h2>
+<h2 id="10-keeping-context-current">10. Keeping context current</h2>
 <div class="tablebox"><table>
 <thead>
 <tr>
@@ -474,7 +554,7 @@ hook last ran. Hook notes go to the agent, not to you, so "I don't see anything"
 <p>After that, the only thing you do by hand is export the schema again after a migration; the checks tell
 you when.</p>
 <hr />
-<h2 id="10-adding-moving-and-removing-repos">10. Adding, moving and removing repos</h2>
+<h2 id="11-adding-moving-and-removing-repos">11. Adding, moving and removing repos</h2>
 <ul>
 <li><strong>Add a repo to the workspace:</strong> <code>node &lt;kit&gt;/install.mjs &lt;repo&gt; --workspace product-context</code>, then
   <code>/context-create</code> for it and <code>/product-context update</code>.</li>
@@ -486,7 +566,11 @@ you when.</p>
   <code>git config --unset core.hooksPath</code>.</li>
 </ul>
 <hr />
-<h2 id="11-upgrading-the-kit">11. Upgrading the kit</h2>
+<h2 id="12-upgrading-the-kit">12. Upgrading the kit</h2>
+<p><strong>Easiest:</strong> put the new kit next to your repos and ask the agent "upgrade the kit" (<code>/kit-setup</code>), or run
+<code>node &lt;kit&gt;/setup.mjs</code> in a terminal. It shows what is new, which repos are older, and the steps (including
+refreshing table pages and the page format when a version needs it), and runs them after your yes.</p>
+<p>By hand:</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node &lt;kit&gt;/install.mjs product-context --upgrade      # workspace: once, in the home repo
 node &lt;kit&gt;/install.mjs &lt;repo&gt; --upgrade               # one-repo setup: in each repo
 node .ai-kit/context-tools.cjs migrate                # if the page format changed (no AI, no tokens)
@@ -495,7 +579,7 @@ node .ai-kit/context-tools.cjs doctor
 <p><code>--upgrade</code> replaces only the kit's own files. It never touches <code>AGENTS.md</code>, rule files, <code>docs/context/</code>
 or your pull request template. Add <code>--dry-run</code> first to see what it would do.</p>
 <hr />
-<h2 id="12-when-something-goes-wrong">12. When something goes wrong</h2>
+<h2 id="13-when-something-goes-wrong">13. When something goes wrong</h2>
 <div class="tablebox"><table>
 <thead>
 <tr>
@@ -531,7 +615,7 @@ or your pull request template. Add <code>--dry-run</code> first to see what it w
 </tbody>
 </table></div>
 <hr />
-<h2 id="13-words-used-in-this-guide">13. Words used in this guide</h2>
+<h2 id="14-words-used-in-this-guide">14. Words used in this guide</h2>
 <div class="tablebox"><table>
 <thead>
 <tr>

@@ -126,11 +126,17 @@ Git Bash or macOS/Linux: `openspec config set profile custom` then
 
 From the folder where you cloned this kit:
 
+Easiest: let the setup agent do it (open the folder that holds the kit and your repos in your agent and say
+"Set up the AI context kit for the repos in this folder. Follow brownfield-ai-context/kit/SETUP-AGENT.md"), or
+run `node brownfield-ai-context/kit/setup.mjs` in a terminal. By hand:
+
 ```bash
-node brownfield-ai-context/kit/install.mjs <your-service-repo> --graphify --ci azure
+node brownfield-ai-context/kit/install.mjs <your-service-repo> --graphify
 ```
 
-`--ci azure` adds the pull request check template (`--ci github` for GitHub Actions). Other tools:
+Optional: `--ci azure` adds a separate pull request pipeline file (`--ci github` for GitHub Actions); if your
+repo already has a pull request pipeline, add the step from `kit/snippets/ci-step-azure.yml` to it instead.
+Other tools:
 add `--tool claude`, `--tool codex`, `--tool copilot,claude` or `--tool all`; each tool gets its own folders.
 
 It **only adds files** and never overwrites. It prints what it added, what it skipped, and anything
@@ -248,8 +254,8 @@ to open them based on what the story touches.
 
 1. **Install the kit in each repo**, each on its own setup branch and setup PR:
 
-        node brownfield-ai-context/kit/install.mjs ../report-service --graphify --ci azure
-        node brownfield-ai-context/kit/install.mjs ../report-ui --graphify --ci azure
+        node brownfield-ai-context/kit/install.mjs ../report-service --graphify
+        node brownfield-ai-context/kit/install.mjs ../report-ui --graphify
 
     Then run `/context-create` in each and build each code map (Step 4b) inside each repo.
 2. **What each repo ends up with:**

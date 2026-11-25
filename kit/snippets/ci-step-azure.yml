@@ -1,0 +1,19 @@
+# AI context check: add to the pull request pipeline your repo ALREADY has (one repo set up on its own).
+# Use this instead of install.mjs --ci azure when you do not want a separate pipeline.
+#
+# 1. Your checkout must fetch history, or the check cannot compare with the target branch:
+#      - checkout: self
+#        fetchDepth: 0
+# 2. Add these two steps to the job that runs for pull requests (after the checkout).
+#    continueOnError keeps it a warning while the team gets used to it; remove that line to block merges.
+
+- task: NodeTool@0
+  inputs:
+    versionSpec: '20.x'
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+- script: |
+    TARGET="origin/${SYSTEM_PULLREQUEST_TARGETBRANCH#refs/heads/}"
+    node .ai-kit/context-tools.cjs ci --base "$TARGET"
+  displayName: AI context check
+  condition: eq(variables['Build.Reason'], 'PullRequest')
+  continueOnError: true

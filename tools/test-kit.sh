@@ -185,4 +185,40 @@ has "$(cat "$S/.ai-kit/kit.json")" '"source": "https://git.example.com/team/ai-c
 node "$KIT/kit/install.mjs" "$S" --upgrade >/dev/null
 has "$(cat "$S/.ai-kit/kit.json")" 'git.example.com/team/ai-context-kit' "--source kept on upgrade"
 
+echo "14. Setup planner: scan, plan, apply, run again, upgrade, repos on their own"
+W="$T/ws"; mkdir -p "$W"; SETUP="$KIT/kit/setup.mjs"
+for n in svc-a ui-b own-c dirty-d; do mkrepo "$W/$n"; done
+printf '<project/>\n' > "$W/svc-a/pom.xml"; echo '{}' > "$W/ui-b/angular.json"; printf 'trigger: [main]\n' > "$W/svc-a/azure-pipelines.yml"
+for n in svc-a ui-b own-c dirty-d; do git -C "$W/$n" add -A; git -C "$W/$n" commit -qm init --no-verify --allow-empty; done
+node "$KIT/kit/install.mjs" "$W/own-c" --tool copilot >/dev/null
+python3 - "$W/own-c/.ai-kit/kit.json" <<'PY'
+import json,sys; p=sys.argv[1]; j=json.load(open(p)); j['version']='2.1.0'; json.dump(j,open(p,'w'),indent=2)
+PY
+git -C "$W/own-c" add -A; git -C "$W/own-c" commit -qm kit --no-verify; echo wip > "$W/dirty-d/wip.txt"
+out=$(node "$SETUP" scan --root "$W"); has "$out" "own-c .*own copy, kit 2.1.0 (older)" "scan: older own copy"
+has "$out" "own pipeline: azure-pipelines.yml" "scan: finds the repo's own pipeline"
+has "$out" "Suggested: --setup workspace --home product-context" "scan: suggests a workspace"
+out=$(node "$SETUP" plan --root "$W" --tools copilot,claude --ci existing)
+has "$out" "1. product-context: Create the home repo" "plan: creates the home repo first"
+has "$out" "own-c: Move into the workspace" "plan: moves an own copy into the workspace"
+has "$out" "skipped dirty-d: has uncommitted changes" "plan: skips a repo with uncommitted changes"
+has "$out" "ci-step-member-azure.yml" "plan: existing pipeline gets the snippet, not a new file"
+grep -q -- "--ci" <<<"$out" && bad "plan: no pipeline file unless asked" || ok "plan: no pipeline file unless asked"
+out=$(node "$SETUP" apply --root "$W" --tools copilot,claude 2>&1 || true); has "$out" "Add --yes to run these steps" "apply needs --yes"
+[ -d "$W/product-context" ] && bad "apply without --yes changes nothing" || ok "apply without --yes changes nothing"
+out=$(node "$SETUP" apply --root "$W" --tools copilot,claude --yes 2>&1); has "$out" "product-context: Result: 0 problem(s)" "apply: doctor clean in the home repo"
+[ "$(git -C "$W/svc-a" config core.hooksPath)" = "../product-context/.githooks" ] && ok "apply: commit check linked" || bad "apply: commit check linked"
+[ ! -f "$W/own-c/.ai-kit/context-tools.cjs" ] && ok "apply: own copy removed" || bad "apply: own copy removed"
+out=$(node "$SETUP" plan --root "$W" --tools copilot,claude); has "$out" "Nothing to install or upgrade" "run again: nothing left"
+python3 - "$W/product-context/.ai-kit/kit.json" <<'PY'
+import json,sys; p=sys.argv[1]; j=json.load(open(p)); j['version']='2.1.0'; json.dump(j,open(p,'w'),indent=2)
+PY
+git -C "$W/product-context" add -A; git -C "$W/product-context" commit -qm home --no-verify
+out=$(node "$SETUP" plan --root "$W"); has "$out" "product-context: Upgrade the kit 2.1.0 → " "plan: upgrades an older home repo"
+out=$(node "$SETUP" plan --root "$W" --json); has "$out" '"label": "Upgrade the kit 2.1.0' "plan --json for agents"
+V="$T/solo"; mkdir -p "$V"; mkrepo "$V/one"; git -C "$V/one" add -A; git -C "$V/one" commit -qm init --no-verify --allow-empty
+out=$(node "$SETUP" apply --root "$V" --setup repo --tools codex --product-context no --yes 2>&1); has "$out" "one: Install the kit for codex" "repo setup: installs in the repo"
+[ -f "$V/one/.ai-kit/context-tools.cjs" ] && [ -d "$V/one/.agents/skills/kit-setup" ] && ok "repo setup: tool and /kit-setup skill" || bad "repo setup: tool and /kit-setup skill"
+out=$(node "$SETUP" plan --root "$V" --setup bogus 2>&1 || true); has "$out" 'setup must be "workspace" or "repo"' "bad choices are refused"
+
 echo ""; echo "Passed: $pass, failed: $fail"; [ "$fail" -eq 0 ]

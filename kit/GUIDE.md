@@ -1,6 +1,6 @@
 # AI Context Kit: user guide
 
-Kit 2.1 · for developers and tech leads · plain language
+Kit 2.3 · for developers and tech leads · plain language
 
 This guide covers everything you need to use the kit: setting it up, the skills, and running a story from
 start to finish in GitHub Copilot, Claude Code or OpenAI Codex. It assumes you have the kit's folder on
@@ -40,7 +40,7 @@ Nothing is sent anywhere by the kit. It only adds plain files, which you review 
 **Why knowledge stays in each repo, even in a workspace:** a cloud agent or a pipeline sees only one repo,
 and a page should change in the same pull request as the code it describes.
 
-You can switch a repo from "one repo" to the workspace later (section 10).
+You can switch a repo from "one repo" to the workspace later (section 11).
 
 ---
 
@@ -55,9 +55,62 @@ You can switch a repo from "one repo" to the workspace later (section 10).
 
 ---
 
-## 4. Set up a product workspace
+## 4. Set up with the setup agent (easiest)
 
-Put the home repo and your repos side by side in one folder:
+Put the kit's folder next to your repos, open that folder in your agent, and type one sentence:
+
+```
+projects/
+  ai-context-kit/      ← the kit (the folder that holds kit/setup.mjs)
+  report-service/
+  report-ui/
+```
+
+> Set up the AI context kit for the repos in this folder. Follow ai-context-kit/kit/SETUP-AGENT.md.
+
+The agent looks at every repo, asks you once what you want, shows the plan, and runs it after you say yes:
+
+| It asks | Your choices |
+| --- | --- |
+| What to do | Set up or update · only check · upgrade only |
+| Setup | One home repo for the product (recommended for two or more repos) · each repo on its own |
+| Repos | All it found, or the ones you pick |
+| Agents | GitHub Copilot, Claude Code, Codex |
+| Product context | Write the product pages (system map, flows across repos), or not |
+| Pull request check | Not now · add it to the pipeline each repo already has · a separate Azure pipeline · a GitHub workflow |
+| OpenSpec, Graphify | Set them up, or not (asked only if they are installed) |
+| Context now | Which repos to write context for after the install |
+
+Then it offers, one at a time: context for each repo (services first), database pages where there is a schema
+export, the product pages, and the pull request step for your pipeline. It never commits or pushes, and it
+skips repos with uncommitted changes. Run it again at any time: it shows only what is left. After setup the
+same agent is the `/kit-setup` skill: "add repo X", "we also use Codex", "upgrade the kit", "is it working?".
+
+**Without an agent:** `node ai-context-kit/kit/setup.mjs` in a terminal asks the same questions and runs the
+same plan. `node ai-context-kit/kit/setup.mjs scan` only shows what it found.
+
+### The pull request check (`--ci`)
+
+The check is optional. It runs the same check as the commit check, on every pull request, whoever (or
+whichever agent) wrote it. You choose where it runs:
+
+- **In the pipeline each repo already has** (recommended when you have one): add the step from
+  `kit/snippets/ci-step-member-azure.yml` (workspace) or `ci-step-azure.yml` (repo on its own); GitHub
+  versions sit next to them. In a workspace it is its own job, so the extra checkout of the home repo does not
+  change your build's paths. Nothing else in your pipeline changes.
+- **A separate pipeline:** `--ci azure` writes `azure-pipelines.ai-context.yml` into the repo. It does nothing
+  until someone creates a pipeline from it in Azure DevOps and adds it as build validation. `--ci github` writes
+  `.github/workflows/ai-context.yml`, which runs on every pull request.
+- **Not now:** leave it out. The commit check and the agent hooks still work.
+
+`--ci` never edits a pipeline you already have. `doctor` shows whether the check runs, wherever it is.
+
+---
+
+## 5. Set up a product workspace by hand
+
+These are the commands the setup agent runs for you. Put the home repo and your repos side by side in one
+folder:
 
 ```
 projects/
@@ -81,15 +134,14 @@ check, `catalog.json` (the list of repos), `product.code-workspace`, and the pro
 **Step 2: add each repo.**
 
 ```bash
-node <kit>/install.mjs report-service --workspace product-context --graphify --ci azure
-node <kit>/install.mjs report-ui      --workspace product-context --graphify --ci azure
+node <kit>/install.mjs report-service --workspace product-context
+node <kit>/install.mjs report-ui      --workspace product-context
 ```
 
 Each command registers the repo in the home repo's catalogue and workspace file, links its commit check
 to the home repo, and adds a small stamp (`.ai-kit/kit.json`) and a pull request template. It adds no
-skills or hooks to the repo. `--graphify` prepares the repo for a code map; `--ci azure` (or `github`) adds
-a pull request pipeline file: put the home repo's project and name in it, then create the pipeline from it
-and add it as a build validation on the main branch (warnings first).
+skills or hooks to the repo. Optional: `--graphify` prepares the repo for a code map; `--ci azure` (or
+`github`) adds a separate pull request pipeline file (see "The pull request check" above).
 
 **Step 3: OpenSpec (if you use it).** Once, in the home repo, so its commands exist once:
 
@@ -128,10 +180,10 @@ folder, the same thing is one command: `git config core.hooksPath ../product-con
 
 ---
 
-## 5. Set up one repo
+## 6. Set up one repo by hand
 
 ```bash
-node <kit>/install.mjs <repo> --tool copilot --graphify --ci azure
+node <kit>/install.mjs <repo> --tool copilot
 node <repo>/.ai-kit/context-tools.cjs doctor
 ```
 
@@ -140,7 +192,7 @@ The repo gets its own copy of the skills, agents, hooks, context tool and checks
 
 ---
 
-## 6. Open it in your agent
+## 7. Open it in your agent
 
 | Agent | Product workspace | One repo |
 | --- | --- | --- |
@@ -153,7 +205,7 @@ instead of `/opsx-propose`.
 
 ---
 
-## 7. The skills
+## 8. The skills
 
 | Skill | When | What you get |
 | --- | --- | --- |
@@ -167,6 +219,7 @@ instead of `/opsx-propose`.
 | `/onboard-me` | A new joiner's first day | A guided tour built from the same knowledge |
 | `/product-context` (workspace) | Once, then after repos are added (`/product-context update`) | System map, flows across repos, glossary, platform rules |
 | `/cross-repo-story` (workspace) | A story across several repos | One plan that links each repo's change |
+| `/kit-setup` | Adding a repo or an agent, the pull request check, an upgrade, "is it working?" | The setup agent: it asks, shows the plan, runs it after your yes |
 
 Two helper agents: **context-steward** (can only edit knowledge files) and **design-reviewer** (reviews a
 plan with no memory of the chat that wrote it, and changes nothing).
@@ -176,7 +229,7 @@ plan with no memory of the chat that wrote it, and changes nothing).
 
 ---
 
-## 8. A story, start to finish
+## 9. A story, start to finish
 
 The work item number (for example `48213`) names the story everywhere. A change id is the number plus a
 few words: `48213-add-report-export`.
@@ -203,7 +256,7 @@ scenarios in its house format, run it after step 2 and keep its output next to t
 
 ---
 
-## 9. Keeping context current
+## 10. Keeping context current
 
 | When | What catches it | What you do |
 | --- | --- | --- |
@@ -239,7 +292,7 @@ you when.
 
 ---
 
-## 10. Adding, moving and removing repos
+## 11. Adding, moving and removing repos
 
 - **Add a repo to the workspace:** `node <kit>/install.mjs <repo> --workspace product-context`, then
   `/context-create` for it and `/product-context update`.
@@ -252,7 +305,13 @@ you when.
 
 ---
 
-## 11. Upgrading the kit
+## 12. Upgrading the kit
+
+**Easiest:** put the new kit next to your repos and ask the agent "upgrade the kit" (`/kit-setup`), or run
+`node <kit>/setup.mjs` in a terminal. It shows what is new, which repos are older, and the steps (including
+refreshing table pages and the page format when a version needs it), and runs them after your yes.
+
+By hand:
 
 ```bash
 node <kit>/install.mjs product-context --upgrade      # workspace: once, in the home repo
@@ -266,7 +325,7 @@ or your pull request template. Add `--dry-run` first to see what it would do.
 
 ---
 
-## 12. When something goes wrong
+## 13. When something goes wrong
 
 | Problem | What to do |
 | --- | --- |
@@ -279,7 +338,7 @@ or your pull request template. Add `--dry-run` first to see what it would do.
 
 ---
 
-## 13. Words used in this guide
+## 14. Words used in this guide
 
 | Word | Meaning |
 | --- | --- |
