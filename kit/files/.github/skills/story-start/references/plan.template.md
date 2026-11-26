@@ -17,6 +17,9 @@
 <!-- How it will work, decisions and alternatives, risks. A short sequence if it crosses UI, API,
      service and database. -->
 
+## Context read
+<!-- each page read, and why: named by `pages-for` for <file>, or from the AGENTS.md index for <topic> -->
+
 ## Tasks
 <!-- Ordered, producers first. For each layer: the test to write first (name it), then the code. -->
 - [ ] 1.1 Test: <!-- ReportExportServiceTest#rejectsMoreThan50kRows --> (fails first)

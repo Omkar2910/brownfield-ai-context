@@ -587,7 +587,8 @@ scenarios in its house format, run it after step 2 and keep its output next to t
 <p>To see whether the hooks actually run, use <code>node .ai-kit/context-tools.cjs doctor</code>. It shows when each
 hook last ran. Hook notes go to the agent, not to you, so "I don't see anything" is normal.</p>
 <p><strong>Is the context used?</strong> The hooks record each time an agent opens a context page (in Copilot and Claude
-Code). <code>node .ai-kit/context-tools.cjs usage</code> lists the pages agents opened in the last 90 days, in how many
+Code), with the file-read tool or by printing it in the shell (<code>cat</code>, <code>tail</code> and the like). Pages found
+through <code>grep</code> or read by a program are not counted. <code>node .ai-kit/context-tools.cjs usage</code> lists the pages agents opened in the last 90 days, in how many
 chats, and the pages nobody opened. A page nobody opens is either not needed (merge, shorten or delete it)
 or not linked from where agents look (add a "Where to look" line in <code>AGENTS.md</code>). Check it monthly.</p>
 <h3 id="database-context-step-by-step">Database context, step by step</h3>

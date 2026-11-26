@@ -43,20 +43,26 @@ normal-size story without an approved plan.
      product hub is open, run `node <hub>/scripts/hub.mjs impact <repo>` for each repo you will change:
      it lists the repos that call or load it, including ones that are not open.
    Keep 3–8 files per repo that matter, and the dependents that may need tests.
-4. **Collect relevant knowledge only,** from each repo that changes:
-   - Current behaviour: specs in its `openspec/specs/` for the domains touched (if any).
-   - Rules: its AGENTS.md lines and the rule files (`.github/instructions/`, `.claude/rules/`) that apply to
-     those files. `node .ai-kit/context-tools.cjs pages-for <file> ...` lists the context lines anchored to
-     them (in a product workspace, run the home repo's copy with `--repo <repo>`).
-   - Product pages: in a product workspace, `pages-for` also lists the home repo's pages anchored to those
-     files (flows across repos, platform rules). Read every flow page it names: they hold what other repos
-     rely on (event names, calls that must happen, field mapping) and the code of this repo cannot show it.
-   - Area pages and traps: its `docs/context/` page for the area, and matching `known-traps.md` entries.
-   - Data: the pages in `docs/context/data/tables/` for the tables the story reads or changes.
-   - Contracts: the API definitions (OpenAPI files, DTOs) the story changes or calls.
-   Read each page once; the story pack lists what you read, so later steps use the pack instead of reading
-   the pages again. Do not read `openspec/changes/archive/` or `docs/stories/` unless the user asks about
-   past stories.
+4. **Collect relevant knowledge only,** from each repo that changes. Start with one command per repo,
+   passing every file you kept in step 3:
+   `node .ai-kit/context-tools.cjs pages-for <file> <file> ...`
+   (in a product workspace, run the home repo's copy with `--repo <repo>`). It prints, for each file, the
+   context lines anchored to it and the pages they are on, in that repo and in the home repo (flows across
+   repos, platform rules). Those lines are the knowledge the people who know the code wrote about exactly
+   these files, including what the code cannot show: an event name another service listens for, a call that
+   must happen, what a status value means.
+   - Read every page `pages-for` names, once. A flow page it names is required reading even if its title
+     does not sound like the story.
+   - Then add only what anchors cannot reach: specs in `openspec/specs/` for the domains touched (if any),
+     the rule files that apply to those files, the table pages in `docs/context/data/tables/` for the tables
+     the story reads or changes, and the API definitions it changes or calls.
+   - If `pages-for` names nothing for a part of the story, look in the index in AGENTS.md (and the home
+     repo's AGENTS.md) for that topic and read only the page it points to.
+   - Do not list or read whole context folders (`docs/context/`, the home repo's `context/`): a large product
+     has dozens of pages, most unrelated, and reading them costs time and attention. Do not read
+     `openspec/changes/archive/` or `docs/stories/` unless the user asks about past stories.
+   The story pack lists what you read and why (named by `pages-for`, or by the index), so later steps use
+   the pack instead of reading the pages again.
 5. **Size it and order it.** Say which path you recommend; the user decides.
    - **Tiny** (one or two files in one repo, no API, data or permission change): no change folder.
      Failing test that shows the problem, fix, run the tests, then `/story-finish`.

@@ -230,13 +230,20 @@ echo "15. Product pages in stories, page reads, branch and PR convention"
 P="$T/prod"; mkdir -p "$P"; mkrepo "$P/orders"; mkdir -p "$P/orders/src"; echo x > "$P/orders/src/Svc.java"; git -C "$P/orders" add -A; git -C "$P/orders" commit -qm code --no-verify
 node "$KIT/kit/setup.mjs" apply --root "$P" --setup workspace --tools claude,copilot --product-context yes --yes >/dev/null 2>&1
 [ "$(cat "$P/product-context/CLAUDE.md" 2>/dev/null)" = "@AGENTS.md" ] && ok "home repo gets CLAUDE.md for Claude Code" || bad "home repo gets CLAUDE.md for Claude Code"
-grep -q '"matcher": "Edit|Write|MultiEdit|NotebookEdit|Read"' "$P/product-context/.claude/settings.json" && ok "Claude Code hook also sees reads" || bad "Claude Code hook also sees reads"
+grep -q '"matcher": "Edit|Write|MultiEdit|NotebookEdit|Read|Bash"' "$P/product-context/.claude/settings.json" && ok "Claude Code hook also sees reads and shell commands" || bad "Claude Code hook also sees reads and shell commands"
 mkdir -p "$P/product-context/context/flows"; printf '# Flow\n1. orders publishes OrderVoided [anchor: orders:src/Svc.java]\n' > "$P/product-context/context/flows/cancel.md"
 HT="$P/product-context/.ai-kit/context-tools.cjs"
 out=$(node "$HT" pages-for src/Svc.java --repo "$P/orders"); has "$out" "../product-context/context/flows/cancel.md" "pages-for lists the product flow page"
 echo "{\"hook_event_name\":\"PostToolUse\",\"session_id\":\"r1\",\"cwd\":\"$P/product-context\",\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"$P/product-context/context/flows/cancel.md\"}}" | node "$HT" post-edit >/dev/null
 out=$(node "$HT" usage --repo "$P/product-context"); has "$out" "1 chat(s)  context/flows/cancel.md" "usage counts page reads"
 has "$out" "Never read" "usage lists pages nobody read"
+printf '# Platform\nAuth.\n' > "$P/product-context/context/platform-auth.md"; mkdir -p "$P/orders/docs/context"; printf '# Traps\n' > "$P/orders/docs/context/known-traps.md"
+python3 -c 'import json,sys; p=sys.argv[1]; print(json.dumps({"hook_event_name":"PostToolUse","session_id":"r2","cwd":p+"/product-context","tool_name":"Bash","tool_input":{"command":"cd "+p+"/orders && tail -n +1 AGENTS.md docs/context/known-traps.md ../product-context/context/flows/*.md && cat > ../product-context/context/platform-auth.md"}}))' "$P" | node "$HT" post-edit >/dev/null
+out=$(node "$HT" usage --repo "$P/product-context"); has "$out" "2 chat(s)  context/flows/cancel.md" "usage counts pages read through the shell (cd, glob)"
+echo "$out" | grep -q "chat(s)  context/platform-auth.md" && bad "a page written with > is not counted as read" || ok "a page written with > is not counted as read"
+out=$(node "$HT" usage --repo "$P/orders"); has "$out" "1 chat(s)  docs/context/known-traps.md" "shell reads are logged in the page's own repo"
+echo "{\"session_id\":\"r3\",\"cwd\":\"$P/orders\",\"toolName\":\"bash\",\"toolArgs\":\"{\\\"command\\\":\\\"sed -i s/a/b/ docs/context/known-traps.md\\\"}\"}" | node "$HT" post-edit >/dev/null
+out=$(node "$HT" usage --repo "$P/orders"); has "$out" "1 chat(s)  docs/context/known-traps.md" "sed -i is an edit, not a read (Copilot format)"
 out=$(node "$HT" conventions name --type bugfix --id 812 --summary "Price is null for archived items" --repo "$P/orders")
 has "$out" "branch:    bugfix/812-price-is-null-archived-items" "convention: branch name"
 has "$out" "title:     fix: 812 Price is null for archived items" "convention: title"

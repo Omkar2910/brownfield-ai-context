@@ -9,8 +9,9 @@ Context that is used, and pull requests that say what they are.
   anchored to that file (flows across repos, platform rules), so `/story-start` reads the flow that says which
   event another service listens for, and `/story-finish` names the product page a change affects.
 - **Which pages agents read.** The agent hooks record each context page an agent opens (Copilot, and Claude
-  Code, whose hook now also sees reads). `context-tools usage` lists pages by how many chats opened them, and
-  the pages nobody opened.
+  Code, whose hook now also sees reads and shell commands), whether through the file-read tool or printed in
+  the shell (`cat`, `head`, `tail`, `sed`, `Get-Content`, with `cd` and `*` understood). `context-tools usage`
+  lists pages by how many chats opened them, and the pages nobody opened.
 - **Branch and pull request convention** (`.ai-kit/conventions.json`, team- or org-owned): per kind of work
   (feature, production fix, QA/UAT fix, maintenance) the work item type, branch pattern, title prefix and
   metrics category; promotion branches exempt. `context-tools conventions` works out the type from the work
@@ -22,7 +23,9 @@ Context that is used, and pull requests that say what they are.
 
 **Changed**
 - `--upgrade` refreshes the kit's own Claude Code hook entries and keeps the team's own hooks.
-- `/story-start` reads each page once and keeps the list in the story pack.
+- `/story-start` starts its knowledge step with one `pages-for` call over the files the story touches, reads
+  every page it names, and no longer lists or reads whole context folders; the story pack records each page
+  read and why. The plan template has a "Context read" section.
 - `MULTI-REPO.md` rewritten around the product workspace, with the rule for what lives in a repo and what in
   the home repo; `ORG-LEVEL.md`, the root `GUIDE.md`, `kit/GUIDE.md` and the management briefing updated.
 

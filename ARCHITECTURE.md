@@ -402,8 +402,9 @@ Everything above was tested on sample repos on Linux. Still open:
 - **The readiness score measures context, not outcomes.** Read it with the always-loaded size and the story log.
 - **Product pages reach a story through anchors.** `pages-for` lists the home repo's pages anchored to the
   files a story touches; a flow page anchored to nothing in the repo is found only through `AGENTS.md`.
-- **Page reads are recorded only where hooks run** (Copilot, Claude Code; not Codex), and only from this
-  version on, so `usage` needs a few weeks of work before "never read" means much.
+- **Page reads are recorded only where hooks run** (Copilot, Claude Code; not Codex), through the file-read
+  tool or printed in the shell (`cat`, `head`, `tail`, `sed`); a page found with `grep` is not counted.
+  Recording starts with this version, so `usage` needs a few weeks of work before "never read" means much.
 - **Pull request titles in Azure Pipelines** are not visible to the pipeline; the title rule there rests on
   `/story-finish` and the PR template, and the branch name is checked. Linking every PR to a work item is best
   enforced by Azure Repos' own branch policy.

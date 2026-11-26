@@ -291,7 +291,8 @@ To see whether the hooks actually run, use `node .ai-kit/context-tools.cjs docto
 hook last ran. Hook notes go to the agent, not to you, so "I don't see anything" is normal.
 
 **Is the context used?** The hooks record each time an agent opens a context page (in Copilot and Claude
-Code). `node .ai-kit/context-tools.cjs usage` lists the pages agents opened in the last 90 days, in how many
+Code), with the file-read tool or by printing it in the shell (`cat`, `tail` and the like). Pages found
+through `grep` or read by a program are not counted. `node .ai-kit/context-tools.cjs usage` lists the pages agents opened in the last 90 days, in how many
 chats, and the pages nobody opened. A page nobody opens is either not needed (merge, shorten or delete it)
 or not linked from where agents look (add a "Where to look" line in `AGENTS.md`). Check it monthly.
 

@@ -535,10 +535,39 @@ function saveTouched(input, list) { try { fs.writeFileSync(sessionFile(input), J
 // so `usage` can show the pages that help and the ones nobody opens.
 const looksLikeRead = name => !!name && /^(read|view|open)|read_?file|readfile|view_?file/i.test(name);
 function readsLogPath(repo) { const d = gitDir(repo); return d ? path.join(d, 'ai-kit', 'reads.jsonl') : null; }
-function logReads(input) {
+// A shell command an agent ran (Claude Code Bash, Copilot bash/powershell, VS Code run_in_terminal).
+function shellCommand(input) {
+  let args = input.tool_input !== undefined ? input.tool_input : input.toolArgs;
+  if (typeof args === 'string') { try { args = JSON.parse(args); } catch { return null; } }
+  const c = args && (args.command || args.cmd || args.script);
+  return typeof c === 'string' ? c : null;
+}
+// Files a shell command prints: cat, head, tail, less, sed, nl, bat, type, Get-Content and friends, with
+// `cd <dir> &&` and a simple * in the last path segment understood. Agents often read pages this way.
+function shellReadPaths(command, baseDir) {
+  const found = [];
+  let dir = baseDir;
+  for (const part of command.split(/&&|;|\|\||\n/)) {
+    const words = part.trim().match(/"[^"]*"|'[^']*'|\S+/g) || [];
+    const clean = words.map(w => w.replace(/^["']|["']$/g, ''));
+    if (clean[0] === 'cd' && clean[1]) { dir = path.resolve(dir, clean[1].replace(/^~(?=\/)/, os.homedir())); continue; }
+    if (!clean.some(w => /^(cat|head|tail|less|more|bat|sed|nl|awk|type|Get-Content|gc)$/i.test(w))) continue;
+    if (clean.includes('sed') && clean.some(w => /^-i/.test(w))) continue; // an in-place edit, not a read
+    for (const [i, w] of clean.entries()) {
+      if (/^>/.test(w) || /^>>?$/.test(clean[i - 1] || '')) continue; // written to, not read
+      if (w.startsWith('-') || !/\.(md|mdc|json|ya?ml)$/i.test(w)) continue;
+      const abs = path.resolve(dir, w);
+      if (!w.includes('*')) { found.push(abs); continue; }
+      const d = path.dirname(abs), re = new RegExp('^' + path.basename(abs).split('*').map(escRe).join('.*') + '$');
+      try { for (const f of fs.readdirSync(d)) if (re.test(f)) found.push(path.join(d, f)); } catch { /* no such folder */ }
+    }
+  }
+  return [...new Set(found)];
+}
+function logReads(input, paths) {
   const sessionRepo = resolveRepo(input);
   const logged = [];
-  for (const p of editedPaths(input)) {
+  for (const p of paths || editedPaths(input)) {
     const abs = path.isAbsolute(p) ? p : path.join(sessionRepo, p);
     const repo = repoOfFile(abs) || sessionRepo;
     const rel = toPosix(path.relative(repo, abs));
@@ -555,6 +584,8 @@ function logReads(input) {
   return { reads: logged };
 }
 function hookPostEdit(input) {
+  const cmd = shellCommand(input);
+  if (cmd !== null) return logReads(input, shellReadPaths(cmd, input.cwd ? path.resolve(input.cwd) : resolveRepo(input)));
   if (looksLikeRead(input.tool_name || input.toolName)) return logReads(input);
   if (!looksLikeEdit(input.tool_name || input.toolName)) return { skipped: 'not an edit' };
   const sessionRepo = resolveRepo(input);

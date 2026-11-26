@@ -30,6 +30,9 @@
 **Dependents to test:** <…>
 **Rules and traps that apply:** <…>
 
+## Context read
+- <page, linked> — named by `pages-for` for <file> | from the AGENTS.md index for <topic>
+
 ## Read only (no change)
 - <repo>: <file, linked> — <why it matters, e.g. shared DTO or an example to follow>
 

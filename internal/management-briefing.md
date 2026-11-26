@@ -106,12 +106,22 @@ with and without the kit. Four facts existed only in the kit's pages. One run ea
 
 Where the code itself showed the facts, the two plans were about the same.
 
-**A third run, with the 2.4 kit.** We removed the line in `AGENTS.md` that pointed to the flow page, to see
-whether the agent still finds it. It did, and the plan again had all four facts right, with branch
-`feature/5012-cancel-order-order-details` and the work item link from the convention (14 turns, $0.98). Two
-findings for the pilot: the agent found the flow page by listing the home repo, not through `pages-for`, which
-will not scale to a product with many pages; and it also opened three platform pages the story did not need.
-The read log recorded all nine pages it opened.
+**Further runs, with the 2.4 kit.** With no pointer in `AGENTS.md` to the flow page, the agent still found
+it, but by reading every page: two repos have too few pages to need `pages-for`. So we built a larger
+version: 31 context pages, the page that matters titled "hand-offs to billing and inventory" rather than
+cancellation, and a look-alike page about a `PaymentCancelled` event.
+
+| Five runs on the larger product | Result |
+| --- | --- |
+| The four facts only the context knew | Right in every plan |
+| Branch name from the convention | Right in every plan |
+| Found the flow page through `pages-for` | Every run |
+| Pages the agent read itself | About 10 of 31 |
+| Pages the plan reviewer read | 7 to 20, mostly unrelated; telling it in its instructions to read less made no difference |
+| Cost per run | $1.14 to $1.31 |
+
+A correction to what we first reported: the read log's nine pages in the first 2.4 run were the
+reviewer's. The main agent read its pages through the shell, which the log now also records.
 
 ## Cost, security and lock-in
 
