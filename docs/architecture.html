@@ -106,16 +106,22 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
       <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a>
     </header>
     
-<p>Kit 2.3.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
+<p>Kit 2.3.1 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
 in <a href="index.html">GUIDE.md</a>; how to roll it out across an organisation is in <a href="org-level.html">ORG-LEVEL.md</a>.</p>
 <h2 id="summary">Summary</h2>
 <p>The AI Context Kit (MIT licence) is a set of plain files installed into each repo that gives AI coding
 agents (GitHub Copilot, Claude Code, OpenAI Codex, and any agent that reads <code>AGENTS.md</code>) correct, current
 knowledge of an existing system, and makes every story follow plan → approve → fresh-eyes review →
-test-first build → review. It contains no server and no database: just text files, seven skills, two agents,
-one checking script (which can also run as an MCP server), git hooks, a pull request check and an installer,
-plus two optional open-source tools (OpenSpec for the story workflow, Graphify for the code map).</p>
-<p>Four principles shape every part of it:</p>
+test-first build → review. It contains no server and no database: just text files, eight skills in each repo
+(two more in a product's home repo), two agents, one checking script (which can also run as an MCP server),
+git hooks, an optional pull request check, an installer and a setup planner that any agent can drive, plus two
+optional open-source tools (OpenSpec for the story workflow, Graphify for the code map).</p>
+<p>It does not make the agent a better programmer. It gives it a short, reviewed memory of the system and the
+knowledge that is not in the code (what a status value means, why something is deliberate, which service
+relies on which event), and it puts a plan review and tests first around every story. Published studies
+and our own first test show that this helps when the context is short and checked by people, and hurts when
+it is long or machine-written (see "Research" and "Limits" below).</p>
+<p>Five principles shape every part of it:</p>
 <ol>
 <li><strong>Little always-loaded, the rest on demand.</strong> One short file is read on every request; detail is read only
    when the task needs it.</li>
@@ -129,10 +135,11 @@ plus two optional open-source tools (OpenSpec for the story workflow, Graphify f
    agent; the per-tool parts are thin adapters that can be added or removed. See <a href="roadmap.html">ROADMAP.md</a>.</li>
 </ol>
 <h2 id="at-a-glance">At a glance</h2>
-<p><img alt="People direct the agent; the kit gives it knowledge and checks its work" src="images/architecture-at-a-glance.png" /></p>
-<p>The agent is the only part that writes code. It follows the skills and reads the knowledge it needs, and the
-checks warn it (and block commits) when knowledge and code disagree. OpenSpec and Graphify are optional; the
-core is plain files and one script.</p>
+<p><img alt="People direct the agent; the kit gives it memory and checks its work" src="images/architecture-at-a-glance.png" /></p>
+<p>The agent is the only part that writes code. It follows the skills and reads the knowledge it needs. The
+checks flag knowledge whose code has changed so someone re-reads it, and block a commit only when knowledge
+points at a file that no longer exists. OpenSpec and Graphify are optional; the core is plain files and one
+script.</p>
 <h2 id="components">Components</h2>
 <p><strong>Kit-owned</strong> files are replaced by <code>--upgrade</code>; <strong>team-owned</strong> files are never touched again by the kit;
 <strong>org-owned</strong> files are replaced by each sync from the organisation context repo.</p>
@@ -208,6 +215,12 @@ core is plain files and one script.</p>
 <td>Team (via stories)</td>
 </tr>
 <tr>
+<td>Product pages</td>
+<td>The product's home repo: <code>catalog.json</code>, <code>context/</code> (system map, flows across repos, platform rules, glossary)</td>
+<td>Only what spans repos; links down to repo pages, never copies them</td>
+<td>Product tech leads</td>
+</tr>
+<tr>
 <td>Code map</td>
 <td><code>graphify-out/</code> (not committed)</td>
 <td>Searchable map of which class calls which, rebuilt locally after every commit</td>
@@ -232,18 +245,13 @@ core is plain files and one script.</p>
 </tr>
 <tr>
 <td><code>/context-create deep</code></td>
-<td>Once per repo, one page at a time</td>
-<td>Writes the in-depth dimension pages and table pages, anchored, with Unverified lists</td>
-</tr>
-<tr>
-<td><code>/context-assess</code></td>
-<td>After pages are reviewed</td>
-<td>Rates each dimension within the evidence cap; the tool computes the score</td>
+<td>One page at a time, when a story or a mistake shows the knowledge is needed</td>
+<td>Writes in-depth pages and table pages, anchored, with Unverified lists</td>
 </tr>
 <tr>
 <td><code>/context-assess</code></td>
 <td>After review, then each sprint or quarter</td>
-<td>Rates each dimension 0–5 within evidence caps; produces the readiness score</td>
+<td>Rates each dimension 0–5 within evidence caps; the tool computes the score</td>
 </tr>
 <tr>
 <td><code>/story-start</code></td>
@@ -271,6 +279,11 @@ core is plain files and one script.</p>
 <td>30-minute guided tour from the same knowledge</td>
 </tr>
 <tr>
+<td><code>/kit-setup</code></td>
+<td>Adding a repo or an agent, the pull request check, an upgrade, "is it working?"</td>
+<td>Follows <code>kit/SETUP-AGENT.md</code>: asks once, shows the setup plan, runs it after a yes</td>
+</tr>
+<tr>
 <td>Context-steward agent</td>
 <td>Monthly or on request</td>
 <td>A restricted agent that may only edit knowledge files; a guard hook blocks code and org-rule edits</td>
@@ -281,9 +294,14 @@ core is plain files and one script.</p>
 <td>Read-only review with no memory of the chat that wrote the plan: traceability, truth to the code, rules, contracts, tests, context impact</td>
 </tr>
 <tr>
-<td><code>/product-context</code> (in the product hub)</td>
-<td>Once per product</td>
-<td>Writes system architecture, end-to-end flows, glossary and platform rules, anchored into the repos</td>
+<td><code>/product-context</code> (home repo or hub)</td>
+<td>Once the repos have context; <code>update</code> after repos are added or removed</td>
+<td>Writes the system map, end-to-end flows, glossary and platform rules, anchored into the repos</td>
+</tr>
+<tr>
+<td><code>/cross-repo-story</code> (home repo or hub)</td>
+<td>A story that changes several repos</td>
+<td>One plan that links each repo's change</td>
 </tr>
 </tbody>
 </table></div>
@@ -305,7 +323,7 @@ the result whether or not the agent hooks run.</p>
 <td>Context tool</td>
 <td><code>.ai-kit/context-tools.cjs</code> (one file, no dependencies)</td>
 <td>Called by every check below</td>
-<td>Reads anchors and page metadata; <code>check</code>, <code>status</code>, <code>doctor</code>, <code>readiness</code>, <code>pages-for</code>, <code>migrate</code>, <code>schema-import</code>, <code>ci</code>, <code>mcp</code> and four hook commands; logs each hook run in <code>.git/ai-kit/</code></td>
+<td>Reads anchors and page metadata; <code>check</code>, <code>status</code>, <code>doctor</code>, <code>readiness</code>, <code>pages-for</code>, <code>migrate</code>, <code>schema-import</code>, <code>review</code>, <code>ci</code>, <code>mcp</code> and four hook commands; logs each hook run in <code>.git/ai-kit/</code></td>
 </tr>
 <tr>
 <td>Agent hooks</td>
@@ -317,7 +335,7 @@ the result whether or not the agent hooks run.</p>
 <td>Git hooks</td>
 <td><code>.githooks/pre-commit</code>, <code>post-commit</code>, <code>post-merge</code>, <code>post-checkout</code></td>
 <td>Commit, merge, branch switch</td>
-<td>Refuse commits with broken anchors; rebuild the code map in the background</td>
+<td>Refuse commits with broken anchors; warn about the rest (including table pages out of date with the schema file or the code); rebuild the code map in the background</td>
 </tr>
 <tr>
 <td>PR template</td>
@@ -326,10 +344,10 @@ the result whether or not the agent hooks run.</p>
 <td>Checklist: plan reviewed, every scenario tested, knowledge updated</td>
 </tr>
 <tr>
-<td>Pull request check</td>
-<td><code>.ai-kit/ci/azure-pipelines.yml</code>, or <code>.github/workflows/ai-context.yml</code> with <code>--ci github</code></td>
+<td>Pull request check (optional)</td>
+<td>A step or job added to the pipeline the repo already has (<code>kit/snippets/ci-step-*.yml</code>), or a separate pipeline file with <code>--ci azure</code> / <code>--ci github</code></td>
 <td>Every pull request, whoever or whatever wrote it</td>
-<td><code>context-tools ci</code>: the check, a story check, the readiness score</td>
+<td><code>context-tools ci</code>: the check, a story check, the readiness score. The kit never edits an existing pipeline</td>
 </tr>
 <tr>
 <td>MCP server (preview)</td>
@@ -353,7 +371,7 @@ the result whether or not the agent hooks run.</p>
 <tr>
 <td>OpenSpec settings</td>
 <td><code>openspec/config.yaml</code></td>
-<td>Points OpenSpec at the context and adds rules, including your own TDD skill</td>
+<td>A short <code>context</code> block (read <code>AGENTS.md</code> first) and test-first guidance for OpenSpec's default workflow</td>
 <td>Team</td>
 </tr>
 <tr>
@@ -375,9 +393,15 @@ the result whether or not the agent hooks run.</p>
 <td>Org or team</td>
 </tr>
 <tr>
+<td>Setup planner</td>
+<td><code>kit/setup.mjs</code>, <code>kit/SETUP-AGENT.md</code></td>
+<td>Finds the repos next to the kit, works out the install or upgrade steps from what is on disk, shows them, runs them after a yes; skips repos with uncommitted changes; never commits or pushes</td>
+<td>Kit repo only</td>
+</tr>
+<tr>
 <td>Installer</td>
 <td><code>kit/install.mjs</code></td>
-<td>Installs, upgrades, syncs org rules, creates hubs and org repos; never overwrites team files</td>
+<td>The steps the planner runs: installs, upgrades, syncs org rules, creates workspaces, hubs and org repos; never overwrites team files</td>
 <td>Kit repo only</td>
 </tr>
 <tr>
@@ -432,9 +456,9 @@ much the team documents.</p>
 <tr>
 <td>Generated</td>
 <td>Queried, never loaded whole</td>
-<td>Code map; generated tables inside pages</td>
+<td>Code map; generated parts of table pages</td>
 <td>None</td>
-<td>Rebuilt from code, so it cannot go stale</td>
+<td>Rebuilt from code by a command, not written by hand. Stale until rebuilt or re-imported; the checks say when</td>
 </tr>
 </tbody>
 </table></div>
@@ -444,7 +468,10 @@ a file, a folder, a glob or several of these. In the product hub, anchors name t
 <code>[anchor: report-service:src/.../ReportController.java]</code>. The checks use anchors three ways:</p>
 <ul>
 <li><strong>Broken:</strong> the anchored file no longer exists, so the line is certainly wrong. Commits are refused.</li>
-<li><strong>Stale:</strong> the anchored file changed but the line didn't, so the line may be wrong. Flagged for a look.</li>
+<li><strong>Stale:</strong> the anchored file changed but the line didn't, so the line may be wrong. Flagged for a look.
+  The check knows only which file changed, not what changed in it: a rename flags the line as much as a
+  change of logic, and logic that moves to a file nothing points at is not flagged at all. Someone (the agent
+  that made the edit, or the reviewer) still judges whether the line is true.</li>
 <li><strong>Provenance:</strong> the share of statements with anchors is part of the readiness score.</li>
 </ul>
 <p><strong>Page metadata.</strong> Each in-depth page starts with frontmatter the tools read, following the Open Knowledge
@@ -540,7 +567,7 @@ traceable but count as unreviewed.</p>
 </tbody>
 </table></div>
 <h2 id="when-each-part-runs">When each part runs</h2>
-<p><img alt="The kit checks knowledge at seven moments, from chat start to archive" src="images/architecture-when-it-runs.png" /></p>
+<p><img alt="The kit checks knowledge at seven moments; only one of them blocks" src="images/architecture-when-it-runs.png" /></p>
 <p>The agent hooks (the first three moments) work inside the chat and only ever add a note or ask once. The
 commit check is the one hard stop, and it only blocks knowledge that points at a file that no longer exists.
 Every check calls the same context tool, so a rule is defined once.</p>
@@ -603,21 +630,29 @@ Tiny fixes skip the folder: failing test, fix, finish. Without OpenSpec, <code>/
 <code>plan.md</code> instead. A team's own technical design or test-scenario format runs as its own skill after
 <code>/opsx-propose</code>, so OpenSpec itself stays unchanged and upgrades cleanly.</p>
 <h2 id="many-repos">Many repos</h2>
-<p><img alt="Each repo keeps its own kit; the hub holds what spans them" src="images/architecture-many-repos.png" /></p>
+<p><img alt="Tools live once in the home repo; knowledge lives in each code repo" src="images/architecture-many-repos.png" /></p>
 <ul>
-<li><strong>Each repo installs the kit and owns its knowledge.</strong> Its rules and pages are reviewed in its own PRs,
-  because they change with its code.</li>
+<li><strong>A product workspace is the recommended setup for two or more repos.</strong> One home repo holds the kit's
+  skills, agents, hooks and tool once, plus the product pages. Each code repo holds only its own knowledge
+  and a small stamp, and its commit check and pull request check run the home repo's tool. The setup planner
+  suggests a workspace as soon as a second repo is next to the kit, and moves a repo that had its own copy
+  into it without touching its knowledge.</li>
+<li><strong>Each repo owns its knowledge.</strong> Its rules and pages are reviewed in its own PRs, because they change with
+  its code. A repo can also be set up on its own, with its own copy of the kit, when a team works on it alone.</li>
+<li><strong>What goes where.</strong> If one team can change it in one pull request, it lives in that repo: how the repo is
+  built, its traps, its business rules, its tables, the API it offers and the calls it makes. If changing it
+  needs two repos to agree, it lives in the home repo: who calls whom (<code>catalog.json</code>), end-to-end flows as
+  5–10 steps with one line per step and a link to the repo page for the detail, field mapping across repos,
+  the events and endpoints one repo relies on from another, platform rules, the glossary. Product pages link
+  down and never copy.</li>
 <li><strong>One story, one change per repo that changes, same change id.</strong> <code>/story-start</code> searches every repo in
-  the window using each repo's own code map, and sorts repos into <em>changes</em>, <em>read only</em> and <em>connected but
-  not open</em>. Producers are planned and built first (services, then UIs); each repo gets its own branch and
-  PR, linked to each other.</li>
-<li><strong>The product hub is optional, one per product.</strong> A small repo holding only what spans repos and changes
-  slowly: the catalogue of who calls whom, system architecture, end-to-end flows with screen → API → column
-  mapping, glossary, platform rules and cross-service decisions. Its anchors name the repo and
-  <code>hub.mjs check</code> verifies them against the cloned repos.</li>
-<li><strong>Incoming callers are the hard case.</strong> A repo can see what it calls, not who calls it. With the hub open,
-  <code>/story-start</code> runs <code>hub.mjs impact</code> to list repos that call or load the ones being changed, including
-  repos not in the window.</li>
+  the window and sorts them into <em>changes</em>, <em>read only</em> and <em>connected but not open</em>. Producers are planned
+  and built first (services, then UIs); each repo gets its own branch and PR, linked to each other.</li>
+<li><strong>Incoming callers are the hard case.</strong> A repo can see what it calls, not who calls it. <code>hub.mjs impact</code>
+  lists repos that call or load the ones being changed, from the catalogue, including repos not open. The
+  catalogue is empty until <code>/product-context</code> fills it.</li>
+<li><strong>A product hub</strong> (<code>--create-hub</code>) is the older form of the home repo, for repos that each keep their own
+  copy of the kit. It holds the same product pages.</li>
 </ul>
 <h2 id="organisation-level">Organisation level</h2>
 <p>The kit has five layers of context. Each holds only what is true at its level, has one owner, and reaches the
@@ -643,9 +678,9 @@ agent in the way that suits how often it changes. Details and rollout: <a href="
 <tr>
 <td>2. Product</td>
 <td>Catalogue of repos, system architecture, end-to-end flows, glossary, product platform rules</td>
-<td>One hub per product (<code>--create-hub</code>)</td>
+<td>The product workspace's home repo (or a product hub)</td>
 <td>Product tech leads</td>
-<td>Opened as a folder in the story's VS Code window; read on demand</td>
+<td>Opened with the repos in the agent's window; read on demand</td>
 </tr>
 <tr>
 <td>3. Repo</td>
@@ -710,7 +745,7 @@ miss. Each later net exists because the earlier ones can be skipped.</p>
 <tr>
 <td>4. Commit check</td>
 <td>Each commit</td>
-<td>Broken anchors: commit refused</td>
+<td>Broken anchors: commit refused. Stale lines, table pages out of date with the schema file or the code, a migration without a new schema export: warnings</td>
 <td>Developer</td>
 </tr>
 <tr>
@@ -719,10 +754,18 @@ miss. Each later net exists because the earlier ones can be skipped.</p>
 <td>Pages anchored to changed files updated or still true; stale anchors since main; PR lists context changes</td>
 <td>Agent + reviewer</td>
 </tr>
+<tr>
+<td>6. Pull request check (optional)</td>
+<td>Each pull request</td>
+<td>The same check as the commit, whoever or whatever wrote the code</td>
+<td>Reviewer</td>
+</tr>
 </tbody>
 </table></div>
-<p>Behind these, a monthly steward run and the weekly hub check catch drift that slipped through, and
-<code>/context-learn</code> turns every agent correction into a rule.</p>
+<p>Behind these, a steward run and <code>hub.mjs check</code> catch drift that slipped through, and <code>/context-learn</code> turns
+every agent correction into a rule. The nets are only as good as their signal: they work per file, so
+false alarms are common and some real changes are never flagged (see "Anchors" above). Apart from missing
+files they warn rather than block, so updating still depends on people acting on them.</p>
 <p><strong>Readiness score.</strong> <code>context-tools.cjs readiness</code> turns the knowledge model into a 0–100 score on the 12
 dimensions. Each dimension is rated 0–5, but the tool caps every rating at what the evidence supports, so the
 score cannot be raised by writing more:</p>
@@ -743,7 +786,7 @@ score cannot be raised by writing more:</p>
 <td>2</td>
 </tr>
 <tr>
-<td>No anchors, code changed since review, or reviewed over 180 days ago</td>
+<td>Generated and not reviewed by a person, no anchors, code changed since review, or reviewed over 180 days ago</td>
 <td>3</td>
 </tr>
 <tr>
@@ -771,6 +814,10 @@ worse agent results, not better. <code>hub.mjs status</code> shows every repo's 
 </thead>
 <tbody>
 <tr>
+<td><code>node kit/setup.mjs</code></td>
+<td><strong>The usual way in.</strong> The setup planner: finds the repos next to the kit, asks (in a terminal) or takes choices, shows the plan, runs the installer commands below after a yes. <code>kit/SETUP-AGENT.md</code> lets any agent drive it, and <code>/kit-setup</code> does the same later</td>
+</tr>
+<tr>
 <td><code>node kit/install.mjs &lt;repo&gt;</code></td>
 <td>Adds the kit files for Copilot. Never overwrites an existing file; lists what to merge by hand. Running it twice changes nothing.</td>
 </tr>
@@ -785,10 +832,6 @@ worse agent results, not better. <code>hub.mjs status</code> shows every repo's 
 <tr>
 <td><code>… --ci azure</code> / <code>--ci github</code></td>
 <td>Optional: a separate pull request pipeline file (never edits an existing pipeline; <code>kit/snippets/ci-step-*.yml</code> adds the check to one)</td>
-</tr>
-<tr>
-<td><code>node kit/setup.mjs</code></td>
-<td>The setup planner: finds the repos, asks (in a terminal) or takes choices, shows the plan, runs these commands. <code>kit/SETUP-AGENT.md</code> lets any agent drive it</td>
 </tr>
 <tr>
 <td><code>… --mcp</code></td>
@@ -822,9 +865,9 @@ worse agent results, not better. <code>hub.mjs status</code> shows every repo's 
 </table></div>
 <p>Beyond copying files, the installer sets the repo's git hooks folder (or, if the repo already has its own
 hooks, prints the one line to add so they keep working), writes <code>.gitattributes</code> so hook scripts keep Unix
-line endings on Windows, adds the kit's OpenSpec settings and makes the story workflow the default for new
-changes, and records the kit version and org sync in <code>.ai-kit/kit.json</code>. Removal is deleting the added
-folders and one git setting.</p>
+line endings on Windows, adds a short context block and test-first guidance to OpenSpec's settings (OpenSpec
+keeps its own default workflow), and records the kit version, tools and org sync in <code>.ai-kit/kit.json</code> (no
+address unless <code>--source</code> is given). Removal is deleting the added folders and one git setting.</p>
 <h2 id="security-and-data-boundaries">Security and data boundaries</h2>
 <p>The kit adds no new place where code or data goes. The only component that sends code anywhere is the AI
 agent itself, under the organisation's existing Copilot (or Claude) licence and policies.</p>
@@ -851,16 +894,16 @@ agent itself, under the organisation's existing Copilot (or Claude) licence and 
 <td>Read-only answers about the repo's context</td>
 </tr>
 <tr>
-<td>tbls (optional, run by a person)</td>
+<td>Schema export (run by a person: <code>pg_dump --schema-only</code>, a DB viewer's "Generate DDL", or tbls)</td>
 <td>The database it is pointed at</td>
-<td>The schema file</td>
-<td>Read-only user, non-production database</td>
+<td><code>docs/context/data/schema.sql</code></td>
+<td>Structure only, read-only user, never production. The kit itself never connects to a database</td>
 </tr>
 <tr>
-<td>Installer</td>
+<td>Installer, setup planner</td>
 <td>None</td>
-<td>Only the target repo, only new files (plus kit- and org-owned files on upgrade or sync)</td>
-<td><code>--dry-run</code> previews everything</td>
+<td>Only the target repos, only new files (plus kit- and org-owned files on upgrade or sync)</td>
+<td><code>--dry-run</code> / <code>plan</code> preview everything; repos with uncommitted changes are skipped; never commits or pushes</td>
 </tr>
 <tr>
 <td>Graphify (optional)</td>
@@ -895,9 +938,9 @@ versions are pinned to the tested ones; and the steward agent can edit only know
 <h2 id="where-it-came-from">Where it came from</h2>
 <p>The kit is an original design, developed with AI assistance and tested on sample Java and Angular
 repositories with OpenSpec 1.16 and Graphify 0.9.100. It follows public file formats, uses two open-source
-tools, and takes its design choices from the published research below. One part reuses
-another project's text: the story workflow's proposal and specs steps are OpenSpec's own wording (MIT
-licence; credited in <a href="../THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>, and the licence ships with the file).</p>
+tools, and takes its design choices from the published research below. Kit versions up to 2.0 shipped a
+workflow schema adapted from OpenSpec's; from 2.1 the kit uses OpenSpec's own default workflow and includes
+none of its text (credited in <a href="../THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md</a>).</p>
 <h3 id="formats-and-platforms-it-follows">Formats and platforms it follows</h3>
 <div class="tablebox"><table>
 <thead>
@@ -949,7 +992,7 @@ licence; credited in <a href="../THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md<
 </tr>
 <tr>
 <td><a href="https://github.com/k1LoW/tbls">tbls</a> (MIT)</td>
-<td>Schema file format read by <code>schema-import</code></td>
+<td>One of the schema file formats <code>schema-import</code> reads; the other is a plain DDL dump (<code>.sql</code>)</td>
 </tr>
 </tbody>
 </table></div>
@@ -967,7 +1010,7 @@ licence; credited in <a href="../THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md<
 <tr>
 <td>OpenSpec 1.16</td>
 <td>MIT</td>
-<td>Story workflow engine; the kit adds its own workflow schema</td>
+<td>Story workflow engine, with its own default workflow; the kit adds only settings</td>
 <td><a href="https://openspec.dev/docs/team-workflow">OpenSpec on a team</a>, <a href="https://openspec.dev/docs/stores">stores</a></td>
 </tr>
 <tr>
@@ -989,9 +1032,19 @@ licence; credited in <a href="../THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md<
 </thead>
 <tbody>
 <tr>
-<td>AI-written files loaded on every request lowered success slightly and raised cost about 20% (ETH Zurich, 138 repos)</td>
+<td>AI-written files loaded on every request lowered success slightly and raised cost about 20%; human-written ones helped about 4% (ETH Zurich, 138 repos)</td>
 <td>Short always-loaded file; detail on demand; people review drafts</td>
-<td><a href="https://the-decoder.com/context-files-for-coding-agents-often-dont-help-and-may-even-hurt-performance/">The Decoder</a></td>
+<td><a href="https://arxiv.org/html/2602.11988v1">Evaluating AGENTS.md (arXiv 2602.11988)</a></td>
+</tr>
+<tr>
+<td>No measurable change in correctness with no guide, an always-on guide or pages read on demand, on 17 tasks with Claude Code and Codex; most failures came from implementation skill</td>
+<td>Context is support, not the quality lever: the plan review and test-first tasks carry the quality</td>
+<td><a href="https://www.alphaxiv.org/abs/2607.27250">Two-agent ablation (Jul 2026)</a></td>
+</tr>
+<tr>
+<td>Context files of 100–150 lines did best; the worst did worse than none (AuggieBench). A short "where to look" index in <code>AGENTS.md</code> passed every task; skills were not triggered in 56% of cases (Vercel)</td>
+<td><code>AGENTS.md</code> about 100 lines with a "where to look" index; the workflow calls skills by name</td>
+<td><a href="https://mcp.directory/blog/claude-md-vs-agents-md-vs-skills-2026">mcp.directory summary</a></td>
 </tr>
 <tr>
 <td>Models get worse as input grows, even on easy tasks</td>
@@ -1025,7 +1078,7 @@ licence; credited in <a href="../THIRD_PARTY_NOTICES.md">THIRD_PARTY_NOTICES.md<
 </tr>
 <tr>
 <td>Using tests as the target improved repository-level code generation by about 9.5 points</td>
-<td>Test plan and test-first tasks</td>
+<td>Test-first tasks; every scenario needs a test</td>
 <td><a href="https://arxiv.org/abs/2509.24148v2">TENET (arXiv 2509.24148)</a></td>
 </tr>
 <tr>
@@ -1084,8 +1137,12 @@ evidence-capped readiness score.</p>
 <h2 id="limits-and-what-is-not-proven-yet">Limits and what is not proven yet</h2>
 <p>Everything above was tested on sample repos on Linux. Still open:</p>
 <ul>
-<li><strong>The benefit on your code.</strong> Measure it before scaling: the story log records premium requests, files read
-  before the first edit, review rounds and rework, with and without the kit.</li>
+<li><strong>The benefit on your code.</strong> Measure it before scaling: the story log (<code>templates/story-log.md</code>) records
+  premium requests, files read before the first edit, review rounds and rework, with and without the kit.
+  A first test on a small sample product (one story, one run each, Claude Code) found that with the kit
+  the plan got four facts right that existed only in the context, where without it three were wrong; the
+  kit run cost about 2.6 times as much. Where the code itself showed the facts, the two plans were about
+  the same.</li>
 <li><strong>Hooks in live agent chats,</strong> including the steward's agent-scoped guard (a new VS Code feature): check
   them once with <code>context-tools.cjs doctor</code> in your own environment.</li>
 <li><strong>Codex and the MCP server</strong> were tested with scripted calls, not in long live sessions yet.</li>
@@ -1097,6 +1154,12 @@ evidence-capped readiness score.</p>
 <li><strong>Staleness is per file, per day.</strong> A change to an anchored file flags every line anchored to it; a change
   on the same day as a review is not counted.</li>
 <li><strong>The readiness score measures context, not outcomes.</strong> Read it with the always-loaded size and the story log.</li>
+<li><strong>Product pages are not yet read by <code>/story-start</code> itself.</strong> In the test above the agent found the product
+  flow page only because the repo's <code>AGENTS.md</code> pointed to it. A fix is planned.</li>
+<li><strong>Nothing records which pages agents actually read,</strong> so unused pages cannot yet be found and removed.</li>
+<li><strong>Behaviour can be described in three places</strong> (domain pages, OpenSpec specs, product flow pages) and
+  drift apart. Rule: behaviour in specs, structure, traps and reasons in the pages, product pages only link.</li>
+<li><strong>Rule file path patterns</strong> are drafted from examples; check they match the repo's real folders.</li>
 </ul>
     <footer>Generated from the Markdown guides in the repository root. The installable kit, templates and research live alongside them. <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a></footer>
   </main>

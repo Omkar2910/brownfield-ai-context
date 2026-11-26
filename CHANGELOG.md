@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.3.1 (November 2026)
+
+**Changed**
+- Setup planner: two or more repos next to the kit suggest a product workspace, even when one already has
+  its own copy (it moves in and keeps its knowledge); choosing the workspace turns product context on.
+- `ARCHITECTURE.md` checked against the kit and corrected: skill and principle counts, the skills table
+  (`/kit-setup`, `/cross-repo-story`), what the checks block and what they only flag, the file-level limit of
+  anchors, generated knowledge going stale until rebuilt, the optional pull request check, OpenSpec's default
+  workflow, the product workspace as the model for many repos and what belongs in a repo versus the home repo,
+  the schema export, the research that does not support context files, and the first with/without test.
+- The four architecture diagrams redrawn for 2.3; their sources are now in `docs/images/src/`
+  (`tools/diagrams.py` writes them, `tools/build-diagrams.py` renders the PNGs).
+
 ## 2.3.0 (November 2026)
 
 Setting up the kit is one sentence to an agent, or one command in a terminal.
