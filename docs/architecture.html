@@ -106,7 +106,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
       <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a>
     </header>
     
-<p>Kit 2.3.1 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
+<p>Kit 2.4.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
 in <a href="index.html">GUIDE.md</a>; how to roll it out across an organisation is in <a href="org-level.html">ORG-LEVEL.md</a>.</p>
 <h2 id="summary">Summary</h2>
 <p>The AI Context Kit (MIT licence) is a set of plain files installed into each repo that gives AI coding
@@ -323,13 +323,13 @@ the result whether or not the agent hooks run.</p>
 <td>Context tool</td>
 <td><code>.ai-kit/context-tools.cjs</code> (one file, no dependencies)</td>
 <td>Called by every check below</td>
-<td>Reads anchors and page metadata; <code>check</code>, <code>status</code>, <code>doctor</code>, <code>readiness</code>, <code>pages-for</code>, <code>migrate</code>, <code>schema-import</code>, <code>review</code>, <code>ci</code>, <code>mcp</code> and four hook commands; logs each hook run in <code>.git/ai-kit/</code></td>
+<td>Reads anchors and page metadata; <code>check</code>, <code>status</code>, <code>doctor</code>, <code>readiness</code>, <code>pages-for</code> (in a workspace also the product pages anchored to a file), <code>migrate</code>, <code>schema-import</code>, <code>review</code>, <code>usage</code>, <code>conventions</code>, <code>ci</code>, <code>mcp</code> and four hook commands; logs each hook run and each context page an agent opens in <code>.git/ai-kit/</code></td>
 </tr>
 <tr>
 <td>Agent hooks</td>
 <td><code>.github/hooks/ai-context.json</code> (Copilot), <code>.claude/settings.json</code> (Claude Code)</td>
-<td>Chat start, after each edit, before the agent finishes</td>
-<td>Health note; "this file is described by line 12"; one request to re-check lines the agent's own edits touched. Duplicate calls ignored</td>
+<td>Chat start, after each edit or read, before the agent finishes</td>
+<td>Health note; "this file is described by line 12"; one request to re-check lines the agent's own edits touched; a record of each context page the agent opens, for <code>usage</code>. Duplicate calls ignored</td>
 </tr>
 <tr>
 <td>Git hooks</td>
@@ -390,6 +390,12 @@ the result whether or not the agent hooks run.</p>
 <td>Readiness weights</td>
 <td><code>.ai-kit/readiness.json</code></td>
 <td>Weights and bands, usually synced from the org</td>
+<td>Org or team</td>
+</tr>
+<tr>
+<td>Branch and PR convention</td>
+<td><code>.ai-kit/conventions.json</code></td>
+<td>Per kind of work: work item type, branch pattern, title prefix, metrics category; exempt promotion branches; <code>check</code> off, warn or block. Used by <code>/story-start</code>, <code>/story-finish</code>, the commit and pull request checks</td>
 <td>Org or team</td>
 </tr>
 <tr>
@@ -1154,9 +1160,13 @@ evidence-capped readiness score.</p>
 <li><strong>Staleness is per file, per day.</strong> A change to an anchored file flags every line anchored to it; a change
   on the same day as a review is not counted.</li>
 <li><strong>The readiness score measures context, not outcomes.</strong> Read it with the always-loaded size and the story log.</li>
-<li><strong>Product pages are not yet read by <code>/story-start</code> itself.</strong> In the test above the agent found the product
-  flow page only because the repo's <code>AGENTS.md</code> pointed to it. A fix is planned.</li>
-<li><strong>Nothing records which pages agents actually read,</strong> so unused pages cannot yet be found and removed.</li>
+<li><strong>Product pages reach a story through anchors.</strong> <code>pages-for</code> lists the home repo's pages anchored to the
+  files a story touches; a flow page anchored to nothing in the repo is found only through <code>AGENTS.md</code>.</li>
+<li><strong>Page reads are recorded only where hooks run</strong> (Copilot, Claude Code; not Codex), and only from this
+  version on, so <code>usage</code> needs a few weeks of work before "never read" means much.</li>
+<li><strong>Pull request titles in Azure Pipelines</strong> are not visible to the pipeline; the title rule there rests on
+  <code>/story-finish</code> and the PR template, and the branch name is checked. Linking every PR to a work item is best
+  enforced by Azure Repos' own branch policy.</li>
 <li><strong>Behaviour can be described in three places</strong> (domain pages, OpenSpec specs, product flow pages) and
   drift apart. Rule: behaviour in specs, structure, traps and reasons in the pages, product pages only link.</li>
 <li><strong>Rule file path patterns</strong> are drafted from examples; check they match the repo's real folders.</li>

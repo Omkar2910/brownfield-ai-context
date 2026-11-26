@@ -118,7 +118,7 @@ and run it.</p>
 <tbody>
 <tr>
 <td><strong>Organisation</strong></td>
-<td>The few rules every repo must follow; shared platforms; AI usage policy; kit version; readiness weights</td>
+<td>The few rules every repo must follow; shared platforms; AI usage policy; kit version; readiness weights; branch and pull request naming</td>
 <td>One <code>org-context</code> repo</td>
 <td>Architecture / engineering excellence</td>
 <td>Rarely; reviewed by the owners</td>
@@ -126,7 +126,7 @@ and run it.</p>
 <tr>
 <td><strong>Product</strong></td>
 <td>Catalogue of repos, system architecture, end-to-end flows, glossary, product-wide platform rules</td>
-<td>One <code>product-context</code> hub per product (<a href="multi-repo.html">MULTI-REPO.md</a>)</td>
+<td>The product workspace's home repo, <code>product-context</code> (or a product hub) (<a href="multi-repo.html">MULTI-REPO.md</a>)</td>
 <td>Product tech leads</td>
 <td>When flows or contracts change</td>
 </tr>
@@ -154,7 +154,7 @@ and run it.</p>
 </tbody>
 </table></div>
 <p><strong>The rule for where something goes:</strong> put it at the lowest layer where it is true, and only once. A rule true
-for every repo goes in the org layer; a flow across one product's repos goes in that product's hub; a column's
+for every repo goes in the org layer; a flow across one product's repos goes in that product's home repo; a column's
 meaning goes in the repo that owns the table. Lower layers link to higher ones instead of copying them.</p>
 <p><strong>When layers disagree:</strong> VS Code loads every applicable file and defines no precedence, so contradictions are
 not resolved for you. Keep org rules to things that are never overridden (security, personal data, approved
@@ -212,6 +212,12 @@ and raise it with the org owners.</p>
 <li><code>.ai-kit/kit.json</code> records the org repo's path and commit, and a fingerprint of each copy.</li>
 <li>The org's <code>context-readiness.json</code> is copied to <code>.ai-kit/readiness.json</code>, so every repo is scored on
   the same weights, unless the repo keeps its own.</li>
+<li>The org's <code>conventions.json</code> is copied to <code>.ai-kit/conventions.json</code> the same way: the branch and pull
+  request naming every repo follows, so an engineering-metrics tool can tell features, production fixes,
+  QA and UAT fixes and maintenance apart. <code>/story-start</code> proposes the branch name (and creates it after
+  asking), <code>/story-finish</code> writes the title and the work item link, the commit check warns about a branch
+  that does not follow it, and the pull request check compares branch and title. <code>check</code> in the file sets
+  <code>off</code>, <code>warn</code> or <code>block</code>.</li>
 <li><code>context-tools check</code> warns when the copies are older than the local clone of the org repo, or were edited
   in the repo. The session-start note tells the agent which org rules it carries.</li>
 <li>The agent is told not to edit org rules, and the context-steward agent is blocked from editing them.</li>
@@ -223,7 +229,9 @@ and raise it with the org owners.</p>
 cd ../org-context
 # 1. Replace every &lt;replace: …&gt; in rules/ and context/ with your real platforms and policies.
 # 2. Set kit.json (kit version every repo should run) and context-readiness.json (weights, band names).
-# 3. List products and their hubs in products.json.
+# 3. Set conventions.json: your branch and pull request naming, the work item field that says where a
+#    defect was found, the maintenance tag, and check: warn (start here) or block.
+# 4. List products and their home repos in products.json.
 git init &amp;&amp; git add -A &amp;&amp; git commit -m &quot;Organisation context&quot;   # push to a protected Azure Repos repo
 </code></pre></div>
 <p>What the template contains:</p>
@@ -259,6 +267,11 @@ git init &amp;&amp; git add -A &amp;&amp; git commit -m &quot;Organisation conte
 <tr>
 <td><code>kit.json</code>, <code>context-readiness.json</code>, <code>products.json</code></td>
 <td>Kit version, scoring weights, product list</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>conventions.json</code></td>
+<td>Branch and pull request naming per kind of work (feature, production fix, QA/UAT fix, maintenance), promotion branches that are exempt, how a PR links its work item</td>
 <td>—</td>
 </tr>
 <tr>

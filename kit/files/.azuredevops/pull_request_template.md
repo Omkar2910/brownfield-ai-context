@@ -1,5 +1,7 @@
 ## Story
-<!-- Work item ID and one-line summary -->
+<!-- Work item link (e.g. AB#48213) and one-line summary. Title: <prefix>: <id> <what changed>, e.g.
+     feat: 48213 Export reports to Excel (feat, hotfix, fix, maint; see .ai-kit/conventions.json).
+     Promotion between sprint and release branches: promote: feature_20 to release_20 -->
 
 ## What changed
 <!-- Grouped by area. /story-finish drafts this from openspec/changes/<change-id>/ -->

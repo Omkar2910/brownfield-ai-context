@@ -292,6 +292,7 @@ function runCheck(repo, { base, strict } = {}) {
   const old = oldFormatPages(repo, a.ctx.contextFiles);
   if (old.length) warnings.push(`${old.length} page(s) use the 1.x status line (${old.slice(0, 3).join(', ')}${old.length > 3 ? ' …' : ''}). Run: ${toolCmd} migrate`);
   for (const d of dataFreshness(repo, a, { changedOnly: !!(STAGED || base) })) warnings.push(...(d.warn ? [d.warn] : d.warns));
+  if (STAGED) for (const f of conventionFindings(repo, { branch: (git(repo, ['rev-parse', '--abbrev-ref', 'HEAD']) || '').trim() })) (f.block ? errors : warnings).push(`Naming: ${f.text}. Run: ${toolCmd} conventions name --type <type> --id <id> --summary "<what changed>"`);
   return { a, errors, warnings, failed: errors.length > 0 || (strict && warnings.length > 0) };
 }
 function printCheck(repo, r, { base } = {}) {
@@ -530,7 +531,31 @@ function sessionFile(input) {
 function loadTouched(input) { try { return JSON.parse(fs.readFileSync(sessionFile(input), 'utf8')); } catch { return []; } }
 function saveTouched(input, list) { try { fs.writeFileSync(sessionFile(input), JSON.stringify(list)); } catch { /* ignore */ } }
 
+// Which context pages agents actually open: one line per read in the page's own repo (.git/ai-kit/reads.jsonl),
+// so `usage` can show the pages that help and the ones nobody opens.
+const looksLikeRead = name => !!name && /^(read|view|open)|read_?file|readfile|view_?file/i.test(name);
+function readsLogPath(repo) { const d = gitDir(repo); return d ? path.join(d, 'ai-kit', 'reads.jsonl') : null; }
+function logReads(input) {
+  const sessionRepo = resolveRepo(input);
+  const logged = [];
+  for (const p of editedPaths(input)) {
+    const abs = path.isAbsolute(p) ? p : path.join(sessionRepo, p);
+    const repo = repoOfFile(abs) || sessionRepo;
+    const rel = toPosix(path.relative(repo, abs));
+    if (rel.startsWith('..') || !isContextFile(rel)) continue;
+    const lp = readsLogPath(repo); if (!lp) continue;
+    try {
+      fs.mkdirSync(path.dirname(lp), { recursive: true });
+      fs.appendFileSync(lp, JSON.stringify({ t: new Date().toISOString(), page: rel, session: sessionId(input) }) + '\n');
+      const st = fs.statSync(lp);
+      if (st.size > 1024 * 1024) { const lines = fs.readFileSync(lp, 'utf8').trim().split('\n'); fs.writeFileSync(lp, lines.slice(-5000).join('\n') + '\n'); }
+      logged.push(rel);
+    } catch { /* never fail a hook */ }
+  }
+  return { reads: logged };
+}
 function hookPostEdit(input) {
+  if (looksLikeRead(input.tool_name || input.toolName)) return logReads(input);
   if (!looksLikeEdit(input.tool_name || input.toolName)) return { skipped: 'not an edit' };
   const sessionRepo = resolveRepo(input);
   const contexts = new Map(); // repo -> anchors, read once per repo
@@ -900,17 +925,155 @@ function cmdReadiness() {
 }
 
 // ---------------------------------------------------------------- pages-for
+// In a product workspace, the home repo's pages (flows, platform rules) anchor into member repos as
+// `<repo>:<path>`. These are the product lines about a member repo's files.
+function productAnchors(repo) {
+  const home = workspaceHome(repo);
+  if (!home || path.resolve(home) === path.resolve(repo)) return [];
+  const me = members(home).find(m => path.resolve(m.dir) === path.resolve(repo));
+  const name = me ? me.name : path.basename(repo);
+  const out = [];
+  for (const cf of listFiles(home).filter(isContextFile)) {
+    let text; try { text = fs.readFileSync(path.join(home, cf), 'utf8'); } catch { continue; }
+    text.split(/\r?\n/).forEach((line, idx) => {
+      for (const m of line.matchAll(/\[anchor:\s*([^\]]+)\]/g)) {
+        for (let p of m[1].split(',')) {
+          p = p.trim().replace(/^[`'"]+|[`'"]+$/g, '').replace(/\\/g, '/').replace(/#.*$/, '');
+          const mm = /^([A-Za-z0-9_.-]{2,}):(.+)$/.exec(p);
+          if (!mm || mm[1] !== name) continue;
+          let g = mm[2].replace(/:\d+(-\d+)?$/, '').replace(/^\.\//, '');
+          if (g.endsWith('/')) g += '**';
+          out.push({ file: toPosix(path.relative(repo, path.join(home, cf))), line: idx + 1, text: line.trim().slice(0, 140), re: globToRegex(g), product: true });
+        }
+      }
+    });
+  }
+  return out;
+}
 function pagesFor(repo, files) {
   const ctx = readContext(repo, listFiles(repo));
+  const all = ctx.anchors.concat(productAnchors(repo));
   const out = [];
   for (const raw of files) {
     const rel = relTo(repo, raw);
-    const hits = ctx.anchors.filter(a => a.re.test(rel));
+    const hits = all.filter(a => a.re.test(rel));
     const pages = [...new Set(hits.map(h => h.file))];
     out.push({ file: rel, pages, lines: hits.map(h => ({ file: h.file, line: h.line, text: h.text })) });
   }
   return out;
 }
+// ---------------------------------------------------------------- conventions (branch and pull request names)
+// .ai-kit/conventions.json in the repo, else the workspace home's copy. Each type maps a kind of work item to a
+// branch pattern and a title prefix, so an engineering-metrics tool can read what kind of work a PR is.
+function loadConventions(repo) {
+  for (const dir of [repo, workspaceHome(repo)].filter(Boolean)) {
+    const c = readJson(path.join(dir, '.ai-kit', 'conventions.json'));
+    if (c && Array.isArray(c.types)) return c;
+  }
+  return null;
+}
+const escRe = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const wildRe = w => new RegExp('^' + w.split('*').map(escRe).join('.*') + '$');
+const patternRe = (tpl, anchorEnd = true) => new RegExp('^' + escRe(tpl).replace(/\\\{id\\\}/g, '[A-Za-z]*-?\\d+').replace(/\\\{slug\\\}/g, '[a-z0-9]+(-[a-z0-9]+)*').replace(/\\\{summary\\\}/g, '\\S.*').replace(/\\\{(from|to)\\\}/g, '\\S+') + (anchorEnd ? '$' : ''));
+const slugify = t => String(t).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(w => !/^(a|an|the|to|of|for|and|in|on|from|with)$/.test(w)).slice(0, 6).join('-').slice(0, 48).replace(/-+$/, '');
+function typeFor(c, { workItemType, foundIn, tags }) {
+  const tagList = String(tags || '').split(/[;,]/).map(t => t.trim().toLowerCase()).filter(Boolean);
+  const wit = String(workItemType || '').toLowerCase(), found = String(foundIn || '').toLowerCase();
+  const tagged = c.types.find(t => t.tag && tagList.includes(t.tag.toLowerCase()) && (!t.workItemTypes || !wit || t.workItemTypes.some(w => w.toLowerCase() === wit)));
+  if (tagged) return tagged;
+  const byType = c.types.filter(t => !t.tag && (t.workItemTypes || []).some(w => w.toLowerCase() === wit));
+  if (byType.length <= 1) return byType[0] || null;
+  return byType.find(t => (t.foundIn || []).some(f => f.toLowerCase() === found)) || null;   // a Bug: decided by Found In
+}
+function checkBranch(c, branch) {
+  if (!branch || branch === 'HEAD') return { ok: true, note: 'no branch (detached)' };
+  const b = branch.replace(/^refs\/heads\//, '');
+  if ((c.exempt && c.exempt.branches || []).some(w => wildRe(w).test(b))) return { ok: true, exempt: true };
+  const t = c.types.find(x => patternRe(x.branch).test(b));
+  return t ? { ok: true, type: t.type } : { ok: false, problem: `branch "${b}" does not follow the naming convention (${c.types.map(x => x.branch).join(', ')})` };
+}
+function checkTitle(c, title) {
+  if (!title) return { ok: true };
+  if ((c.exempt && c.exempt.titles || []).some(w => wildRe(w).test(title))) return { ok: true, exempt: true };
+  const t = c.types.find(x => patternRe(x.title).test(title));
+  return t ? { ok: true, type: t.type } : { ok: false, problem: `pull request title "${title}" does not follow the convention (${c.types.map(x => x.title).join(', ')})` };
+}
+function conventionFindings(repo, { branch, title }) {
+  const c = loadConventions(repo);
+  if (!c || c.check === 'off') return [];
+  const out = [];
+  const b = checkBranch(c, branch); if (!b.ok) out.push(b.problem);
+  const t = checkTitle(c, title); if (!t.ok) out.push(t.problem);
+  if (b.ok && t.ok && b.type && t.type && b.type !== t.type) out.push(`branch says ${b.type} but the title says ${t.type}`);
+  return out.map(text => ({ text, block: c.check === 'block' }));
+}
+function cmdConventions() {
+  const repo = resolveRepo({});
+  const c = loadConventions(repo);
+  if (!c) { console.log('No .ai-kit/conventions.json here (or in the workspace home repo). Copy the kit\'s default and edit it.'); process.exitCode = 2; return; }
+  const sub = argv[1] && !argv[1].startsWith('--') ? argv[1] : 'show';
+  if (sub === 'show') {
+    console.log(`Branch and pull request convention (check: ${c.check || 'warn'}, branch creation: ${c.createBranch || 'ask'})`);
+    for (const t of c.types) console.log(`  ${t.type.padEnd(8)} ${t.branch.padEnd(24)} ${t.title.padEnd(26)} ${t.when}`);
+    if (c.exempt && c.exempt.note) console.log(`  Promotion: ${c.exempt.note}`);
+    (c.rules || []).forEach(r => console.log(`  - ${r}`));
+    return;
+  }
+  if (sub === 'type') {
+    const t = typeFor(c, { workItemType: opt('--work-item-type'), foundIn: opt('--found-in'), tags: opt('--tags') });
+    console.log(t ? t.type : `unknown: ask the person which it is (${c.types.map(x => x.type).join(', ')})`);
+    if (!t) process.exitCode = 1;
+    return;
+  }
+  if (sub === 'name') {
+    const id = opt('--id'), summary = opt('--summary');
+    const t = c.types.find(x => x.type === opt('--type')) || typeFor(c, { workItemType: opt('--work-item-type'), foundIn: opt('--found-in'), tags: opt('--tags') });
+    if (!t || !id || !summary) { console.log(`Usage: conventions name --type ${c.types.map(x => x.type).join('|')} --id <work item id> --summary "<what changed>"`); process.exitCode = 2; return; }
+    const fill = tpl => tpl.replace('{id}', id).replace('{slug}', slugify(summary)).replace('{summary}', summary.replace(/\s+/g, ' ').trim());
+    const res = { type: t.type, category: t.category, branch: fill(t.branch), title: fill(t.title), link: (c.workItem && c.workItem.link || '#{id}').replace('{id}', id), changeId: `${id}-${slugify(summary)}` };
+    if (flag('--json')) console.log(JSON.stringify(res, null, 2));
+    else console.log(`type:      ${res.type} (${res.category})\nbranch:    ${res.branch}\ntitle:     ${res.title}\nlink:      ${res.link}  (put it in the pull request description)\nchange id: ${res.changeId}`);
+    return;
+  }
+  if (sub === 'check-branch' || sub === 'check-title') {
+    const value = argv[2] && !argv[2].startsWith('--') ? argv[2] : sub === 'check-branch' ? (git(repo, ['rev-parse', '--abbrev-ref', 'HEAD']) || '').trim() : '';
+    const r = sub === 'check-branch' ? checkBranch(c, value) : checkTitle(c, value);
+    console.log(r.ok ? `ok${r.type ? `: ${r.type}` : r.exempt ? ': exempt (promotion or main branch)' : ''}` : r.problem);
+    process.exitCode = r.ok ? 0 : 1;
+    return;
+  }
+  console.log('Usage: conventions [show] | type --work-item-type <t> [--found-in <v>] [--tags <a;b>] | name --type <t> --id <id> --summary "<text>" [--json] | check-branch [<name>] | check-title "<title>"');
+  process.exitCode = 2;
+}
+
+// ---------------------------------------------------------------- usage (which pages agents read)
+function cmdUsage() {
+  const repo = resolveRepo({});
+  const days = Number(opt('--days') || 90);
+  const since = Date.now() - days * 864e5;
+  const pages = listFiles(repo).filter(f => isContextFile(f) && !/(^|\/)(index|README)\.md$/.test(f) && !/^\.github\/instructions\/org\//.test(f));
+  const lp = readsLogPath(repo);
+  const reads = new Map(), sessions = new Map(); let first = null;
+  try {
+    for (const l of fs.readFileSync(lp, 'utf8').trim().split('\n')) {
+      let e; try { e = JSON.parse(l); } catch { continue; }
+      const t = Date.parse(e.t); if (!(t >= since)) continue;
+      first = first === null ? t : Math.min(first, t);
+      reads.set(e.page, (reads.get(e.page) || 0) + 1);
+      if (!sessions.has(e.page)) sessions.set(e.page, new Set());
+      sessions.get(e.page).add(e.session);
+    }
+  } catch { /* no reads yet */ }
+  if (flag('--json')) { console.log(JSON.stringify({ days, pages: pages.map(p => ({ page: p, reads: reads.get(p) || 0, sessions: sessions.has(p) ? sessions.get(p).size : 0 })) }, null, 2)); return; }
+  console.log(`Context pages read by agents, last ${days} days${first ? ` (log starts ${new Date(first).toISOString().slice(0, 10)})` : ''}`);
+  if (!reads.size) { console.log('  No reads recorded yet. Reads are logged by the agent hooks (Copilot, Claude Code) after this kit version.'); return; }
+  const used = pages.filter(p => reads.has(p)).sort((a, b) => sessions.get(b).size - sessions.get(a).size);
+  for (const p of used) console.log(`  ${String(sessions.get(p).size).padStart(4)} chat(s)  ${p}`);
+  const never = pages.filter(p => !reads.has(p) && !/^(AGENTS|CLAUDE)\.md$/.test(p));
+  if (never.length) { console.log(`  Never read (${never.length}): candidates to merge, shorten or delete, or to link from AGENTS.md:`); never.forEach(p => console.log(`        ${p}`)); }
+  console.log('  AGENTS.md (and CLAUDE.md) are loaded automatically, so they do not show as reads.');
+}
+
 function cmdPagesFor() {
   const repo = resolveRepo({});
   const files = argv.slice(1).filter((a, i, all) => !a.startsWith('--') && all[i - 1] !== '--repo');
@@ -1723,6 +1886,11 @@ function cmdCi() {
     }
   }
   if (!r.fatal) {
+    // Branch and title naming, from what the pipeline knows about the pull request.
+    let title = opt('--title') || process.env.AI_KIT_PR_TITLE || '';
+    if (!title && process.env.GITHUB_EVENT_PATH) { const ev = readJson(process.env.GITHUB_EVENT_PATH); title = ev && ev.pull_request && ev.pull_request.title || ''; }
+    const branch = opt('--branch') || process.env.SYSTEM_PULLREQUEST_SOURCEBRANCH || process.env.GITHUB_HEAD_REF || '';
+    if (branch || title) for (const f of conventionFindings(repo, { branch, title })) { out.push(`  ${f.block ? 'ERROR' : 'WARN '}  Naming: ${f.text}`); if (f.block) r.failed = true; }
     const res = computeReadiness(repo);
     out.push('', `Readiness: ${res.total} / 100 · ${res.band}${res.gaps.length ? ` · biggest gap: ${res.gaps[0].label} (${res.gaps[0].how})` : ''}`);
   }
@@ -1779,7 +1947,7 @@ function cmdMcp() {
 // ---------------------------------------------------------------- main
 const hooks = { 'session-start': hookSessionStart, 'post-edit': hookPostEdit, stop: hookStop, guard: hookGuard };
 const commands = { check: cmdCheck, status: cmdStatus, readiness: cmdReadiness, migrate: cmdMigrate, doctor: cmdDoctor,
-  'pages-for': cmdPagesFor, 'schema-import': cmdSchemaImport, review: cmdReview, ci: cmdCi, mcp: cmdMcp };
+  'pages-for': cmdPagesFor, 'schema-import': cmdSchemaImport, review: cmdReview, usage: cmdUsage, conventions: cmdConventions, ci: cmdCi, mcp: cmdMcp };
 if (commands[command]) commands[command]();
 else if (hooks[command]) {
   let input = {}, repo = null, result = null, duplicate = false;

@@ -1,0 +1,59 @@
+{
+  "_about": "Branch and pull request naming, so an engineering-metrics tool can tell what kind of work each pull request is. Team- or org-owned: edit it here, or keep it in the organisation context repo (install.mjs --org copies it). check: off | warn | block (commit and pull request checks). createBranch: ask (the agent asks before creating the branch locally; it never pushes) | never.",
+  "check": "warn",
+  "createBranch": "ask",
+  "workItem": {
+    "foundInField": "Found In",
+    "maintenanceTag": "Maintenance",
+    "link": "AB#{id}"
+  },
+  "types": [
+    {
+      "type": "feature",
+      "when": "New capability or enhancement: a User Story or Feature",
+      "workItemTypes": ["User Story", "Feature", "Product Backlog Item"],
+      "branch": "feature/{id}-{slug}",
+      "title": "feat: {id} {summary}",
+      "category": "Features"
+    },
+    {
+      "type": "hotfix",
+      "when": "Defect found in production: a Bug whose Found In is Production",
+      "workItemTypes": ["Bug"],
+      "foundIn": ["Production"],
+      "branch": "hotfix/{id}-{slug}",
+      "title": "hotfix: {id} {summary}",
+      "category": "Fixes (production)"
+    },
+    {
+      "type": "bugfix",
+      "when": "Defect found in QA or UAT: a Bug whose Found In is QA or UAT, linked to its story",
+      "workItemTypes": ["Bug"],
+      "foundIn": ["QA", "UAT"],
+      "branch": "bugfix/{id}-{slug}",
+      "title": "fix: {id} {summary}",
+      "category": "Fixes"
+    },
+    {
+      "type": "maint",
+      "when": "Maintenance: security findings, vulnerability and image-scan fixes, upgrades; a Task or Story tagged Maintenance",
+      "workItemTypes": ["Task", "User Story"],
+      "tag": "Maintenance",
+      "branch": "maint/{id}-{slug}",
+      "title": "maint: {id} {summary}",
+      "category": "Maintenance"
+    }
+  ],
+  "exempt": {
+    "branches": ["main", "master", "develop", "feature_*", "release_*"],
+    "titles": ["promote: *"],
+    "note": "Promotion between sprint and release branches needs no work item: keep the branch names, title it promote: <from> to <to>."
+  },
+  "rules": [
+    "Every pull request is linked to a work item: the work item type says what the work was.",
+    "Keep sprint and release branch names: the pipeline needs the release prefix.",
+    "Use the right work item type: a new requirement is a Story; a QA or UAT observation is a Bug.",
+    "One fix, one work item: pull requests in several repos link to the same Bug.",
+    "No shorthand titles: the prefix names the type; the rest says what changed."
+  ]
+}

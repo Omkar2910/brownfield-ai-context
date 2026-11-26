@@ -32,10 +32,11 @@ links the other PRs and says which must merge first.
    `origin/develop`). If the check says the base does not exist, run `git fetch` and try again.
    For each finding, follow the `context-update` skill. Context edits go in this same PR.
    Then run `pages-for` on the files this PR changed and confirm each context page it names was either
-   updated in this PR or is still true. For a page in the product hub, draft its change and tell the user it needs a PR in the
-   hub repo, linked from this one. If the repo has a `docs/context/readiness.md`, a reviewed page you
-   changed keeps counting as reviewed only if a reviewer checks it in this PR and adds a `verified` line;
-   otherwise set it back to `status: draft`.
+   updated in this PR or is still true. `pages-for` also names product pages (the home repo's flows and
+   platform rules) when the story changed something another repo relies on: an event, an endpoint, a field.
+   For each, draft its change and tell the user it needs a PR in the home repo (or the product hub), linked
+   from this one. A reviewed page you changed keeps counting as reviewed only if its reviewer checks it in
+   this PR and runs `review` in their own terminal; otherwise set it back to `status: draft`.
 6. **Promote what this story taught (only if it applies).** Ask: did understanding an area take a lot of
    tracing (many files read, a flow across UI, API, service and database, or a wrong first guess), and
    does `docs/context/` have no page for it? If yes, and the area will be changed again, offer to turn
@@ -45,8 +46,13 @@ links the other PRs and says which must merge first.
    a test shows them, everything else under "Unverified". Add one line for it to AGENTS.md "Where to
    look". If the area already has a page, update only the lines this story changed. If neither applies,
    skip this step and say so.
-7. **PR description.** Draft it from the change folder (or, without OpenSpec, from the agreed plan
-   and the diff):
+7. **PR title and description.** If `.ai-kit/conventions.json` exists (here or in the home repo), get the
+   title from `node .ai-kit/context-tools.cjs conventions name --type <type> --id <id> --summary "<what
+   changed>"` and check the branch with `conventions check-branch`; if the branch name is wrong, tell the
+   user before they push (renaming a branch is easy before the PR exists). Draft the description from the
+   change folder (or, without OpenSpec, from the agreed plan and the diff):
+   - The work item link the command printed (for example `AB#48213`), on its own line, so the PR is linked
+     to the work item; in a story across repos, every PR links the same work item
    - Story id and one-line summary
    - What changed, grouped by area
    - Requirements and scenarios or acceptance checks covered, with the test that proves each

@@ -1,6 +1,6 @@
 # AI Context Kit: Architecture
 
-Kit 2.3.1 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
+Kit 2.4.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
 in [GUIDE.md](GUIDE.md); how to roll it out across an organisation is in [ORG-LEVEL.md](ORG-LEVEL.md).
 
 ## Summary
@@ -89,8 +89,8 @@ the result whether or not the agent hooks run.
 
 | Component | Installed at | When it runs | What it does |
 | --- | --- | --- | --- |
-| Context tool | `.ai-kit/context-tools.cjs` (one file, no dependencies) | Called by every check below | Reads anchors and page metadata; `check`, `status`, `doctor`, `readiness`, `pages-for`, `migrate`, `schema-import`, `review`, `ci`, `mcp` and four hook commands; logs each hook run in `.git/ai-kit/` |
-| Agent hooks | `.github/hooks/ai-context.json` (Copilot), `.claude/settings.json` (Claude Code) | Chat start, after each edit, before the agent finishes | Health note; "this file is described by line 12"; one request to re-check lines the agent's own edits touched. Duplicate calls ignored |
+| Context tool | `.ai-kit/context-tools.cjs` (one file, no dependencies) | Called by every check below | Reads anchors and page metadata; `check`, `status`, `doctor`, `readiness`, `pages-for` (in a workspace also the product pages anchored to a file), `migrate`, `schema-import`, `review`, `usage`, `conventions`, `ci`, `mcp` and four hook commands; logs each hook run and each context page an agent opens in `.git/ai-kit/` |
+| Agent hooks | `.github/hooks/ai-context.json` (Copilot), `.claude/settings.json` (Claude Code) | Chat start, after each edit or read, before the agent finishes | Health note; "this file is described by line 12"; one request to re-check lines the agent's own edits touched; a record of each context page the agent opens, for `usage`. Duplicate calls ignored |
 | Git hooks | `.githooks/pre-commit`, `post-commit`, `post-merge`, `post-checkout` | Commit, merge, branch switch | Refuse commits with broken anchors; warn about the rest (including table pages out of date with the schema file or the code); rebuild the code map in the background |
 | PR template | `.azuredevops/pull_request_template.md` | Every pull request | Checklist: plan reviewed, every scenario tested, knowledge updated |
 | Pull request check (optional) | A step or job added to the pipeline the repo already has (`kit/snippets/ci-step-*.yml`), or a separate pipeline file with `--ci azure` / `--ci github` | Every pull request, whoever or whatever wrote it | `context-tools ci`: the check, a story check, the readiness score. The kit never edits an existing pipeline |
@@ -104,6 +104,7 @@ the result whether or not the agent hooks run.
 | Code map connection | `.vscode/mcp.json`, `.graphifyignore` | Lets the agent query Graphify; keeps kit and story files out of the map | Team |
 | Version stamp | `.ai-kit/kit.json` | Which kit version, which tools and which org rules this repo runs | Kit |
 | Readiness weights | `.ai-kit/readiness.json` | Weights and bands, usually synced from the org | Org or team |
+| Branch and PR convention | `.ai-kit/conventions.json` | Per kind of work: work item type, branch pattern, title prefix, metrics category; exempt promotion branches; `check` off, warn or block. Used by `/story-start`, `/story-finish`, the commit and pull request checks | Org or team |
 | Setup planner | `kit/setup.mjs`, `kit/SETUP-AGENT.md` | Finds the repos next to the kit, works out the install or upgrade steps from what is on disk, shows them, runs them after a yes; skips repos with uncommitted changes; never commits or pushes | Kit repo only |
 | Installer | `kit/install.mjs` | The steps the planner runs: installs, upgrades, syncs org rules, creates workspaces, hubs and org repos; never overwrites team files | Kit repo only |
 | Product hub template | `kit/hub-template/` | Catalogue, platform rules, flows, contracts, `/product-context`, `hub.mjs` | Created once per product |
@@ -399,9 +400,13 @@ Everything above was tested on sample repos on Linux. Still open:
 - **Staleness is per file, per day.** A change to an anchored file flags every line anchored to it; a change
   on the same day as a review is not counted.
 - **The readiness score measures context, not outcomes.** Read it with the always-loaded size and the story log.
-- **Product pages are not yet read by `/story-start` itself.** In the test above the agent found the product
-  flow page only because the repo's `AGENTS.md` pointed to it. A fix is planned.
-- **Nothing records which pages agents actually read,** so unused pages cannot yet be found and removed.
+- **Product pages reach a story through anchors.** `pages-for` lists the home repo's pages anchored to the
+  files a story touches; a flow page anchored to nothing in the repo is found only through `AGENTS.md`.
+- **Page reads are recorded only where hooks run** (Copilot, Claude Code; not Codex), and only from this
+  version on, so `usage` needs a few weeks of work before "never read" means much.
+- **Pull request titles in Azure Pipelines** are not visible to the pipeline; the title rule there rests on
+  `/story-finish` and the PR template, and the branch name is checked. Linking every PR to a work item is best
+  enforced by Azure Repos' own branch policy.
 - **Behaviour can be described in three places** (domain pages, OpenSpec specs, product flow pages) and
   drift apart. Rule: behaviour in specs, structure, traps and reasons in the pages, product pages only link.
 - **Rule file path patterns** are drafted from examples; check they match the repo's real folders.

@@ -107,7 +107,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
       <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a>
     </header>
     
-<p>Kit 2.3 · for developers and tech leads · plain language</p>
+<p>Kit 2.4 · for developers and tech leads · plain language</p>
 <p>This guide covers everything you need to use the kit: setting it up, the skills, and running a story from
 start to finish in GitHub Copilot, Claude Code or OpenAI Codex. It assumes you have the kit's folder on
 your machine (the folder that contains this guide and <code>install.mjs</code>). Below, <code>&lt;kit&gt;</code> means that folder.</p>
@@ -428,8 +428,8 @@ few words: <code>48213-add-report-export</code>.</p>
 <tr>
 <td>1. Start</td>
 <td><code>/story-start 48213</code></td>
-<td>The agent reads the work item (or asks you to paste it), finds the repos and files it touches, lists what to know, and sizes it: tiny, small or normal</td>
-<td>Answer at most one question, if it asks</td>
+<td>The agent reads the work item (or asks you to paste it), finds the repos and files it touches, pulls the context lines anchored to those files (in a workspace also the product flow pages), sizes it, and proposes the branch name from your naming convention</td>
+<td>Answer at most one question; say yes or no to creating the branch</td>
 </tr>
 <tr>
 <td>2. Plan</td>
@@ -458,7 +458,7 @@ few words: <code>48213-add-report-export</code>.</p>
 <tr>
 <td>6. Finish</td>
 <td><code>/story-finish</code></td>
-<td>Tests run, every scenario has a test, impact checked, <code>/opsx-verify</code>, context updated, pull request text drafted</td>
+<td>Tests run, every scenario has a test, impact checked, <code>/opsx-verify</code>, context updated, pull request title and text drafted with the work item link</td>
 <td>Review the diff</td>
 </tr>
 <tr>
@@ -479,6 +479,56 @@ few words: <code>48213-add-report-export</code>.</p>
 the fix, then <code>/story-finish</code>.</p>
 <p><strong>Stories across repos:</strong> one change folder per repo, same change id. Plan and build the service first,
 then the UI against the finished API. One pull request per repo, each linking the others.</p>
+<p><strong>Branch and pull request names.</strong> If <code>.ai-kit/conventions.json</code> exists (the kit ships one; your
+organisation can supply its own), every pull request says what kind of work it is, so an engineering-metrics
+tool can count features, production fixes, QA and UAT fixes and maintenance separately:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Kind of work</th>
+<th>Work item</th>
+<th>Branch</th>
+<th>Pull request title</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>New capability or enhancement</td>
+<td>User Story or Feature</td>
+<td><code>feature/&lt;id&gt;-&lt;short-name&gt;</code></td>
+<td><code>feat: &lt;id&gt; &lt;what changed&gt;</code></td>
+</tr>
+<tr>
+<td>Defect found in production</td>
+<td>Bug, Found In: Production</td>
+<td><code>hotfix/&lt;id&gt;-&lt;short-name&gt;</code></td>
+<td><code>hotfix: &lt;id&gt; &lt;what changed&gt;</code></td>
+</tr>
+<tr>
+<td>Defect found in QA or UAT</td>
+<td>Bug, Found In: QA or UAT</td>
+<td><code>bugfix/&lt;id&gt;-&lt;short-name&gt;</code></td>
+<td><code>fix: &lt;id&gt; &lt;what changed&gt;</code></td>
+</tr>
+<tr>
+<td>Maintenance (security findings, upgrades)</td>
+<td>Task or Story tagged Maintenance</td>
+<td><code>maint/&lt;id&gt;-&lt;short-name&gt;</code></td>
+<td><code>maint: &lt;id&gt; &lt;what changed&gt;</code></td>
+</tr>
+<tr>
+<td>Promotion between sprint and release branches</td>
+<td>None</td>
+<td><code>feature_20</code>, <code>release_20</code> (unchanged)</td>
+<td><code>promote: feature_20 to release_20</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>node .ai-kit/context-tools.cjs conventions name --type bugfix --id 812 --summary "Price is null for
+archived items"</code> prints the branch, the title and the work item link for work that did not start with
+<code>/story-start</code>. The commit check warns when a branch does not follow it; the pull request check compares the
+branch and the title. In the file, <code>check</code> is <code>off</code>, <code>warn</code> or <code>block</code>, <code>createBranch</code> is <code>ask</code> or <code>never</code>,
+and <code>workItem</code> names your "Found In" field and maintenance tag.</p>
 <p><strong>Your own design or test format:</strong> if your team has a skill for a technical design document or test
 scenarios in its house format, run it after step 2 and keep its output next to the plan.</p>
 <hr />
@@ -536,6 +586,10 @@ scenarios in its house format, run it after step 2 and keep its output next to t
 </table></div>
 <p>To see whether the hooks actually run, use <code>node .ai-kit/context-tools.cjs doctor</code>. It shows when each
 hook last ran. Hook notes go to the agent, not to you, so "I don't see anything" is normal.</p>
+<p><strong>Is the context used?</strong> The hooks record each time an agent opens a context page (in Copilot and Claude
+Code). <code>node .ai-kit/context-tools.cjs usage</code> lists the pages agents opened in the last 90 days, in how many
+chats, and the pages nobody opened. A page nobody opens is either not needed (merge, shorten or delete it)
+or not linked from where agents look (add a "Where to look" line in <code>AGENTS.md</code>). Check it monthly.</p>
 <h3 id="database-context-step-by-step">Database context, step by step</h3>
 <ol>
 <li><strong>Export the schema (a person, once).</strong> Structure only, with a read-only user, from a development or QA

@@ -8,14 +8,14 @@ and run it.
 
 | Layer | Holds | Lives in | Owner | Changes |
 | --- | --- | --- | --- | --- |
-| **Organisation** | The few rules every repo must follow; shared platforms; AI usage policy; kit version; readiness weights | One `org-context` repo | Architecture / engineering excellence | Rarely; reviewed by the owners |
-| **Product** | Catalogue of repos, system architecture, end-to-end flows, glossary, product-wide platform rules | One `product-context` hub per product ([MULTI-REPO.md](MULTI-REPO.md)) | Product tech leads | When flows or contracts change |
+| **Organisation** | The few rules every repo must follow; shared platforms; AI usage policy; kit version; readiness weights; branch and pull request naming | One `org-context` repo | Architecture / engineering excellence | Rarely; reviewed by the owners |
+| **Product** | Catalogue of repos, system architecture, end-to-end flows, glossary, product-wide platform rules | The product workspace's home repo, `product-context` (or a product hub) ([MULTI-REPO.md](MULTI-REPO.md)) | Product tech leads | When flows or contracts change |
 | **Repo** | `AGENTS.md`, rule files, in-depth pages, specs, code map | Each repo | The owning team | With every PR that changes the code it describes |
 | **Story** | Proposal, specs, design (if needed), tasks | `openspec/changes/<id>/` | Developer + reviewer | Every story |
 | **Personal** | A developer's own preferences | Their VS Code profile | The developer | Any time; never team rules |
 
 **The rule for where something goes:** put it at the lowest layer where it is true, and only once. A rule true
-for every repo goes in the org layer; a flow across one product's repos goes in that product's hub; a column's
+for every repo goes in the org layer; a flow across one product's repos goes in that product's home repo; a column's
 meaning goes in the repo that owns the table. Lower layers link to higher ones instead of copying them.
 
 **When layers disagree:** VS Code loads every applicable file and defines no precedence, so contradictions are
@@ -42,6 +42,12 @@ The copy is what the kit implements:
 - `.ai-kit/kit.json` records the org repo's path and commit, and a fingerprint of each copy.
 - The org's `context-readiness.json` is copied to `.ai-kit/readiness.json`, so every repo is scored on
   the same weights, unless the repo keeps its own.
+- The org's `conventions.json` is copied to `.ai-kit/conventions.json` the same way: the branch and pull
+  request naming every repo follows, so an engineering-metrics tool can tell features, production fixes,
+  QA and UAT fixes and maintenance apart. `/story-start` proposes the branch name (and creates it after
+  asking), `/story-finish` writes the title and the work item link, the commit check warns about a branch
+  that does not follow it, and the pull request check compares branch and title. `check` in the file sets
+  `off`, `warn` or `block`.
 - `context-tools check` warns when the copies are older than the local clone of the org repo, or were edited
   in the repo. The session-start note tells the agent which org rules it carries.
 - The agent is told not to edit org rules, and the context-steward agent is blocked from editing them.
@@ -55,7 +61,9 @@ node brownfield-ai-context/kit/install.mjs --create-org ../org-context
 cd ../org-context
 # 1. Replace every <replace: …> in rules/ and context/ with your real platforms and policies.
 # 2. Set kit.json (kit version every repo should run) and context-readiness.json (weights, band names).
-# 3. List products and their hubs in products.json.
+# 3. Set conventions.json: your branch and pull request naming, the work item field that says where a
+#    defect was found, the maintenance tag, and check: warn (start here) or block.
+# 4. List products and their home repos in products.json.
 git init && git add -A && git commit -m "Organisation context"   # push to a protected Azure Repos repo
 ```
 
@@ -68,6 +76,7 @@ What the template contains:
 | `context/platform.md` | Shared platforms (identity, permissions, logging, cloud): what each is for, how a repo uses it, owner | On demand |
 | `context/ai-usage.md` | Approved agents, models and MCP servers; what may be shared; agents never push | On demand |
 | `kit.json`, `context-readiness.json`, `products.json` | Kit version, scoring weights, product list | — |
+| `conventions.json` | Branch and pull request naming per kind of work (feature, production fix, QA/UAT fix, maintenance), promotion branches that are exempt, how a PR links its work item | — |
 | `CODEOWNERS` | Who must review changes | — |
 
 Two rules for writing org rules:

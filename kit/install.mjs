@@ -156,7 +156,7 @@ const KIT_SKILLS = ['context-create', 'kit-setup', 'context-update', 'context-as
 const OLD_SKILLS = ['context-bootstrap', 'context-baseline', 'context-refresh', 'story-to-change'];
 const SKILL_DIRS = { copilot: '.github/skills', claude: '.claude/skills', codex: '.agents/skills' };
 const kitOwned = rel => /^\.(github|claude|agents)\/skills\/([^/]+)\//.test(rel) && KIT_SKILLS.includes(rel.split('/')[2])
-  || /(context-steward|design-reviewer)(\.agent)?\.md$/.test(rel) || rel.startsWith('.ai-kit/') && rel !== '.ai-kit/readiness.json'
+  || /(context-steward|design-reviewer)(\.agent)?\.md$/.test(rel) || rel.startsWith('.ai-kit/') && !['.ai-kit/readiness.json', '.ai-kit/conventions.json'].includes(rel)
   || rel === '.github/hooks/ai-context.json' || rel.startsWith('.githooks/') || rel === '.github/workflows/ai-context.yml';
 
 // ------------------------------------------------------------------ text for each tool
@@ -206,6 +206,8 @@ if (homeMode || (stampObj && stampObj.mode === 'workspace')) { // the product-le
     for (const t of tools) plan.push([rel.replace('.github/skills/', SKILL_DIRS[t] + '/'), forTool(t, rel, fs.readFileSync(src, 'utf8'))]);
   }
 }
+// Claude Code reads CLAUDE.md, not AGENTS.md: the home repo's working-across-repos rules reach it through this.
+if ((homeMode || (stampObj && stampObj.mode === 'workspace')) && uses('claude') && !fs.existsSync(path.join(root, 'CLAUDE.md'))) plan.push(['CLAUDE.md', '@AGENTS.md\n']);
 if (ci === 'github') plan.push(['.github/workflows/ai-context.yml', fs.readFileSync(path.join(filesDir, '.ai-kit', 'ci', 'github-workflow.yml'), 'utf8')]);
 
 log(`AI context kit ${kitVersion} → ${root}  (${memberOf ? `joining the product workspace ${path.basename(memberOf)}` : homeMode ? 'product workspace home' : 'one repo'}; tools: ${tools.join(', ')}${upgrade ? ', upgrade' : ''}${dry ? ', dry run' : ''})`);
@@ -273,7 +275,23 @@ if (uses('claude') && !memberOf) {
   }
   const cur = text === null ? {} : (() => { try { return JSON.parse(text); } catch { return null; } })();
   if (cur === null) notes.push(`${rel} is not plain JSON: merge the "hooks" block from kit/optional/claude-code-settings.json by hand.`);
-  else if (JSON.stringify(cur).includes('context-tools.cjs')) skipped.push(`${rel} (kit hooks already there)`);
+  else if (JSON.stringify(cur).includes('context-tools.cjs')) {
+    // Kit hooks already there. On upgrade, replace only the kit's own entries (they may have new triggers);
+    // the team's own hooks stay as they are.
+    let changed = false;
+    if (upgrade) {
+      cur.hooks = cur.hooks || {};
+      for (const [ev, entries] of Object.entries(kitHooks)) {
+        const list = cur.hooks[ev] || [];
+        const mine = list.filter(e => JSON.stringify(e).includes('context-tools.cjs'));
+        if (JSON.stringify(mine) === JSON.stringify(entries)) continue;
+        cur.hooks[ev] = list.filter(e => !JSON.stringify(e).includes('context-tools.cjs')).concat(entries);
+        changed = true;
+      }
+    }
+    if (changed) { write(rel, JSON.stringify(cur, null, 2) + '\n'); updated.push(`${rel} (kit hooks refreshed; your own hooks kept)`); }
+    else skipped.push(`${rel} (kit hooks already there)`);
+  }
   else {
     cur.hooks = cur.hooks || {};
     for (const [ev, entries] of Object.entries(kitHooks)) cur.hooks[ev] = (cur.hooks[ev] || []).concat(entries);
@@ -416,6 +434,18 @@ if (orgArg) {
       else {
         const text = JSON.stringify({ _source: `${orgName} @ ${commit}`, ...w }, null, 2) + '\n';
         if (!fs.existsSync(repoWeights) || fs.readFileSync(repoWeights, 'utf8') !== text) { write(repoWeightsRel, text); created.push(`${repoWeightsRel} (org readiness weights, ${orgName} @ ${commit})`); }
+      }
+    }
+    // The organisation's branch and pull request convention, like the weights: copied unless the repo has its own.
+    const orgConv = path.join(orgDir, 'conventions.json'), repoConvRel = '.ai-kit/conventions.json', repoConv = path.join(root, '.ai-kit', 'conventions.json');
+    if (fs.existsSync(orgConv)) {
+      const cur = readJson(repoConv);
+      const shipped = readJson(path.join(filesDir, '.ai-kit', 'conventions.json'));
+      const own = cur && !cur._source && JSON.stringify(cur) !== JSON.stringify(shipped);
+      if (own) notes.push(`${repoConvRel} is the repo's own; the org convention was not copied over it.`);
+      else {
+        const text = JSON.stringify({ _source: `${orgName} @ ${commit}`, ...JSON.parse(fs.readFileSync(orgConv, 'utf8')) }, null, 2) + '\n';
+        if (!fs.existsSync(repoConv) || fs.readFileSync(repoConv, 'utf8') !== text) { write(repoConvRel, text); created.push(`${repoConvRel} (org branch and PR convention, ${orgName} @ ${commit})`); }
       }
     }
     orgRecord = { name: orgName, path: path.relative(root, orgDir).split(path.sep).join('/') || '.', commit, synced: new Date().toISOString().slice(0, 10), rulesDirs: dests.map(d => d.dir), files };

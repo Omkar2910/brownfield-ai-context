@@ -226,4 +226,40 @@ out=$(node "$SETUP" scan --root "$V"); has "$out" "Suggested: --setup workspace"
 out=$(node "$SETUP" plan --root "$V"); has "$out" "one: Move into the workspace" "second repo: plan moves the first repo in"
 has "$out" "Product pages: /product-context in product-context" "workspace chosen: product context on by default"
 
+echo "15. Product pages in stories, page reads, branch and PR convention"
+P="$T/prod"; mkdir -p "$P"; mkrepo "$P/orders"; mkdir -p "$P/orders/src"; echo x > "$P/orders/src/Svc.java"; git -C "$P/orders" add -A; git -C "$P/orders" commit -qm code --no-verify
+node "$KIT/kit/setup.mjs" apply --root "$P" --setup workspace --tools claude,copilot --product-context yes --yes >/dev/null 2>&1
+[ "$(cat "$P/product-context/CLAUDE.md" 2>/dev/null)" = "@AGENTS.md" ] && ok "home repo gets CLAUDE.md for Claude Code" || bad "home repo gets CLAUDE.md for Claude Code"
+grep -q '"matcher": "Edit|Write|MultiEdit|NotebookEdit|Read"' "$P/product-context/.claude/settings.json" && ok "Claude Code hook also sees reads" || bad "Claude Code hook also sees reads"
+mkdir -p "$P/product-context/context/flows"; printf '# Flow\n1. orders publishes OrderVoided [anchor: orders:src/Svc.java]\n' > "$P/product-context/context/flows/cancel.md"
+HT="$P/product-context/.ai-kit/context-tools.cjs"
+out=$(node "$HT" pages-for src/Svc.java --repo "$P/orders"); has "$out" "../product-context/context/flows/cancel.md" "pages-for lists the product flow page"
+echo "{\"hook_event_name\":\"PostToolUse\",\"session_id\":\"r1\",\"cwd\":\"$P/product-context\",\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"$P/product-context/context/flows/cancel.md\"}}" | node "$HT" post-edit >/dev/null
+out=$(node "$HT" usage --repo "$P/product-context"); has "$out" "1 chat(s)  context/flows/cancel.md" "usage counts page reads"
+has "$out" "Never read" "usage lists pages nobody read"
+out=$(node "$HT" conventions name --type bugfix --id 812 --summary "Price is null for archived items" --repo "$P/orders")
+has "$out" "branch:    bugfix/812-price-is-null-archived-items" "convention: branch name"
+has "$out" "title:     fix: 812 Price is null for archived items" "convention: title"
+out=$(node "$HT" conventions type --work-item-type Bug --found-in Production --repo "$P/orders"); has "$out" "hotfix" "convention: production bug is a hotfix"
+out=$(node "$HT" conventions check-branch release_20 --repo "$P/orders"); has "$out" "exempt" "convention: promotion branch exempt"
+git -C "$P/orders" checkout -q -b quick-fix; echo y >> "$P/orders/src/Svc.java"; git -C "$P/orders" add -A
+out=$(cd "$P/orders" && node "$HT" check --staged --repo .); has "$out" 'Naming: branch "quick-fix" does not follow' "commit check warns about the branch name"
+out=$(cd "$P/orders" && SYSTEM_PULLREQUEST_SOURCEBRANCH=refs/heads/feature/9-x AI_KIT_PR_TITLE="fix: 9 x" node "$HT" ci --repo .); has "$out" "branch says feature but the title says bugfix" "pull request check compares branch and title"
+O="$T/org2"; node "$KIT/kit/install.mjs" --create-org "$O" >/dev/null; git -C "$O" init -q; git -C "$O" add -A; git -C "$O" -c user.email=t@e -c user.name=T commit -qm org
+python3 - "$O/conventions.json" <<'PY'
+import json,sys; p=sys.argv[1]; j=json.load(open(p)); j['check']='block'; json.dump(j,open(p,'w'),indent=2)
+PY
+git -C "$O" add -A; git -C "$O" -c user.email=t@e -c user.name=T commit -qm block
+S2="$T/orgrepo"; mkrepo "$S2"; node "$KIT/kit/install.mjs" "$S2" --org "$O" >/dev/null 2>&1
+grep -q '"check": "block"' "$S2/.ai-kit/conventions.json" && grep -q '"_source"' "$S2/.ai-kit/conventions.json" && ok "org convention synced into the repo" || bad "org convention synced into the repo"
+U="$T/upg"; mkrepo "$U"; node "$KIT/kit/install.mjs" "$U" --tool claude >/dev/null 2>&1
+python3 - "$U/.claude/settings.json" <<'PY'
+import json,sys; p=sys.argv[1]; j=json.load(open(p))
+for e in j['hooks']['PostToolUse']: e['matcher']='Edit|Write|MultiEdit|NotebookEdit'
+j['hooks']['PostToolUse'].append({'matcher':'Bash','hooks':[{'type':'command','command':'echo team-hook'}]})
+json.dump(j,open(p,'w'),indent=2)
+PY
+git -C "$U" add -A; git -C "$U" commit -qm kit --no-verify; node "$KIT/kit/install.mjs" "$U" --upgrade >/dev/null 2>&1
+grep -q 'NotebookEdit|Read' "$U/.claude/settings.json" && grep -q 'team-hook' "$U/.claude/settings.json" && ok "upgrade refreshes kit hooks, keeps the team's own" || bad "upgrade refreshes kit hooks, keeps the team's own"
+
 echo ""; echo "Passed: $pass, failed: $fail"; [ "$fail" -eq 0 ]

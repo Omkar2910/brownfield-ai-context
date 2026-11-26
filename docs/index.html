@@ -193,6 +193,15 @@ covers all four with five parts:</p>
 <p>The full table of steps and tools, including optional ones, is in <a href="toolbox.html">TOOLBOX.md</a>.</p>
 <hr />
 <h2 id="3-one-time-setup-about-an-hour">3. One-time setup (about an hour)</h2>
+<blockquote>
+<p><strong>Easiest: let the setup agent do Steps 1–5.</strong> Put the kit's folder next to your repos, open that folder
+in your agent (Copilot agent mode, Claude Code or Codex) and say: <em>"Set up the AI context kit for the repos
+in this folder. Follow brownfield-ai-context/kit/SETUP-AGENT.md."</em> It looks at every repo, asks once (one
+home repo for the product or each repo on its own, which agents, product context, the pull request check,
+OpenSpec, Graphify), shows the plan and runs it after your yes. In a terminal:
+<code>node brownfield-ai-context/kit/setup.mjs</code>. Then continue at Step 6. The steps below are what it does, for
+when you want to do it by hand or understand it.</p>
+</blockquote>
 <h3 id="before-you-start">Before you start</h3>
 <ul>
 <li class="task"><input type="checkbox" aria-label="done"> VS Code with the GitHub Copilot Chat extension, signed in, agent mode available</li>
@@ -395,13 +404,11 @@ searching?</em> If yes, delete it. Then run:</p>
 </code></pre></div>
 <p>Fix any <code>ERROR</code> lines, commit everything, and open the setup pull request.</p>
 <h3 id="ui-and-backend-one-vs-code-window-or-two">UI and backend: one VS Code window or two?</h3>
-<p><strong>Rule: install per repo, open per story.</strong> Each repo carries its own kit and context. You choose how
-to open them based on what the story touches.</p>
-<blockquote>
-<p><strong>Several micro-frontends and services?</strong> Use a product context hub (catalog of repos, platform rules,
-contracts, cross-repo story notes, a script that builds the right VS Code window per story). See
-<strong><a href="multi-repo.html">MULTI-REPO.md</a></strong>. This section covers the simplest case: one UI repo and one service repo.</p>
-</blockquote>
+<p><strong>Two or more repos: use a product workspace</strong> (the setup agent suggests it). One home repo holds the kit's
+tools once and the product pages (flows across repos, platform rules, who calls whom); each repo keeps only
+its own knowledge. See <strong><a href="multi-repo.html">MULTI-REPO.md</a></strong> and <a href="kit-guide.html">kit/GUIDE.md</a>. The steps below
+show the alternative where each repo carries its own copy of the kit, which still works for one UI repo and
+one service repo.</p>
 <p><strong>If the UI and the service are two separate git repos (the usual case):</strong></p>
 <ol>
 <li>
@@ -527,18 +534,22 @@ root folder. Keep the root <code>AGENTS.md</code> short (shared rules and the ma
 <p>When your team or management wants a full reference of the service (architecture, business rules, data,
 API, dependencies, security, testing, operations, decisions) and a readiness score:</p>
 <ol>
-<li><strong>Type <code>/context-create deep</code>.</strong> It asks which flows matter most and who owns each page, then writes one
-   page at a time in <code>docs/context/</code>, every fact anchored, unproven claims under "Unverified". Check each
-   page as it appears.</li>
+<li><strong>Type <code>/context-create deep &lt;page&gt;</code>, one page at a time, starting where agents get things wrong.</strong> It
+   writes in <code>docs/context/</code>, every fact anchored, unproven claims under "Unverified". Check each page as it
+   appears. Write a page when a story needed the knowledge or the agent made a mistake, not all of them up
+   front: a page nothing points to is never read (<code>node .ai-kit/context-tools.cjs usage</code> shows which pages
+   agents actually open).</li>
 <li><strong>Data pages.</strong> If you can get a schema file (a DDL dump such as <code>pg_dump --schema-only</code> or a DB viewer's
    "Generate DDL", exported once by a person with a read-only user from a development or QA database),
    save it as <code>docs/context/data/schema.sql</code> and run
-   <code>node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql</code>. It writes one page per table; the skill then fills in what each table means for the tables your flows use.
+   <code>node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql</code>. It writes one page per table,
+   linked to the entity, repository, SQL and migrations that use it; the skill then asks you only what the
+   code cannot answer (what status values mean, where <code>_id</code> columns without a foreign key point).
    Without one, it writes table pages from migrations, entities and query constants. See
    <a href="context.html#data-context-from-code-and-from-the-database">CONTEXT-GUIDE.md</a>.</li>
-<li><strong>Review.</strong> Each page's owner reads it against the code, resolves the Unverified lines and sets the
-   page's frontmatter: sets <code>status: stable</code> and adds a line under <code>verified:</code> (<code>- { by: "human:&lt;name&gt;", at: "&lt;date&gt;" }</code>). Core pages first
-   (architecture, domain, data, API, dependencies, security).</li>
+<li><strong>Review.</strong> Each page's owner reads it against the code, resolves the Unverified lines, then runs
+   <code>node .ai-kit/context-tools.cjs review &lt;page or folder&gt; --by &lt;name&gt;</code> in their own terminal (it sets the
+   page to reviewed; an agent cannot run it).</li>
 <li><strong>Score it.</strong> Type <code>/context-assess</code>. You get the 0–100 score, its band, and the three gaps that would
    raise it most. Or run <code>node .ai-kit/context-tools.cjs readiness</code> any time.</li>
 <li><strong>Commit</strong> through a normal PR. From then on, stories keep the pages current (Phase 2 and 4 below).</li>

@@ -48,10 +48,15 @@ normal-size story without an approved plan.
    - Rules: its AGENTS.md lines and the rule files (`.github/instructions/`, `.claude/rules/`) that apply to
      those files. `node .ai-kit/context-tools.cjs pages-for <file> ...` lists the context lines anchored to
      them (in a product workspace, run the home repo's copy with `--repo <repo>`).
+   - Product pages: in a product workspace, `pages-for` also lists the home repo's pages anchored to those
+     files (flows across repos, platform rules). Read every flow page it names: they hold what other repos
+     rely on (event names, calls that must happen, field mapping) and the code of this repo cannot show it.
    - Area pages and traps: its `docs/context/` page for the area, and matching `known-traps.md` entries.
    - Data: the pages in `docs/context/data/tables/` for the tables the story reads or changes.
    - Contracts: the API definitions (OpenAPI files, DTOs) the story changes or calls.
-   Do not read `openspec/changes/archive/` or `docs/stories/` unless the user asks about past stories.
+   Read each page once; the story pack lists what you read, so later steps use the pack instead of reading
+   the pages again. Do not read `openspec/changes/archive/` or `docs/stories/` unless the user asks about
+   past stories.
 5. **Size it and order it.** Say which path you recommend; the user decides.
    - **Tiny** (one or two files in one repo, no API, data or permission change): no change folder.
      Failing test that shows the problem, fix, run the tests, then `/story-finish`.
@@ -75,6 +80,14 @@ normal-size story without an approved plan.
 8. **Save the change folders** (not for tiny stories).
    - Choose one change id for the whole story: lowercase kebab-case, the work item number first, then a
      verb (e.g. `48213-add-report-export`). Use the same id in every repo.
+   - **Branch name**, if `.ai-kit/conventions.json` exists (here or in the home repo): work out the kind of
+     work from the work item (its type, its "Found In" field for a Bug, a "Maintenance" tag; the field and
+     tag names are in the file). Run `node .ai-kit/context-tools.cjs conventions type --work-item-type
+     "<type>" --found-in "<value>" --tags "<tags>"`; if it says unknown, or you could not read the work
+     item, ask the user once which kind it is. Then `conventions name --type <type> --id <id> --summary
+     "<what changes>"` gives the branch name, the PR title and the work item link; use its change id too.
+     If `createBranch` is `ask`, ask before creating the branch (`git switch -c <branch>`) in each repo that
+     changes, from the branch the team starts work from. Never push. With `never`, show the name only.
    - For **each repo that changes and has `openspec/`**, in that repo's folder: run
      `openspec new change <change-id>` FIRST, then save `openspec/changes/<change-id>/context.md`: the full pack, with
      that repo's section first and the other repos' sections kept short, so a reviewer of this repo

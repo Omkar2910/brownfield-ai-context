@@ -1,6 +1,6 @@
 # AI Context Kit: user guide
 
-Kit 2.3 · for developers and tech leads · plain language
+Kit 2.4 · for developers and tech leads · plain language
 
 This guide covers everything you need to use the kit: setting it up, the skills, and running a story from
 start to finish in GitHub Copilot, Claude Code or OpenAI Codex. It assumes you have the kit's folder on
@@ -236,12 +236,12 @@ few words: `48213-add-report-export`.
 
 | Step | You type | What happens | You do |
 | --- | --- | --- | --- |
-| 1. Start | `/story-start 48213` | The agent reads the work item (or asks you to paste it), finds the repos and files it touches, lists what to know, and sizes it: tiny, small or normal | Answer at most one question, if it asks |
+| 1. Start | `/story-start 48213` | The agent reads the work item (or asks you to paste it), finds the repos and files it touches, pulls the context lines anchored to those files (in a workspace also the product flow pages), sizes it, and proposes the branch name from your naming convention | Answer at most one question; say yes or no to creating the branch |
 | 2. Plan | `/opsx-propose 48213-add-report-export` (say which repo; services before UIs) | OpenSpec writes the proposal, the specs (scenarios), a design if the change needs one, and the tasks. Without OpenSpec, the agent writes one `plan.md` | Read it |
 | 3. Fresh-eyes review | Run the `design-reviewer` agent on the change | A table of gaps: scenarios without a test, files that don't exist, rules broken, context to update | Decide what to fix |
 | 4. **Approve** | — | — | **Approve the plan, or ask for changes. Nothing is coded before this.** |
 | 5. Build | `/opsx-apply` | The agent writes each test first, sees it fail, then writes the code, a slice at a time | Review each slice |
-| 6. Finish | `/story-finish` | Tests run, every scenario has a test, impact checked, `/opsx-verify`, context updated, pull request text drafted | Review the diff |
+| 6. Finish | `/story-finish` | Tests run, every scenario has a test, impact checked, `/opsx-verify`, context updated, pull request title and text drafted with the work item link | Review the diff |
 | 7. Pull request | — | The pull request check runs | Commit, push, open the pull request yourself; the team reviews |
 | 8. Archive | `/opsx-archive 48213-add-report-export` | The story's specs merge into the repo's record of what it does | Push it as the last commit of the same pull request |
 
@@ -250,6 +250,24 @@ the fix, then `/story-finish`.
 
 **Stories across repos:** one change folder per repo, same change id. Plan and build the service first,
 then the UI against the finished API. One pull request per repo, each linking the others.
+
+**Branch and pull request names.** If `.ai-kit/conventions.json` exists (the kit ships one; your
+organisation can supply its own), every pull request says what kind of work it is, so an engineering-metrics
+tool can count features, production fixes, QA and UAT fixes and maintenance separately:
+
+| Kind of work | Work item | Branch | Pull request title |
+| --- | --- | --- | --- |
+| New capability or enhancement | User Story or Feature | `feature/<id>-<short-name>` | `feat: <id> <what changed>` |
+| Defect found in production | Bug, Found In: Production | `hotfix/<id>-<short-name>` | `hotfix: <id> <what changed>` |
+| Defect found in QA or UAT | Bug, Found In: QA or UAT | `bugfix/<id>-<short-name>` | `fix: <id> <what changed>` |
+| Maintenance (security findings, upgrades) | Task or Story tagged Maintenance | `maint/<id>-<short-name>` | `maint: <id> <what changed>` |
+| Promotion between sprint and release branches | None | `feature_20`, `release_20` (unchanged) | `promote: feature_20 to release_20` |
+
+`node .ai-kit/context-tools.cjs conventions name --type bugfix --id 812 --summary "Price is null for
+archived items"` prints the branch, the title and the work item link for work that did not start with
+`/story-start`. The commit check warns when a branch does not follow it; the pull request check compares the
+branch and the title. In the file, `check` is `off`, `warn` or `block`, `createBranch` is `ask` or `never`,
+and `workItem` names your "Found In" field and maintenance tag.
 
 **Your own design or test format:** if your team has a skill for a technical design document or test
 scenarios in its house format, run it after step 2 and keep its output next to the plan.
@@ -271,6 +289,11 @@ scenarios in its house format, run it after step 2 and keep its output next to t
 
 To see whether the hooks actually run, use `node .ai-kit/context-tools.cjs doctor`. It shows when each
 hook last ran. Hook notes go to the agent, not to you, so "I don't see anything" is normal.
+
+**Is the context used?** The hooks record each time an agent opens a context page (in Copilot and Claude
+Code). `node .ai-kit/context-tools.cjs usage` lists the pages agents opened in the last 90 days, in how many
+chats, and the pages nobody opened. A page nobody opens is either not needed (merge, shorten or delete it)
+or not linked from where agents look (add a "Where to look" line in `AGENTS.md`). Check it monthly.
 
 ### Database context, step by step
 

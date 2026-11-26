@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.4.0 (November 2026)
+
+Context that is used, and pull requests that say what they are.
+
+**Added**
+- **Product pages reach stories.** In a product workspace, `pages-for <file>` also lists the home repo's pages
+  anchored to that file (flows across repos, platform rules), so `/story-start` reads the flow that says which
+  event another service listens for, and `/story-finish` names the product page a change affects.
+- **Which pages agents read.** The agent hooks record each context page an agent opens (Copilot, and Claude
+  Code, whose hook now also sees reads). `context-tools usage` lists pages by how many chats opened them, and
+  the pages nobody opened.
+- **Branch and pull request convention** (`.ai-kit/conventions.json`, team- or org-owned): per kind of work
+  (feature, production fix, QA/UAT fix, maintenance) the work item type, branch pattern, title prefix and
+  metrics category; promotion branches exempt. `context-tools conventions` works out the type from the work
+  item and prints the branch, title and work item link. `/story-start` proposes the branch and creates it
+  after asking; `/story-finish` writes the title and link; the commit check warns about a branch that does not
+  follow it; the pull request check compares branch and title. `check`: off, warn or block. `install.mjs --org`
+  copies the organisation's version.
+- The workspace home repo gets a `CLAUDE.md` (`@AGENTS.md`), so Claude Code reads its rules.
+
+**Changed**
+- `--upgrade` refreshes the kit's own Claude Code hook entries and keeps the team's own hooks.
+- `/story-start` reads each page once and keeps the list in the story pack.
+- `MULTI-REPO.md` rewritten around the product workspace, with the rule for what lives in a repo and what in
+  the home repo; `ORG-LEVEL.md`, the root `GUIDE.md`, `kit/GUIDE.md` and the management briefing updated.
+
 ## 2.3.1 (November 2026)
 
 **Changed**

@@ -83,7 +83,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
     <div class="toc">
 <ul>
 <li><a href="#1-the-idea-in-one-paragraph">1. The idea in one paragraph</a></li>
-<li><a href="#2-what-goes-where">2. What goes where</a></li>
+<li><a href="#2-what-goes-where-on-disk">2. What goes where on disk</a></li>
 <li><a href="#3-setting-it-up">3. Setting it up</a></li>
 <li><a href="#4-opening-the-right-repos-for-a-story">4. Opening the right repos for a story</a></li>
 <li><a href="#5-running-a-story-that-crosses-repos">5. Running a story that crosses repos</a></li>
@@ -107,11 +107,11 @@ a micro-frontend shell, several micro-frontend remotes, several backend services
 Plain English, about 15 minutes. Read <a href="index.html">GUIDE.md</a> first for the single-repo setup.</p>
 <hr />
 <h2 id="1-the-idea-in-one-paragraph">1. The idea in one paragraph</h2>
-<p>Context lives at <strong>three levels</strong>, and each fact goes to exactly one of them. Each repo keeps its own
-rules. A small <strong>product context hub</strong> repo keeps what no single repo owns: which repos exist and how
-they depend on each other, platform rules, API contracts, and notes for stories that cross repos. For
-each story you open <strong>only the repos it touches, plus the hub</strong>, in one VS Code window. A small script
-in the hub generates that window for you.</p>
+<p>Set the product up as a <strong>product workspace</strong>. One <strong>home repo</strong> (<code>product-context</code>) holds the kit's skills,
+agents, hooks and tool once, plus what no single repo owns: which repos exist and who calls whom, flows across
+repos, platform rules, contracts and notes for stories that cross repos. Each code repo keeps <strong>only its own
+knowledge</strong>, so it changes in the same pull request as its code. You open the repos a story touches together
+with the home repo.</p>
 <div class="tablebox"><table>
 <thead>
 <tr>
@@ -124,46 +124,84 @@ in the hub generates that window for you.</p>
 <tbody>
 <tr>
 <td><strong>Organization</strong></td>
-<td>Rules for every product (security, coding standards)</td>
-<td>GitHub organization custom instructions, or a platform hub</td>
+<td>Rules for every product (security, coding standards, branch and PR naming)</td>
+<td>An org context repo, synced into each repo (<a href="org-level.html">ORG-LEVEL.md</a>)</td>
 <td>Architecture / platform team</td>
 </tr>
 <tr>
-<td><strong>Product (hub)</strong></td>
-<td>Repo catalog, system map, platform rules for this product, API contracts, cross-repo story notes, cross-repo skill</td>
-<td><code>product-context</code> repo</td>
+<td><strong>Product (home repo)</strong></td>
+<td>The kit's tools; repo catalogue, system map, flows across repos, platform rules, contracts, cross-repo story notes</td>
+<td><code>product-context</code></td>
 <td>Tech leads of the product</td>
 </tr>
 <tr>
 <td><strong>Repo</strong></td>
-<td>Its commands, rules, traps, code map, its own specs and changes</td>
-<td>Each repo (<code>AGENTS.md</code>, <code>.github/</code>, <code>docs/context/</code>, <code>openspec/</code>)</td>
+<td>Its commands, rules, traps, tables, code map, its own specs and changes</td>
+<td>Each repo (<code>AGENTS.md</code>, rule files, <code>docs/context/</code>, <code>openspec/</code>)</td>
 <td>That repo's team</td>
 </tr>
 </tbody>
 </table></div>
+<p><strong>The rule for what goes where:</strong> if one team can change it in one pull request, it lives in that repo. If
+changing it needs two repos to agree, it lives in the home repo. Product pages link down to repo pages and
+never copy them.</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>In each repo (<code>docs/context/</code>)</th>
+<th>In the home repo (<code>context/</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>How the repo is built; its commands and traps</td>
+<td>Which repos exist, who owns them, who calls whom (<code>catalog.json</code>)</td>
+</tr>
+<tr>
+<td>Its business rules, as its code implements them</td>
+<td>Flows across repos: 5–10 steps, one line each saying which repo does what, linked to that repo's page</td>
+</tr>
+<tr>
+<td>Its tables: meaning of columns and status values</td>
+<td>Field mapping across repos: screen field → API field → column</td>
+</tr>
+<tr>
+<td>The API it offers and the calls it makes</td>
+<td>What one repo relies on from another: event names, endpoints, who consumes them</td>
+</tr>
+<tr>
+<td>Deep detail inside the repo (an invoice calculation)</td>
+<td>Platform rules, glossary, decisions that cross repos</td>
+</tr>
+</tbody>
+</table></div>
+<p>A product flow page is short on purpose. In a test, an agent planning a cancel-order story got the event name
+billing listens for and a stock-release call to another service right only because the flow page said so; it
+did not need the internals of either service.</p>
 <hr />
-<h2 id="2-what-goes-where">2. What goes where</h2>
+<h2 id="2-what-goes-where-on-disk">2. What goes where on disk</h2>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code>work/
-├── product-context/                 ← the hub (one per product)
+├── ai-context-kit/                  ← the kit (for setup and upgrades)
+├── product-context/                 ← the home repo (one per product)
+│   ├── AGENTS.md, CLAUDE.md         how to work across the repos
+│   ├── .github/skills, .claude/…    the kit's skills, agents and hooks, once for every repo
+│   ├── .ai-kit/                     the context tool, conventions.json, readiness weights
+│   ├── .githooks/                   the commit check every repo runs
 │   ├── catalog.json                 every repo: type, owner, areas, exposes/API, calls, uses
 │   ├── context/system-map.md        generated: tables, &quot;which UI calls which API&quot; matrix, diagram
+│   ├── context/flows/               one page per flow across repos
 │   ├── context/platform/            auth, micro-frontends, errors and logging rules
 │   ├── contracts/&lt;service&gt;/         copies of each service's API contract
 │   ├── initiatives/&lt;change-id&gt;.md   one note per cross-repo story
-│   ├── workspaces/*.code-workspace  generated VS Code windows per story or area
-│   ├── .github/skills/cross-repo-story/
-│   └── scripts/hub.mjs              map, workspace, impact, status, clone, contracts
+│   ├── product.code-workspace       every repo in one VS Code window
+│   └── scripts/hub.mjs              map, workspace, impact, status, clone, contracts, claude
 ├── shell-app/                       ← micro-frontend shell
 ├── reports-mfe/                     ← micro-frontend remote
-├── admin-mfe/
 ├── report-service/                  ← backend service
-├── ciam-service/
 └── ui-shared-lib/                   ← shared library
-    (each repo: AGENTS.md, .github/instructions, .github/skills, hooks, .githooks,
-     docs/context, openspec/, graphify-out/)
+    (each repo: AGENTS.md, rule files, docs/context/, openspec/, .ai-kit/kit.json stamp)
 </code></pre></div>
-<p>Keep all clones <strong>side by side in one folder</strong>. The hub's scripts and the workspace files assume that.</p>
+<p>Keep all clones <strong>side by side in one folder</strong>. The home repo's scripts and the workspace file assume that.</p>
 <h3 id="what-each-kind-of-repo-says-about-the-others">What each kind of repo says about the others</h3>
 <p><code>/context-create</code> asks what kind of repo it is working in and adds these (details in
 <code>kit/files/.github/skills/context-create/references/repo-types.md</code>):</p>
@@ -185,7 +223,7 @@ in the hub generates that window for you.</p>
 </tr>
 <tr>
 <td><strong>Backend service</strong></td>
-<td>API base path and where the contract lives; who calls it (from the hub); permission per endpoint</td>
+<td>API base path and where the contract lives; who calls it (from the catalogue); permission per endpoint</td>
 </tr>
 <tr>
 <td><strong>Shared library</strong></td>
@@ -193,72 +231,57 @@ in the hub generates that window for you.</p>
 </tr>
 <tr>
 <td><strong>Every repo</strong></td>
-<td>A "Where to look" line pointing at <code>../product-context/</code>; 2–3 lines of platform rules that apply to almost every task</td>
+<td>2–3 lines of platform rules that apply to almost every task, with a link to the home repo's page</td>
 </tr>
 </tbody>
 </table></div>
 <p>Rules that apply everywhere (the identity provider for login, the permission service, one error format, how
-micro-frontends share dependencies) are written <strong>once</strong> in the hub's <code>context/platform/</code>. Each repo has
-only a short summary line and the link.</p>
+micro-frontends share dependencies) are written <strong>once</strong> in the home repo's <code>context/platform/</code>.</p>
 <hr />
 <h2 id="3-setting-it-up">3. Setting it up</h2>
-<p>Above the product hubs there can be one organisation layer (rules every repo follows, synced into each repo);
-see <a href="org-level.html">ORG-LEVEL.md</a>.</p>
-<h3 id="once-per-product-about-an-hour-one-person">Once per product (about an hour, one person)</h3>
-<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs --create-hub ../product-context
-cd ../product-context
-# edit catalog.json: one entry per repo
-# edit context/platform/*.md: your real rules, short, with reasons
-node scripts/hub.mjs map
-git init &amp;&amp; git add -A &amp;&amp; git commit -m &quot;Product context hub&quot;   # then push to Azure Repos
+<p><strong>Easiest:</strong> put the kit next to the repos, open that folder in your agent and say <em>"Set up the AI context kit
+for the repos in this folder. Follow ai-context-kit/kit/SETUP-AGENT.md."</em> It suggests the workspace as soon as
+there are two repos, asks once, shows the plan and runs it after your yes (in a terminal:
+<code>node ai-context-kit/kit/setup.mjs</code>). The steps below are what it runs; details in <a href="kit-guide.html">kit/GUIDE.md</a>.</p>
+<h3 id="once-per-product-one-person">Once per product (one person)</h3>
+<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node ai-context-kit/kit/install.mjs --create-workspace product-context --tool copilot,claude
+node ai-context-kit/kit/install.mjs report-service --workspace product-context
+node ai-context-kit/kit/install.mjs reports-mfe    --workspace product-context
 </code></pre></div>
-<p>Then the product-level context (half a day, the tech lead with one developer per service):</p>
+<h3 id="then-in-this-order">Then, in this order</h3>
 <ol>
-<li>Clone the repos next to the hub (<code>node scripts/hub.mjs clone all --run</code>) and open them all with the hub
-   (<code>node scripts/hub.mjs workspace all</code>, then open the generated <code>.code-workspace</code>).</li>
-<li>Type <code>/product-context</code>. It writes <code>context/architecture.md</code>, <code>context/glossary.md</code>, one
-   <code>context/flows/&lt;flow&gt;.md</code> per important end-to-end flow (with screen field → API field → column
-   mappings) and fills in <code>context/platform/</code>. Every fact is anchored into a repo as
-   <code>[anchor: report-service:src/main/java/**/ReportController.java]</code>.</li>
-<li><code>node scripts/hub.mjs check</code> confirms every anchor resolves in the cloned repos;
-   <code>node scripts/hub.mjs readiness</code> scores the hub's own context.</li>
-<li>Owners review their pages: each sets <code>status: stable</code> and adds a line under <code>verified:</code> (<code>- { by: "human:&lt;name&gt;", at: "&lt;date&gt;" }</code>). Commit and push.</li>
+<li><strong>Context for each repo, services first:</strong> <code>/context-create</code> in each repo (and <code>/context-create deep data</code>
+   where a repo owns tables). Each team reviews its own.</li>
+<li><strong>The product picture, last:</strong> <code>/product-context</code> in the home repo. It fills <code>catalog.json</code> (who calls
+   whom), writes <code>context/architecture.md</code>, <code>context/glossary.md</code>, one <code>context/flows/&lt;flow&gt;.md</code> per important
+   flow across repos, and <code>context/platform/</code>. Every fact is anchored into a repo as
+   <code>[anchor: report-service:src/main/java/**/ReportController.java]</code>. It comes out better once each repo has
+   its own context, because it links to those pages instead of guessing.</li>
+<li><strong>Check and review:</strong> <code>node scripts/hub.mjs check</code> confirms every anchor resolves in the repos; owners
+   review their pages and run <code>node .ai-kit/context-tools.cjs review &lt;page&gt; --by &lt;name&gt;</code> in their own terminal.</li>
+<li><strong>A repo added later:</strong> run setup again (it adds the repo), <code>/context-create</code> in it, then
+   <code>/product-context update</code>.</li>
 </ol>
-<p>Per-repo detail (each service's data, API, screens, security) stays in that repo's <code>docs/context/</code>, made with
-<code>/context-create deep</code> there; the hub links to it instead of copying it.</p>
-<p>The catalog is the most valuable part. For each repo record: <code>type</code> (<code>mfe-shell</code>, <code>mfe-remote</code>,
-<code>service</code>, <code>library</code>), <code>owner</code>, <code>areas</code> (business areas such as <code>reports</code>; use <code>platform</code> for repos
-almost everything uses), <code>exposes</code> (micro-frontends) or <code>api</code> and <code>contract</code> (services), and <code>calls</code>,
-<code>uses</code>, <code>loads</code> (dependencies). See the example <code>catalog.json</code>.</p>
-<h3 id="once-per-repo-each-team-on-their-own-setup-pr">Once per repo (each team, on their own setup PR)</h3>
-<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs ../reports-mfe --graphify
-# then in VS Code: /context-create, build the code map, review, commit
-</code></pre></div>
-<p>For many repos at once (PowerShell):</p>
-<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-powershell">foreach ($r in &quot;shell-app&quot;,&quot;reports-mfe&quot;,&quot;admin-mfe&quot;,&quot;report-service&quot;) {
-  node brownfield-ai-context/kit/install.mjs &quot;..\$r&quot; --graphify
-}
-</code></pre></div>
+<p><strong>How stories use the product pages.</strong> <code>pages-for &lt;file&gt;</code> (which <code>/story-start</code> and <code>/story-finish</code> run)
+lists the home repo's lines anchored to the files a story touches, next to the repo's own pages. So an agent
+changing <code>OrderService.java</code> is pointed at the cancellation flow page that says which event billing listens
+for, without anyone having to remember it.</p>
 <h3 id="keeping-the-kit-the-same-everywhere">Keeping the kit the same everywhere</h3>
-<p>Each repo records its kit version in <code>.ai-kit/kit.json</code>. When the kit improves:</p>
-<div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">node brownfield-ai-context/kit/install.mjs ../reports-mfe --upgrade
-</code></pre></div>
-<p>This replaces only the kit's own files (skills, agents, hook script and config, git hooks). It never
-touches <code>AGENTS.md</code>, instructions, <code>docs/context/</code> or your PR template. With many repos, consider the
-<strong>product workspace</strong> instead: the tools live once in a home repo, so there is one upgrade, not one per
-repo (<a href="kit-guide.html">kit/GUIDE.md</a>). Commit the result in a
-small PR. Later, an agent plugin or APM package can do this centrally (see <a href="toolbox.html">TOOLBOX.md</a>).</p>
+<p>The tools live once in the home repo, so an upgrade is one command there
+(<code>node ai-context-kit/kit/install.mjs product-context --upgrade</code>, or ask the agent "upgrade the kit").
+Repos record only a small stamp. A product hub (<code>--create-hub</code>) is the older form, for repos that each keep
+their own copy of the kit; it holds the same product pages and works with the same scripts.</p>
 <hr />
 <h2 id="4-opening-the-right-repos-for-a-story">4. Opening the right repos for a story</h2>
-<p>Do not open every repo at once: more folders mean more rules, more duplicate skills and more code for
-the agent to wade through. Open the <strong>working set</strong> for the story.</p>
+<p><code>product.code-workspace</code> opens every repo. For a large product, open only the <strong>working set</strong> for the story:
+more folders mean more code for the agent to wade through.</p>
 <div class="code"><button type="button" class="copy">Copy</button><pre><code class="language-bash">cd product-context
 node scripts/hub.mjs workspace reports                    # the &quot;reports&quot; area + its direct dependencies
 node scripts/hub.mjs workspace reports-mfe report-service # exactly these repos
 node scripts/hub.mjs workspace reports ciam-service --name reports-with-auth
 </code></pre></div>
 <p>This writes <code>workspaces/&lt;name&gt;.code-workspace</code> with the repos (producers first, then micro-frontends, then
-the shell) <strong>plus the hub</strong>. Open it with <strong>File → Open Workspace from File</strong>. Platform repos (areas
+the shell) <strong>plus the home repo</strong>. Open it with <strong>File → Open Workspace from File</strong>. Platform repos (areas
 include <code>platform</code>) are listed but not added unless you name them, so they don't end up in every window.
 It warns when a repo isn't cloned (<code>node scripts/hub.mjs clone reports --run</code> clones it) and when the
 window would hold more than five repos.</p>
@@ -272,7 +295,7 @@ window would hold more than five repos.</p>
 <tbody>
 <tr>
 <td>One repo</td>
-<td>That repo alone. Add the hub only if you need the platform rules or contracts.</td>
+<td>That repo plus the home repo (it holds the skills and the product pages).</td>
 </tr>
 <tr>
 <td>One micro-frontend + the service it calls</td>
@@ -288,7 +311,7 @@ window would hold more than five repos.</p>
 </tr>
 </tbody>
 </table></div>
-<p>With the hub in the window, its <code>cross-repo-story</code> skill is available alongside each repo's own skills.</p>
+<p>With the home repo in the window, its skills (including <code>cross-repo-story</code>) serve every repo.</p>
 <hr />
 <h2 id="5-running-a-story-that-crosses-repos">5. Running a story that crosses repos</h2>
 <ol>
@@ -301,7 +324,7 @@ window would hold more than five repos.</p>
 <li><strong>Per repo, in that order:</strong> the normal single-repo flow (<code>/story-start</code> → <code>/opsx-propose &lt;change-id&gt;</code>
    → review → <code>/opsx-apply</code> → <code>/story-finish</code>). Same change id in every repo. One PR per repo, each linking
    the initiative note.</li>
-<li><strong>After each service PR merges:</strong> <code>node scripts/hub.mjs contracts --sync</code> in the hub and commit, so the
+<li><strong>After each service PR merges:</strong> <code>node scripts/hub.mjs contracts --sync</code> in the home repo and commit, so the
    micro-frontends see the new contract.</li>
 <li><strong>Finish:</strong> archive each repo's OpenSpec change; update <code>catalog.json</code> if a dependency was added or
    removed (<code>hub.mjs map</code>); mark the initiative done.</li>
@@ -336,7 +359,7 @@ can hold one change for several repos; try it later if this becomes awkward (see
 <td>Graphify global graph: <code>graphify global add graphify-out/graph.json --as &lt;repo&gt;</code> in each repo, then query with <code>--graph</code> pointing at <code>graphify global path</code></td>
 </tr>
 <tr>
-<td>Has a service's contract changed since the hub copy?</td>
+<td>Has a service's contract changed since the home repo's copy?</td>
 <td><code>node scripts/hub.mjs contracts</code></td>
 </tr>
 </tbody>
@@ -382,18 +405,23 @@ dependency is added to the catalog in the same PR that introduces it.</p>
 </tr>
 <tr>
 <td>Weekly (5 min)</td>
-<td><code>hub.mjs check</code> (after pulling the repos): hub lines whose code changed since review</td>
+<td><code>hub.mjs check</code> (after pulling the repos): product lines whose code changed since review</td>
+<td>Product tech lead</td>
+</tr>
+<tr>
+<td>Monthly (5 min)</td>
+<td><code>context-tools usage</code>: pages agents never opened; merge, shorten or delete them</td>
 <td>Product tech lead</td>
 </tr>
 <tr>
 <td>A story changes a cross-repo flow or contract</td>
-<td>Its design's "Context impact" lists the hub page; a linked PR in the hub updates it</td>
+<td><code>pages-for</code> names the product page; a linked PR in the home repo updates it</td>
 <td>Story author</td>
 </tr>
 <tr>
 <td>Each kit release</td>
-<td><code>install.mjs &lt;repo&gt; --upgrade</code> per repo</td>
-<td>Each team</td>
+<td>One upgrade in the home repo</td>
+<td>Product tech lead</td>
 </tr>
 <tr>
 <td>Quarterly</td>
@@ -402,12 +430,12 @@ dependency is added to the catalog in the same PR that introduces it.</p>
 </tr>
 </tbody>
 </table></div>
-<p>Ownership: put the hub under CODEOWNERS (or branch policies in Azure Repos): platform rules → platform
+<p>Ownership: put the home repo under CODEOWNERS (or branch policies in Azure Repos): platform rules → platform
 team; catalog and initiatives → product tech leads; <code>contracts/</code> → updated only by the sync, never by hand.</p>
 <hr />
 <h2 id="8-rolling-it-out">8. Rolling it out</h2>
 <ol>
-<li><strong>Start small:</strong> the hub with a catalog of every repo (cheap, immediately useful), but the kit only in
+<li><strong>Start small:</strong> the home repo with a catalogue of every repo (cheap, immediately useful), context only for
    one micro-frontend and the service it calls. Run one real cross-repo story.</li>
 <li><strong>Add repos as teams pick up stories</strong>, not all at once. Each team owns its setup PR.</li>
 <li><strong>Automate later:</strong> contract sync in service pipelines, the context check in PR pipelines, kit
@@ -424,16 +452,32 @@ team; catalog and initiatives → product tech leads; <code>contracts/</code> �
 </thead>
 <tbody>
 <tr>
-<td>Create the hub</td>
-<td><code>node kit/install.mjs --create-hub ../product-context</code></td>
+<td>Set up or upgrade everything</td>
+<td>Ask the agent (<code>SETUP-AGENT.md</code>, later <code>/kit-setup</code>), or <code>node ai-context-kit/kit/setup.mjs</code></td>
 </tr>
 <tr>
-<td>Install the kit in a repo</td>
-<td><code>node kit/install.mjs ../&lt;repo&gt; --graphify</code></td>
+<td>Create the home repo</td>
+<td><code>node kit/install.mjs --create-workspace product-context --tool copilot,claude</code></td>
 </tr>
 <tr>
-<td>Upgrade the kit in a repo</td>
-<td><code>node kit/install.mjs ../&lt;repo&gt; --upgrade</code></td>
+<td>Add a repo</td>
+<td><code>node kit/install.mjs &lt;repo&gt; --workspace product-context</code></td>
+</tr>
+<tr>
+<td>Upgrade the kit</td>
+<td><code>node kit/install.mjs product-context --upgrade</code></td>
+</tr>
+<tr>
+<td>Product pages for a file</td>
+<td><code>node .ai-kit/context-tools.cjs pages-for &lt;file&gt; --repo &lt;repo&gt;</code> (in the home repo)</td>
+</tr>
+<tr>
+<td>Pages agents actually read</td>
+<td><code>node .ai-kit/context-tools.cjs usage</code></td>
+</tr>
+<tr>
+<td>Branch name and PR title</td>
+<td><code>node .ai-kit/context-tools.cjs conventions name --type &lt;type&gt; --id &lt;id&gt; --summary "&lt;text&gt;"</code></td>
 </tr>
 <tr>
 <td>Regenerate the system map</td>
@@ -442,6 +486,10 @@ team; catalog and initiatives → product tech leads; <code>contracts/</code> �
 <tr>
 <td>Window for a story</td>
 <td><code>node scripts/hub.mjs workspace &lt;area or repos&gt;</code></td>
+</tr>
+<tr>
+<td>Claude Code with every repo</td>
+<td><code>node scripts/hub.mjs claude</code></td>
 </tr>
 <tr>
 <td>What does a change affect</td>
@@ -460,12 +508,8 @@ team; catalog and initiatives → product tech leads; <code>contracts/</code> �
 <td><code>node scripts/hub.mjs contracts [--sync]</code></td>
 </tr>
 <tr>
-<td>Hub anchors still true in the repos?</td>
+<td>Product anchors still true in the repos?</td>
 <td><code>node scripts/hub.mjs check</code></td>
-</tr>
-<tr>
-<td>Hub readiness score</td>
-<td><code>node scripts/hub.mjs readiness</code></td>
 </tr>
 </tbody>
 </table></div>
