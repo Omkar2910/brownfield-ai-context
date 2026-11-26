@@ -123,7 +123,10 @@ function defaults(s) {
   const home = s.homes[0];
   const others = s.repos.filter(r => r.mode !== 'home');
   const own = others.filter(r => r.mode === 'own').length;
-  const setup = home ? 'workspace' : own && own >= others.filter(r => r.mode === 'none').length ? 'repo' : others.length >= 2 ? 'workspace' : 'repo';
+  // Two or more repos: a workspace, even when some already have their own copy (the move keeps their knowledge
+  // and is what makes product context possible). One repo: on its own; run setup again when a second one arrives.
+  const setup = home || others.length >= 2 ? 'workspace' : 'repo';
+  void own;
   const tools = [...new Set(s.repos.flatMap(r => r.tools))].filter(t => ALL_TOOLS.includes(t));
   return {
     setup, home: home ? home.name : 'product-context',
@@ -364,7 +367,11 @@ if (!cmd) {
 } else if (cmd === 'scan') {
   if (json) console.log(JSON.stringify({ ...s0, defaults: defaults(s0) }, null, 2)); else { printScan(s0); const d = defaults(s0); console.log(`\nSuggested: --setup ${d.setup}${d.setup === 'workspace' ? ` --home ${d.home}` : ''} --repos ${d.repos.join(',') || '(none)'} --tools ${d.tools.join(',')} --product-context ${d.productContext ? 'yes' : 'no'} --ci none`); }
 } else if (cmd === 'plan' || cmd === 'apply') {
-  const c = { ...defaults(s0), ...readChoices() };
+  const picked = readChoices();
+  const d = defaults(s0);
+  // A setup chosen by hand decides the defaults that follow from it (product context on for a workspace).
+  if (picked.setup && picked.setup !== d.setup) d.productContext = picked.setup === 'workspace';
+  const c = { ...d, ...picked };
   const errs = validate(c, s0);
   if (errs.length) { console.log(errs.map(e => '! ' + e).join('\n')); process.exit(2); }
   const p = plan(s0, c);

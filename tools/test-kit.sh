@@ -221,4 +221,9 @@ out=$(node "$SETUP" apply --root "$V" --setup repo --tools codex --product-conte
 [ -f "$V/one/.ai-kit/context-tools.cjs" ] && [ -d "$V/one/.agents/skills/kit-setup" ] && ok "repo setup: tool and /kit-setup skill" || bad "repo setup: tool and /kit-setup skill"
 out=$(node "$SETUP" plan --root "$V" --setup bogus 2>&1 || true); has "$out" 'setup must be "workspace" or "repo"' "bad choices are refused"
 
+git -C "$V/one" add -A; git -C "$V/one" commit -qm kit --no-verify; mkrepo "$V/two"; git -C "$V/two" commit -qm init --no-verify --allow-empty
+out=$(node "$SETUP" scan --root "$V"); has "$out" "Suggested: --setup workspace" "second repo: suggests moving to a workspace"
+out=$(node "$SETUP" plan --root "$V"); has "$out" "one: Move into the workspace" "second repo: plan moves the first repo in"
+has "$out" "Product pages: /product-context in product-context" "workspace chosen: product context on by default"
+
 echo ""; echo "Passed: $pass, failed: $fail"; [ "$fail" -eq 0 ]
