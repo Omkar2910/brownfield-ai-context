@@ -132,6 +132,8 @@ node .ai-kit/context-tools.cjs migrate [--dry-run]        # upgrade page format 
 node .ai-kit/context-tools.cjs schema-import <schema.sql|schema.json> [--out docs/context/data] [--no-code]   # table pages from a DDL dump or tbls, linked to the code
 node .ai-kit/context-tools.cjs review <page|folder> --by <name>   # a person marks pages reviewed (own terminal only)
 node .ai-kit/context-tools.cjs usage [--days 90]                   # which context pages agents opened, and which nobody did
+node .ai-kit/context-tools.cjs names [--all]                       # code names the pages mention, and the ones the code does not have
+node .ai-kit/context-tools.cjs schemas [--write]                   # which repo changes and which reads each database schema
 node .ai-kit/context-tools.cjs conventions [name|type|check-branch|check-title]   # branch and pull request naming
 node .ai-kit/context-tools.cjs ci --base origin/main      # the pull request check
 node .ai-kit/context-tools.cjs mcp                        # MCP server on stdio (preview)

@@ -102,18 +102,52 @@ node ai-context-kit/kit/install.mjs reports-mfe    --workspace product-context
    where a repo owns tables). Each team reviews its own.
 2. **The product picture, last:** `/product-context` in the home repo. It fills `catalog.json` (who calls
    whom), writes `context/architecture.md`, `context/glossary.md`, one `context/flows/<flow>.md` per important
-   flow across repos, and `context/platform/`. Every fact is anchored into a repo as
-   `[anchor: report-service:src/main/java/**/ReportController.java]`. It comes out better once each repo has
-   its own context, because it links to those pages instead of guessing.
-3. **Check and review:** `node scripts/hub.mjs check` confirms every anchor resolves in the repos; owners
+   flow across repos, and `context/platform/`. Every fact names the code it is about in backticks (the event,
+   endpoint, class, table and column), so each repo's own checks warn when a change removes something a
+   product page relies on. It comes out better once each repo has its own context, because it links to those
+   pages instead of guessing. If there is a database, it starts with `context-tools schemas` (below).
+3. **Check and review:** `node scripts/hub.mjs check` confirms every name exists in some repo and every
+   anchor resolves; owners
    review their pages and run `node .ai-kit/context-tools.cjs review <page> --by <name>` in their own terminal.
 4. **A repo added later:** run setup again (it adds the repo), `/context-create` in it, then
    `/product-context update`.
 
 **How stories use the product pages.** `pages-for <file>` (which `/story-start` and `/story-finish` run)
-lists the home repo's lines anchored to the files a story touches, next to the repo's own pages. So an agent
-changing `OrderService.java` is pointed at the cancellation flow page that says which event billing listens
-for, without anyone having to remember it.
+lists the home repo's lines that anchor or name the files a story touches, next to the repo's own pages. So
+an agent changing `OrderService.java` is pointed at the cancellation flow page that says which event billing
+listens for, without anyone having to remember it. Agents also find these pages by searching for the names
+they change; in a test, that worked as well.
+
+**How a service's change is checked against the product pages.** The home repo is checked out next to each
+repo in its commit check and pull request check, so both also read the product pages:
+
+| A change in orders-service | Warns, in orders-service's commit and pull request |
+| --- | --- |
+| Renames the event `OrderCreated` | `context/flows/placing.md:2` names `OrderCreated` |
+| Drops `orders.status`, which billing reads (new migration and schema export) | `context/data/across-services.md:2` names `orders.status` |
+| Deletes a file a product page anchors | That page and line |
+| A billing migration alters a table in the `orders` schema | `catalog.json` says the `orders` schema belongs to orders-service |
+
+Before raising the pull requests of a story across several repos, `node scripts/hub.mjs check` runs the same
+name checks over every cloned repo at once.
+
+### Database schemas: one home per schema
+
+Each schema's export (`schema.sql`) and table pages live once, with whoever changes that schema, because they
+must change in the same pull request as its migrations:
+
+| Who changes the schema | Where its export and table pages go |
+| --- | --- |
+| One service (most schemas) | That service: `docs/context/data/` (a service with two schemas: one folder per schema) |
+| A separate migrations repo | That repo |
+| Several services, no owner | The home repo: `context/data/<schema>/` |
+
+`node .ai-kit/context-tools.cjs schemas` (in the home repo) proposes this from the code: migrations show who
+creates, alters or fills each table; entities and SQL show who reads. A person confirms or corrects it, and
+`schemas --write` records it in `catalog.json` (`"schemas"`, with `"confirmed": true` once confirmed).
+`/context-create deep data` and `/product-context` both start from it. The home repo keeps
+`context/data/across-services.md` for what crosses services only: IDs that point into another service's data,
+and which columns another service reads. Nothing is copied up from the services.
 
 ### Keeping the kit the same everywhere
 The tools live once in the home repo, so an upgrade is one command there
@@ -238,4 +272,5 @@ team; catalog and initiatives → product tech leads; `contracts/` → updated o
 | Context health of every repo | `node scripts/hub.mjs status` |
 | Clone what's missing | `node scripts/hub.mjs clone <area> --run` |
 | Contract copies up to date? | `node scripts/hub.mjs contracts [--sync]` |
-| Product anchors still true in the repos? | `node scripts/hub.mjs check` |
+| Product pages still true in the repos (names and anchors)? | `node scripts/hub.mjs check` |
+| Who changes and who reads each database schema | `node .ai-kit/context-tools.cjs schemas [--write]` |

@@ -1,6 +1,6 @@
 # AI Context Kit: what it does and what it is worth
 
-Kit 2.4 · November 2026 · for management and architects. The same text is kept as a shared document for
+Kit 2.5 · November 2026 · for management and architects. The same text is kept as a shared document for
 review; this copy follows it.
 
 ## Summary
@@ -58,15 +58,20 @@ unused pages can be removed.
 
 ## How the context stays current, and its limits
 
-Every statement about code carries an anchor to the file it describes. The same small script checks it after
-each agent edit, when the agent finishes, at commit (blocking only knowledge that points at a missing file),
-in the optional pull request check, and for table pages against the schema export and the code.
+Every statement about code names that code in backticks: the class and method, the event, the table and
+column. The same small script checks those names at commit and in the optional pull request check: a change
+that removes a name a page still mentions gets a warning with the page and line. In a product workspace that
+includes the product pages, so a service that renames an event, or drops a column another service reads, is
+warned in its own pull request. Table pages are checked against the schema export and the code. Each
+database schema has one owner, worked out from the migrations and confirmed by a person; a migration on
+another team's schema warns.
 
-- **Coarse.** A change anywhere in an anchored file flags every line anchored to it; someone still judges
-  whether the line is true.
-- **Blind spots.** Logic that moves to a file nothing points at, or behaviour that changes through config,
-  data or another service, is not flagged. Only the next mistake reveals it.
-- **Warnings, not enforcement.** Updating still depends on people acting on the warnings.
+- **Names, not meaning.** A rule that becomes false while every name stays is caught only by whoever reads
+  the page; in our tests the agent did read it first.
+- **Cross-service checks rely on the product pages.** A service's pull request warns about what another
+  service relies on only if a product page says so.
+- **Warnings, not enforcement.** Updating still depends on people acting on the warnings. How many warnings
+  are noise on real pages is unknown until the pilot.
 
 ## How it fits with OpenSpec and Graphify
 
@@ -90,6 +95,8 @@ fixes. Behaviour belongs in specs; structure, traps and reasons in the kit's pag
 | [Context rot](https://research.trychroma.com/context-rot) | Models get worse as input grows |
 | [Codified Context](https://arxiv.org/html/2602.20478) | Deep docs read on demand worked in a 108,000-line codebase; stale docs were the main failure |
 | [TENET](https://arxiv.org/abs/2509.24148v2) | Tests as the target improved repository-level code generation by about 9.5 points |
+| [Embeddings vs. grep](https://arxiv.org/abs/2611.20455v1) (Nov 2026) | Text search with the right names matched search by meaning; inside an agent, changing the search tool mattered little next to changing the model |
+| [Outdated code references](https://arxiv.org/abs/2212.01479v1) (3,000+ GitHub projects) | Most projects had documentation naming code that no longer existed at some point; checking that named code still exists finds it |
 
 ## Early evidence from our own test
 
@@ -122,6 +129,23 @@ cancellation, and a look-alike page about a `PaymentCancelled` event.
 
 A correction to what we first reported: the read log's nine pages in the first 2.4 run were the
 reviewer's. The main agent read its pages through the shell, which the log now also records.
+
+**Do anchors help?** Each statement in a page used to carry an anchor to the file it describes. We tested
+that on two copies of the larger product: one with all 39 anchors, one with none, everything else the same.
+
+| Task (14 runs) | With anchors | Without anchors |
+| --- | --- | --- |
+| Plan the cancel story | 5 of 5 plans with all four facts | 2 of 2 |
+| Delete `OrderService.remove`, which makes a known-traps line false | 2 of 2 fixed the line | 2 of 2 |
+| Add a retention job in a new file, against a known trap | 2 of 2 updated the trap and the table page | 2 of 2 |
+| Rename the `OrderCreated` event, described only on a product page | 2 of 2 updated the product page | 2 of 2 |
+
+Anchors neither helped nor harmed: the agent found the pages by searching for the names it was about to
+change, and through the "where to look" list in `AGENTS.md`, before it edited anything. This matches what
+code agents do today (Claude Code and Copilot search the code themselves, and studies find the search tool
+matters less than the model). The tests used Claude Code on a small product with pages that name the code
+they describe; a person editing without an agent was not tested. From 2.5, pages name the code in backticks,
+the checks warn when a change removes a name a page still mentions, and anchors are optional.
 
 ## Cost, security and lock-in
 

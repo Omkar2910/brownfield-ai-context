@@ -10,7 +10,10 @@
  *   status                         Short summary: kit version, context files, anchors, always-on size, hooks.
  *   doctor                         Is the kit wired up? Hook files, git hook, harness settings, last hook runs.
  *   readiness [--json]             Context readiness score (0-100) over 12 dimensions.
- *   pages-for <file> [<file> ...]  Context lines and pages that describe these files (anchored to them).
+ *   pages-for <file> [<file> ...]  Context lines and pages that describe these files (anchored to them, or naming them).
+ *   names [--json] [--all]         Code names the pages mention in backticks, and the ones the code does not have.
+ *   schemas [--write] [--json]     Which repo changes each database schema and which only read it (from migrations,
+ *                                  entities and SQL); --write records it in the home repo's catalog.json.
  *   migrate [--dry-run]            Upgrade context pages to the current kit format (no AI, no tokens).
  *   schema-import <schema.sql|schema.json> [--out docs/context/data] [--dry-run]
  *                                  Build or refresh one page per table from a DDL dump or a tbls schema.json. Only the
@@ -27,7 +30,11 @@
  *   Every hook run is logged in <git dir>/ai-kit/hook-log.jsonl (never committed); "doctor" reads it.
  *
  * Options: --repo <dir> (default: git root of the current folder), --format copilot|claude (default: auto).
- * Anchors: write [anchor: <path>] at the end of any context line that depends on code. <path> can be a
+ * Names: pages name the code they describe in backticks (`OrderService.remove`, `OrderVoided`, `deleted_at`,
+ *   `orders.id`, a file path). check warns about names the code does not have; at commit and in a pull request,
+ *   about names the change removes, on this repo's pages and (in a workspace) the home repo's. A page lists
+ *   names that are deliberately not in this code with <!-- names: ignore A, B -->. --no-names skips it.
+ * Anchors (optional): [anchor: <path>] at the end of a context line points it at a file. <path> can be a
  *   file, a folder (src/main/resources/db/migration/), a glob (with * or **) or several of
  *   these separated by commas. Backticks, #L12 / :12 line suffixes and Windows backslashes are fine.
  *   Paths outside the repo (../product-context/...) and repo-name:path anchors are not checked here.
@@ -274,6 +281,187 @@ function unregistered(home) {
   return ws.folders.map(f => path.resolve(home, f.path)).filter(d => d !== path.resolve(home) && !known.has(d) && exists(path.join(d, '.git')));
 }
 
+// ---------------------------------------------------------------- names
+// Pages name the code they describe in backticks: `OrderService.remove`, `OrderVoided`, `deleted_at`,
+// `orders.id`, `src/main/.../Order.java`. The check looks each name up in the code (git grep) and in the
+// schema exports, and warns when a page names something the code no longer has. It needs no anchors.
+const NAME_EXT = /\.(md|mdc|json|ya?ml|java|kt|kts|ts|tsx|js|jsx|mjs|cjs|sql|ddl|xml|html|scss|css|properties|txt|sh|ps1|py|gradle|toml)$/i;
+function nameKind(raw) {
+  const t = raw.replace(/\(\)$/, '');
+  if (t.length < 4 || t.length > 160 || /[\s<>{}"'=,;|*$@\\]/.test(t) || /^[a-z]+:\/\//i.test(t) || /^[-.]/.test(t)) return null;
+  if (t.includes('/')) return NAME_EXT.test(t) && !t.includes('...') && !t.startsWith('/') && !/^[A-Za-z0-9_.-]+:/.test(t) ? 'path' : null;
+  if (NAME_EXT.test(t)) return /^[A-Za-z0-9_.-]+$/.test(t) ? 'file' : null;
+  if (/^[A-Z][A-Za-z0-9]*\.[a-z_][A-Za-z0-9_]*$/.test(t)) return 'member';                 // OrderService.remove
+  if (/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*){1,2}$/.test(t)) return 'dotted';                // orders.id, billing.invoices.order_id, a.config.key
+  if (/^[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]*)+$/.test(t)) return 'word';                         // OrderVoided, OrderService
+  if (/^[a-z][a-z0-9]*[A-Z][A-Za-z0-9]*$/.test(t)) return 'word';                           // cancelledAt
+  if (/^[a-z][a-z0-9]*(_[a-z0-9]+)+$/.test(t)) return 'word';                               // deleted_at
+  return null;
+}
+// Names a page mentions: backticked spans outside fenced code and generated blocks; a page can list names
+// that are deliberately not in this code (another team's event, a planned class): <!-- names: ignore A, B -->
+function pageNames(text) {
+  const ignore = new Set();
+  for (const m of text.matchAll(/<!--\s*names:\s*ignore\s+([^>]*?)-->/gi)) m[1].split(/[,\s]+/).filter(Boolean).forEach(x => ignore.add(x.replace(/`/g, '')));
+  const out = [];
+  let fence = false, gen = false;
+  text.split(/\r?\n/).forEach((line, i) => {
+    if (/^\s*(```|~~~)/.test(line)) { fence = !fence; return; }
+    if (line.includes('<!-- generated:start')) gen = true;
+    if (line.includes('<!-- generated:end')) { gen = false; return; }
+    if (fence || gen) return;
+    for (const m of line.replace(/\[anchor:[^\]]*\]/g, '').matchAll(/`([^`\n]+)`/g)) {
+      const name = m[1].trim().replace(/\(\)$/, ''), kind = nameKind(name);
+      if (kind && !ignore.has(name)) out.push({ name, kind, line: i + 1, text: line.trim().slice(0, 140) });
+    }
+  });
+  return out;
+}
+const CODE_SPEC = ['--', '.', ':(exclude,glob)**/*.md', ':(exclude,glob)**/*.mdc', ':(exclude).ai-kit', ':(exclude).github', ':(exclude).claude', ':(exclude).agents', ':(exclude)openspec', ':(exclude)graphify-out'];
+// rev: null = working tree (with untracked files), ':' = the index (the commit being made), else a commit.
+const revArgs = rev => rev === null ? ['--untracked'] : rev === ':' ? ['--cached'] : [rev];
+// One git grep for all the words: which files each one occurs in (a Map of word → Set of files).
+function wordsFound(repo, words, rev) {
+  const found = new Map();
+  if (!words.length) return found;
+  const tmp = path.join(os.tmpdir(), `ai-kit-names-${process.pid}-${Date.now()}.txt`);
+  const prefix = rev && rev !== ':' ? rev + ':' : '';
+  try {
+    for (const [flags, list] of [[['-w'], words.filter(w => !w.includes('.') && !w.includes('/'))], [[], words.filter(w => w.includes('.') || w.includes('/'))]]) {
+      if (!list.length) continue;
+      fs.writeFileSync(tmp, list.join('\n') + '\n');
+      const out = git(repo, ['grep', '-I', '-o', '-F', ...flags, '-f', tmp, ...revArgs(rev), ...CODE_SPEC]);
+      for (let line of (out || '').split('\n')) {
+        if (!line) continue;
+        if (prefix && line.startsWith(prefix)) line = line.slice(prefix.length);
+        const i = line.lastIndexOf(':'); if (i < 0) continue;
+        const w = line.slice(i + 1).trim(), f = line.slice(0, i);
+        if (!found.has(w)) found.set(w, new Set());
+        found.get(w).add(f);
+      }
+    }
+  } finally { try { fs.unlinkSync(tmp); } catch { /* gone */ } }
+  return found;
+}
+const shareFile = (found, a, b) => { const x = found.get(a), y = found.get(b); if (!x || !y) return false; for (const f of x) if (y.has(f)) return true; return false; };
+function filesAt(repo, rev) {
+  if (rev === null) return listFiles(repo);
+  const out = rev === ':' ? git(repo, ['ls-files', '-z', '--cached']) : git(repo, ['ls-tree', '-r', '-z', '--name-only', rev]);
+  return (out || '').split('\0').filter(Boolean);
+}
+const showAt = (repo, rev, rel) => rev === null ? (() => { try { return fs.readFileSync(path.join(repo, rel), 'utf8'); } catch { return null; } })() : git(repo, ['show', (rev === ':' ? ':' : rev + ':') + rel]);
+// Columns from every schema export a repo has imported: "table.column" and "schema.table.column".
+function schemaColumns(repo, rev, files) {
+  const cols = new Set(), tables = new Set();
+  const ctxFiles = (files || filesAt(repo, rev)).filter(isContextFile);
+  const srcs = [];
+  for (const f of ctxFiles.filter(x => /(^|\/)index\.md$/.test(x))) {
+    const t = showAt(repo, rev, f) || '';
+    const m = /<!-- generated:start schema-import[^\n]*\n\s*Source:\s*\[anchor:\s*([^\]]+)\]/.exec(t);
+    if (m) srcs.push(m[1].trim());
+  }
+  for (const s of srcs) {
+    const text = showAt(repo, rev, s); if (!text) continue;
+    let schema = null;
+    if (/\.(sql|ddl)$/i.test(s)) schema = parseDdl(text); else { try { schema = JSON.parse(text); } catch { /* not json */ } }
+    for (const t of (schema && schema.tables) || []) {
+      const full = t.name.toLowerCase(), bare = bareName(t.name).toLowerCase();
+      tables.add(full); tables.add(bare);
+      for (const c of t.columns || []) { const cn = c.name.toLowerCase(); cols.add(`${bare}.${cn}`); cols.add(`${full}.${cn}`); }
+    }
+  }
+  return { cols, tables, exports: srcs };
+}
+// Which of these names the code (in any of the repos) has, at a revision. Returns a Set of names.
+function namesPresent(scopes, names) {
+  const present = new Set();
+  const uniq = [...new Map(names.map(n => [n.name, n])).values()];
+  for (const { repo, rev } of scopes) {
+    const todo = uniq.filter(n => !present.has(n.name));
+    if (!todo.length) break;
+    const files = filesAt(repo, rev);
+    const sc = todo.some(n => n.kind === 'dotted') ? schemaColumns(repo, rev, files) : null;
+    const words = new Set();
+    for (const n of todo) {
+      if (n.kind === 'path') { if (files.some(f => f === n.name || f.endsWith('/' + n.name))) present.add(n.name); }
+      else if (n.kind === 'file') { if (files.some(f => path.posix.basename(f) === n.name)) present.add(n.name); }
+      else if (n.kind === 'dotted') {
+        const k = n.name.toLowerCase(), tbl = k.split('.').slice(0, -1).join('.');
+        if (sc.cols.has(k) || sc.tables.has(k)) present.add(n.name);
+        else if (!sc.tables.has(tbl)) { words.add(n.name); words.add(tbl); words.add(k.split('.').pop()); }   // an export has this table but not the column: missing
+      }
+      else if (n.kind === 'member') { const [c, m] = n.name.split('.'); words.add(c); words.add(m); }
+      else words.add(n.name);
+    }
+    const found = wordsFound(repo, [...words], rev);
+    for (const n of todo) {
+      if (present.has(n.name)) continue;
+      if (n.kind === 'word') { if (found.has(n.name)) present.add(n.name); }
+      else if (n.kind === 'dotted') {   // no export has the table: the literal (a config key, a package), or table and column in one file (a migration)
+        if (!words.has(n.name)) continue;
+        const parts = n.name.toLowerCase().split('.'), col = parts.pop(), tbl = parts.join('.');
+        if (found.has(n.name) || shareFile(found, tbl, col)) present.add(n.name);
+      }
+      else if (n.kind === 'member') { const [c, m] = n.name.split('.'); if (shareFile(found, c, m)) present.add(n.name); }
+    }
+  }
+  return present;
+}
+// Lines removed by this change (commit: staged; pull request: since the merge base); null when no change.
+function removedText(repo, base) {
+  if (STAGED) return git(repo, ['diff', '--cached', '-U0', '--no-color']) || '';
+  if (base) { const mb = (git(repo, ['merge-base', base, 'HEAD']) || '').trim(); return mb ? (git(repo, ['diff', '-U0', '--no-color', mb]) || '') : null; }
+  return null;
+}
+// The names check. Without a change (plain `check`): every name the code does not have. With a change
+// (commit or pull request): only names this change removed, and names in pages this change edits.
+// `pages` are [{ repo, file, text }]: this repo's pages, and in a workspace the home repo's pages too.
+function nameFindings(repo, pages, { base, changed = [], home = null } = {}) {
+  const findings = [];
+  const all = [];
+  for (const p of pages) for (const n of pageNames(p.text)) all.push({ ...n, page: p });
+  if (!all.length) return findings;
+  const scopeNow = [{ repo, rev: STAGED ? ':' : null }];
+  const others = home ? [home, ...members(home).map(m => m.dir)].filter(d => path.resolve(d) !== path.resolve(repo) && exists(path.join(d, '.git'))) : [];
+  const diff = removedText(repo, base);
+  if (diff === null) {   // plain check: everything, looking in this repo and (in a workspace) the others
+    const present = namesPresent(scopeNow.concat(others.map(d => ({ repo: d, rev: null }))), all);
+    for (const n of all) if (!present.has(n.name)) findings.push({ ...n, why: 'missing' });
+    return findings;
+  }
+  const minus = diff.split('\n').filter(l => l.startsWith('-') && !l.startsWith('---')).join('\n');
+  const touched = all.filter(n => n.name.split(/[./]/).some(part => part.length > 1 && minus.includes(part)));
+  const baseRev = STAGED ? 'HEAD' : (git(repo, ['merge-base', base, 'HEAD']) || '').trim();
+  if (touched.length && baseRev) {
+    const before = namesPresent([{ repo, rev: baseRev }], touched);
+    const now = namesPresent(scopeNow, touched.filter(n => before.has(n.name)));
+    for (const n of touched) if (before.has(n.name) && !now.has(n.name)) findings.push({ ...n, why: 'removed' });
+  }
+  const edited = all.filter(n => n.page.repo === repo && changed.includes(n.page.file) && !findings.some(f => f.name === n.name));
+  if (edited.length) {
+    const present = namesPresent(scopeNow.concat(others.map(d => ({ repo: d, rev: null }))), edited);
+    for (const n of edited) if (!present.has(n.name)) findings.push({ ...n, why: 'missing' });
+  }
+  return findings;
+}
+function namePages(repo, contextFiles, home) {
+  const pages = [];
+  for (const f of contextFiles.filter(x => x.endsWith('.md') || x.endsWith('.mdc'))) { try { pages.push({ repo, file: f, text: readText(repo, f) }); } catch { /* unreadable */ } }
+  if (home && path.resolve(home) !== path.resolve(repo)) {
+    for (const f of listFilesPlain(home).filter(isContextFile).filter(x => x.endsWith('.md'))) {
+      try { pages.push({ repo: home, file: f, text: fs.readFileSync(path.join(home, f), 'utf8'), home: true }); } catch { /* unreadable */ }
+    }
+  }
+  return pages;
+}
+function listFilesPlain(repo) { const o = git(repo, ['ls-files', '-z', '-co', '--exclude-standard']); return o === null ? walk(repo, repo, []) : o.split('\0').filter(Boolean); }
+const nameWhere = (n, repo) => (n.page.repo === repo ? '' : path.basename(n.page.repo) + ':') + `${n.page.file}:${n.line}`;
+function nameMessage(n, repo) {
+  const where = nameWhere(n, repo);
+  if (n.why === 'removed') return `${where}  names \`${n.name}\`, which this change removes from the code${n.page.repo !== repo ? ' (a product page: update it in the home repo, and tell the teams that rely on it)' : ''}: update the page, or keep the name`;
+  return `${where}  names \`${n.name}\`, which the code does not have${n.kind === 'dotted' ? ' (nor any imported schema)' : ''}. Fix the page, or mark it: <!-- names: ignore ${n.name} -->`;
+}
+
 // ---------------------------------------------------------------- check
 function runCheck(repo, { base, strict } = {}) {
   const errors = [], warnings = [];
@@ -283,6 +471,18 @@ function runCheck(repo, { base, strict } = {}) {
   const a = analyse(repo, base);
   for (const b of a.broken) errors.push(`${b.file}:${b.line}  anchor points at a file that does not exist: ${b.pattern}`);
   for (const s of a.stale) warnings.push(`${s.file}:${s.line}  anchored code changed (${s.hit}) but this context file did not: is the line still true?`);
+  // Home-repo pages (flows, platform rules, data across services) that anchor into this repo.
+  const home = workspaceHome(repo);
+  if (home && path.resolve(home) !== path.resolve(repo)) {
+    for (const p of productAnchors(repo)) if (!a.files.some(f => p.re.test(f))) warnings.push(`${p.file}:${p.line}  a product page anchors a file this repo no longer has: update the page in the home repo`);
+  }
+  for (const w of ownershipFindings(repo, home, a.changed)) warnings.push(w);
+  if (!flag('--no-names')) {
+    const nf = nameFindings(repo, namePages(repo, a.ctx.contextFiles, home), { base, changed: a.changed, home });
+    const shown = nf.slice(0, base || STAGED ? 30 : 12);
+    for (const n of shown) warnings.push(nameMessage(n, repo));
+    if (nf.length > shown.length) warnings.push(`${nf.length - shown.length} more page name(s) not found in the code. List them all: ${toolCmd} names`);
+  }
   if (!a.agentsMd) warnings.push('No AGENTS.md at the repo root. Run /context-create to create one.');
   else if (a.agentsMd.lines > MAX_AGENTS_LINES) warnings.push(`AGENTS.md has ${a.agentsMd.lines} lines (budget ${MAX_AGENTS_LINES}). Move detail into docs/context/ or a skill.`);
   const o = orgState(repo);
@@ -854,7 +1054,9 @@ function anchoredShare(text) {
     const isHeaderRow = isRow && !/^\s*\|/.test(prev);
     const isClaim = !unverified && !/^\s*>/.test(line) && !/<[^>]+>/.test(line) &&
       (/^\s*([-*]|\d+\.)\s+\S/.test(line) || (isRow && !isHeaderRow));
-    if (isClaim) { claims++; if (/\[anchor:/.test(line) || sectionSourced || (inGen && genSourced)) anchored++; }
+    // Traceable: the line names the code it is about in backticks (the names check keeps that true), or anchors it.
+    const named = [...line.matchAll(/`([^`\n]+)`/g)].some(m => nameKind(m[1].trim()));
+    if (isClaim) { claims++; if (named || /\[anchor:/.test(line) || sectionSourced || (inGen && genSourced)) anchored++; }
     prev = line;
   }
   return { claims, anchored };
@@ -911,7 +1113,7 @@ function computeReadiness(repo) {
     if (d.id === 'provenance') {
       const share = claims ? anchoredClaims / claims : 0;
       measured = !claims ? 0 : share < 0.1 ? 1 : share < 0.25 ? 2 : share < 0.45 ? 3 : share < 0.65 ? 4 : 5;
-      evidence = [`${anchoredClaims} of ${claims} statements anchored (${Math.round(share * 100)}%)`];
+      evidence = [`${anchoredClaims} of ${claims} statements name the code they describe, or anchor it (${Math.round(share * 100)}%)`];
     }
     if (d.id === 'freshness') {
       const verified = pages.filter(p => p.verified);
@@ -928,11 +1130,11 @@ function computeReadiness(repo) {
   const total = Math.round(rows.reduce((n, r) => n + r.points, 0));
   const band = [...cfg.bands].reverse().find(b => total >= b.min) || cfg.bands[0];
   const gaps = [...rows].sort((x, y) => y.lost - x.lost).filter(r => r.lost > 0).slice(0, 3).map(r => {
-    const how = r.id === 'provenance' ? 'add [anchor: …] to statements in the deep pages'
+    const how = r.id === 'provenance' ? 'name the code each statement is about in backticks (`OrderService.cancel`, `orders.status`), or anchor it'
       : r.id === 'freshness' ? 'fix broken anchors, run /context-update, re-review old pages'
       : r.cap === 0 ? (r.id === 'code-understanding' ? 'run /context-create and build the code map' : 'no page yet: run /context-create deep')
       : r.cap <= 2 ? 'page is a draft or has broken anchors: owner reviews it, sets status: stable and adds a verified entry'
-      : r.cap === 3 ? 'unanchored, stale or old review: add anchors, /context-update, re-review'
+      : r.cap === 3 ? 'statements without code names, stale or old review: name the code, /context-update, re-review'
       : r.cap === 4 ? 'independent review by a second person (needed for 5)'
       : 'run /context-assess';
     return { ...r, how };
@@ -981,15 +1183,31 @@ function productAnchors(repo) {
   }
   return out;
 }
+// The names a file goes by on a page: OrderService.java → OrderService; order-details.component.ts →
+// OrderDetailsComponent; the file name and its path.
+function fileNames(rel) {
+  const base = path.posix.basename(rel), stem = base.replace(/\.[^.]+$/, '');
+  const pascal = stem.split(/[-_.]/).filter(Boolean).map(x => x[0].toUpperCase() + x.slice(1)).join('');
+  return { base, rel, words: [...new Set([stem, pascal].filter(w => /^[A-Za-z][A-Za-z0-9]{3,}$/.test(w) && /[A-Z]/.test(w)))] };
+}
 function pagesFor(repo, files) {
-  const ctx = readContext(repo, listFiles(repo));
+  const list = listFiles(repo);
+  const ctx = readContext(repo, list);
   const all = ctx.anchors.concat(productAnchors(repo));
+  const home = workspaceHome(repo);
+  let named = null;   // pages that name a file's class or path in backticks, without an anchor
   const out = [];
   for (const raw of files) {
     const rel = relTo(repo, raw);
     const hits = all.filter(a => a.re.test(rel));
     const pages = [...new Set(hits.map(h => h.file))];
-    out.push({ file: rel, pages, lines: hits.map(h => ({ file: h.file, line: h.line, text: h.text })) });
+    if (!named) { named = []; for (const p of namePages(repo, ctx.contextFiles, home)) for (const n of pageNames(p.text)) named.push({ ...n, shown: p.repo === repo ? p.file : toPosix(path.relative(repo, path.join(p.repo, p.file))) }); }
+    const fn = fileNames(rel);
+    const mentioned = named.filter(n => !pages.includes(n.shown) && (n.name === fn.rel || n.name === fn.base || n.name.endsWith('/' + fn.base) ||
+      fn.words.some(w => n.name === w || n.name.startsWith(w + '.'))));
+    const seen = new Set();
+    const ment = mentioned.filter(m => { const k = m.shown + ':' + m.line; if (seen.has(k)) return false; seen.add(k); return true; });
+    out.push({ file: rel, pages: pages.concat([...new Set(ment.map(m => m.shown))].filter(x => !pages.includes(x))), lines: hits.map(h => ({ file: h.file, line: h.line, text: h.text })).concat(ment.map(m => ({ file: m.shown, line: m.line, text: m.text, mentioned: true }))) });
   }
   return out;
 }
@@ -1078,6 +1296,102 @@ function cmdConventions() {
 }
 
 // ---------------------------------------------------------------- usage (which pages agents read)
+// ---------------------------------------------------------------- schema ownership
+// Which repo changes each database schema (its migrations create, alter or fill the tables) and which repos
+// only read it (entities, SQL). One schema export and one set of table pages per schema, kept by whoever
+// changes it: one repo, a migrations repo, or (several repos, no owner) the home repo.
+function defaultSchema(repo, files) {
+  for (const f of files.filter(x => /(^|\/)application[^/]*\.(ya?ml|properties)$/i.test(x) && !TEST_RE.test(x)).slice(0, 20)) {
+    let t; try { t = fs.readFileSync(path.join(repo, f), 'utf8'); } catch { continue; }
+    const m = /(?:default[-_]schema|flyway[.\w-]*\.schemas|currentSchema)\s*[:=]\s*["']?([A-Za-z_][\w]*)/i.exec(t);
+    if (m) return m[1].toLowerCase();
+  }
+  return null;
+}
+function schemaUse(repo, name) {
+  const files = listFilesPlain(repo);
+  const scan = scanCode(repo, files, null);
+  const dflt = defaultSchema(repo, files);
+  const split = t => { const n = unquoteId(unq(t)).toLowerCase(); const parts = n.split('.'); return parts.length > 1 ? { schema: parts[parts.length - 2], table: parts[parts.length - 1] } : { schema: dflt || 'public', table: n, assumed: !dflt }; };
+  const changes = [], reads = [];
+  for (const r of scan.refs) for (const t of r.names) {
+    if (MIGRATION_TABLES.test(bareName(t))) continue;
+    (r.migration ? changes : reads).push({ ...split(t), file: r.file });
+  }
+  for (const e of scan.entities) reads.push({ ...split(e.schema ? `${e.schema}.${e.table || snakeCase(e.name)}` : (e.table || snakeCase(e.name))), file: e.file });
+  return { name, repo, dflt, changes, reads };
+}
+function schemaOwnership(home) {
+  const repos = home && readJson(path.join(home, 'catalog.json')) ? members(home).filter(m => exists(path.join(m.dir, '.git'))) : [];
+  const uses = repos.length ? repos.map(m => schemaUse(m.dir, m.name)) : [schemaUse(home, path.basename(home))];
+  const by = new Map();
+  const get = s => { if (!by.has(s)) by.set(s, { schema: s, changedBy: new Set(), readBy: new Set(), tables: new Set(), assumed: false }); return by.get(s); };
+  for (const u of uses) {
+    for (const c of u.changes) { const e = get(c.schema); e.changedBy.add(u.name); e.tables.add(c.table); if (c.assumed) e.assumed = true; }
+    for (const r of u.reads) { const e = get(r.schema); if (!e.changedBy.has(u.name)) e.readBy.add(u.name); e.tables.add(r.table); if (r.assumed) e.assumed = true; }
+  }
+  for (const e of by.values()) for (const c of e.changedBy) e.readBy.delete(c);
+  return [...by.values()].sort((a, b) => a.schema.localeCompare(b.schema)).map(e => ({
+    schema: e.schema, owner: e.changedBy.size === 1 ? [...e.changedBy][0] : null, changedBy: [...e.changedBy].sort(), readBy: [...e.readBy].sort(),
+    tables: [...e.tables].sort(), assumed: e.assumed,
+    layout: e.changedBy.size === 1 ? 'owned' : e.changedBy.size > 1 ? 'shared' : 'no-migrations',
+  }));
+}
+function cmdSchemas() {
+  const repo = resolveRepo({});
+  const home = workspaceHome(repo) || repo;
+  const found = schemaOwnership(home);
+  const catPath = path.join(home, 'catalog.json'), cat = readJson(catPath);
+  const recorded = new Map(((cat && cat.schemas) || []).map(x => [x.schema, x]));
+  if (flag('--json')) { console.log(JSON.stringify({ schemas: found, recorded: [...recorded.values()] }, null, 2)); return; }
+  if (!found.length) { console.log('No tables found in migrations, entities or SQL.'); return; }
+  console.log('Schemas, from the migrations (who changes) and the entities and SQL (who reads):');
+  for (const e of found) {
+    const r = recorded.get(e.schema);
+    const where = e.layout === 'owned' ? `owned by ${e.owner}: its export and table pages go in that repo`
+      : e.layout === 'shared' ? `changed by ${e.changedBy.join(', ')}: shared, no single owner. Its export and table pages go once in the home repo (context/data/${e.schema}/), or in the one repo you name as owner`
+      : 'no repo here has migrations for it: managed elsewhere (a migrations repo, or a database team)? Name its owner';
+    console.log(`  ${e.schema}${e.assumed ? ' (unqualified tables, assumed default schema)' : ''}: ${where}`);
+    if (e.readBy.length) console.log(`      read by: ${e.readBy.join(', ')}`);
+    console.log(`      tables: ${e.tables.slice(0, 8).join(', ')}${e.tables.length > 8 ? ` and ${e.tables.length - 8} more` : ''}`);
+    if (r && r.confirmed && (r.owner || null) !== e.owner) console.log(`      recorded owner: ${r.owner || 'shared'} (confirmed). The code now says otherwise: check with the teams.`);
+  }
+  if (!flag('--write')) { console.log(cat ? '\nConfirm or correct it, then record it: node .ai-kit/context-tools.cjs schemas --write (sets "schemas" in catalog.json; edit "owner" there, and set "confirmed": true).' : '\n(One repo: nothing to record. In a product workspace, run this in the home repo.)'); return; }
+  if (!cat) { console.log('No catalog.json: run this in the home repo of a product workspace.'); process.exitCode = 2; return; }
+  cat.schemas = found.map(e => { const r = recorded.get(e.schema); return r && r.confirmed ? { ...r, changedBy: e.changedBy, readBy: e.readBy } : { schema: e.schema, owner: e.owner, changedBy: e.changedBy, readBy: e.readBy, confirmed: false }; });
+  for (const [k, r] of recorded) if (!found.some(e => e.schema === k)) cat.schemas.push(r);
+  fs.writeFileSync(catPath, JSON.stringify(cat, null, 2) + '\n');
+  console.log(`\nRecorded ${cat.schemas.length} schema(s) in catalog.json. A person confirms each owner there ("confirmed": true).`);
+}
+// A migration in this repo that changes a schema the catalogue says another repo owns.
+function ownershipFindings(repo, home, changed) {
+  const cat = home && readJson(path.join(home, 'catalog.json'));
+  if (!cat || !Array.isArray(cat.schemas) || !cat.schemas.length) return [];
+  const me = (members(home).find(m => path.resolve(m.dir) === path.resolve(repo)) || {}).name || path.basename(repo);
+  const migs = changed.filter(f => MIGRATION_RE.test(f) && !SKIP_CODE_RE.test(f) && !TEST_RE.test(f));
+  if (!migs.length) return [];
+  const u = schemaUse(repo, me), out = [];
+  for (const c of u.changes.filter(x => migs.includes(x.file))) {
+    const rec = cat.schemas.find(x => x.schema === c.schema);
+    if (rec && !rec.owner && (rec.changedBy || []).length > 1) out.push(`${c.file}  changes ${c.schema}.${c.table}, a schema several repos change (${rec.changedBy.join(', ')}): its export and table pages are in the home repo. Once the migration has run on your dev database, export the schema again into the home repo and run schema-import there`);
+    if (rec && rec.owner && rec.owner !== me) out.push(`${c.file}  changes ${c.schema}.${c.table}, but catalog.json says schema "${c.schema}" belongs to ${rec.owner}: agree it with that team (their table pages and export describe it)`);
+  }
+  return [...new Set(out)];
+}
+function cmdNames() {
+  const repo = resolveRepo({});
+  const home = workspaceHome(repo);
+  const files = listFiles(repo);
+  const pages = namePages(repo, files.filter(isContextFile), home);
+  const all = []; for (const p of pages) for (const n of pageNames(p.text)) all.push({ ...n, page: p });
+  const others = home ? [home, ...members(home).map(m => m.dir)].filter(d => path.resolve(d) !== path.resolve(repo) && exists(path.join(d, '.git'))) : [];
+  const present = namesPresent([{ repo, rev: null }].concat(others.map(d => ({ repo: d, rev: null }))), all);
+  const missing = all.filter(n => !present.has(n.name));
+  if (flag('--json')) { console.log(JSON.stringify({ names: all.length, unique: new Set(all.map(n => n.name)).size, missing: missing.map(n => ({ name: n.name, kind: n.kind, page: nameWhere(n, repo) })) }, null, 2)); return; }
+  console.log(`Names on context pages: ${all.length} (${new Set(all.map(n => n.name)).size} different), ${missing.length} not found in the code${others.length ? ' (this repo, the home repo and the other cloned repos)' : ''}.`);
+  for (const n of missing) console.log('  ' + nameMessage({ ...n, why: 'missing' }, repo));
+  if (flag('--all')) for (const n of all.filter(x => present.has(x.name))) console.log(`  ok  \`${n.name}\`  ${nameWhere(n, repo)}`);
+}
 function cmdUsage() {
   const repo = resolveRepo({});
   const days = Number(opt('--days') || 90);
@@ -1112,8 +1426,8 @@ function cmdPagesFor() {
   const res = pagesFor(repo, files);
   if (flag('--json')) { console.log(JSON.stringify(res, null, 2)); return; }
   for (const r of res) {
-    console.log(`${r.file}: ${r.pages.length ? r.pages.join(', ') : 'no context page anchors this file'}`);
-    r.lines.slice(0, 10).forEach(l => console.log(`  ${l.file}:${l.line}  ${l.text}`));
+    console.log(`${r.file}: ${r.pages.length ? r.pages.join(', ') : 'no context page anchors or names this file'}`);
+    r.lines.slice(0, 12).forEach(l => console.log(`  ${l.file}:${l.line}  ${l.mentioned ? '(names it) ' : ''}${l.text}`));
   }
 }
 
@@ -1640,8 +1954,35 @@ const mentionsData = (repo, f) => { try { return /@Entity|@Table|@Column|@JoinCo
 const lastCommit = (repo, paths) => Number((git(repo, ['log', '-1', '--format=%ct', '--', ...paths]) || '0').trim()) || 0;
 // Are the table pages still what the schema file and the code say? `changed` limits the work in the commit
 // check and CI: nothing runs unless a schema file, table page, migration or data-access code changed.
+// With several schema exports in one repo (one per schema), a migration belongs to the exports whose tables or
+// schema it names; one that names none of them (a new unqualified table) belongs to all.
+function exportTables(repo, file) {
+  let text; try { text = fs.readFileSync(path.join(repo, file), 'utf8'); } catch { return null; }
+  let sc = null; if (/\.(sql|ddl)$/i.test(file)) sc = parseDdl(text); else { try { sc = JSON.parse(text); } catch { return null; } }
+  const names = new Set(), schemas = new Set();
+  for (const t of (sc && sc.tables) || []) { const n = t.name.toLowerCase(); names.add(n); names.add(bareName(n)); if (n.includes('.')) schemas.add(n.split('.')[0]); }
+  return { names, schemas };
+}
+function migrationOwners(repo, srcs) {
+  if (srcs.length < 2) return () => true;
+  const sets = new Map(srcs.map(s => [s.file, exportTables(repo, s.file)]));
+  const cache = new Map();
+  return (mig, srcFile) => {
+    if (!cache.has(mig)) {
+      let t = ''; try { t = fs.readFileSync(path.join(repo, mig), 'utf8'); } catch { /* deleted */ }
+      const refs = [...t.matchAll(SQL_REF_RE)].map(x => unquoteId(x[1]).toLowerCase()).concat([...t.matchAll(TABLE_ATTR_RE)].map(x => unquoteId(x[1]).toLowerCase()));
+      const owners = new Set();
+      for (const [f, st] of sets) if (st && refs.some(r => st.names.has(r) || (r.includes('.') && st.schemas.has(r.split('.')[0])))) owners.add(f);
+      cache.set(mig, owners.size ? owners : null);
+    }
+    const o = cache.get(mig);
+    return !o || o.has(srcFile);
+  };
+}
 function dataFreshness(repo, a, { changedOnly = false } = {}) {
   const res = [];
+  const srcsAll = schemaSources(repo, a.ctx.contextFiles).filter(s => a.files.includes(s.file));
+  const belongs = migrationOwners(repo, srcsAll);
   for (const src of schemaSources(repo, a.ctx.contextFiles)) {
     if (!a.files.includes(src.file)) continue;                     // broken anchor: reported elsewhere
     const relevant = f => f === src.file || f.startsWith(src.outDir + '/') || (MIGRATION_RE.test(f) && !SKIP_CODE_RE.test(f)) || (/\.(java|kt|xml)$/i.test(f) && !TEST_RE.test(f) && mentionsData(repo, f));
@@ -1652,11 +1993,11 @@ function dataFreshness(repo, a, { changedOnly = false } = {}) {
     if (r.stale.length) r.warns.push(`${r.stale.length} table page(s) out of date with ${src.file} or the code (${r.stale.slice(0, 3).map(x => path.posix.basename(x, '.md')).join(', ')}${r.stale.length > 3 ? ' …' : ''}). Run: ${toolCmd} schema-import ${src.file}`);
     for (const x of p.mismatches.slice(0, 5)) r.warns.push(`Code and schema disagree: ${x.text}`);
     const migs = a.files.filter(f => MIGRATION_RE.test(f) && !SKIP_CODE_RE.test(f) && !TEST_RE.test(f));
-    const newMig = changedOnly ? a.changed.filter(f => migs.includes(f)) : [];
+    const newMig = changedOnly ? a.changed.filter(f => migs.includes(f) && belongs(f, src.file)) : [];
     if (newMig.length && !a.changed.includes(src.file)) r.warns.push(`Migration changed (${path.posix.basename(newMig[0])}) but ${src.file} did not. Once it has run on your local or development database, export the schema again and run schema-import.`);
     else if (!changedOnly && migs.length && !a.changed.includes(src.file) && lastCommit(repo, [src.file])) {
-      const dirs = [...new Set(migs.map(f => path.posix.dirname(f)))];
-      if (lastCommit(repo, dirs) > lastCommit(repo, [src.file])) r.warns.push(`A migration was committed after ${src.file}. Once it has run on your local or development database, export the schema again and run schema-import.`);
+      const dirs = [...new Set(migs.filter(f => belongs(f, src.file)).map(f => path.posix.dirname(f)))];
+      if (dirs.length && lastCommit(repo, dirs) > lastCommit(repo, [src.file])) r.warns.push(`A migration was committed after ${src.file}. Once it has run on your local or development database, export the schema again and run schema-import.`);
     }
     res.push(r);
   }
@@ -1978,7 +2319,7 @@ function cmdMcp() {
 // ---------------------------------------------------------------- main
 const hooks = { 'session-start': hookSessionStart, 'post-edit': hookPostEdit, stop: hookStop, guard: hookGuard };
 const commands = { check: cmdCheck, status: cmdStatus, readiness: cmdReadiness, migrate: cmdMigrate, doctor: cmdDoctor,
-  'pages-for': cmdPagesFor, 'schema-import': cmdSchemaImport, review: cmdReview, usage: cmdUsage, conventions: cmdConventions, ci: cmdCi, mcp: cmdMcp };
+  'pages-for': cmdPagesFor, 'schema-import': cmdSchemaImport, review: cmdReview, usage: cmdUsage, names: cmdNames, schemas: cmdSchemas, conventions: cmdConventions, ci: cmdCi, mcp: cmdMcp };
 if (commands[command]) commands[command]();
 else if (hooks[command]) {
   let input = {}, repo = null, result = null, duplicate = false;

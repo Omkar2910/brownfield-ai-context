@@ -339,7 +339,7 @@ When your team or management wants a full reference of the service (architecture
 API, dependencies, security, testing, operations, decisions) and a readiness score:
 
 1. **Type `/context-create deep <page>`, one page at a time, starting where agents get things wrong.** It
-   writes in `docs/context/`, every fact anchored, unproven claims under "Unverified". Check each page as it
+   writes in `docs/context/`, every fact naming its code, unproven claims under "Unverified". Check each page as it
    appears. Write a page when a story needed the knowledge or the agent made a mistake, not all of them up
    front: a page nothing points to is never read (`node .ai-kit/context-tools.cjs usage` shows which pages
    agents actually open).
@@ -596,7 +596,8 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 | **Hook** | A small script the editor runs at a moment in the agent's work (session start, after an edit, before finishing) |
 | **Fresh-eyes review** | A review by an agent that has not seen the conversation that wrote the plan, so it judges the documents alone |
 | **Code map** | Graphify's local graph of classes, calls and dependencies (`graphify-out/`) |
-| **Anchor** | `[anchor: path]` at the end of a context line, saying which code the line describes, so changes can be detected |
+| **Names** | The code a context line is about, written in backticks (`OrderService.cancel`, `orders.status`); the checks warn when a change removes one |
+| **Anchor** | Optional `[anchor: path]` at the end of a context line, for a line with no name to point at |
 | **OpenSpec change** | A folder with the proposal, spec changes, design (if needed) and tasks for one story |
 | **Design** | `design.md` in the change, when OpenSpec judges one is needed: how the story will be built, reviewed before code |
 | **Test-first** | Write the test, see it fail, then write the code that makes it pass |

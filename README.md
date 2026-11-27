@@ -5,7 +5,7 @@ It works with **GitHub Copilot** (VS Code, CLI and cloud agent), **Claude Code**
 keeps the parts that matter in plain files any agent can read:
 
 - small context files the agent reads, and reviewed in-depth pages it opens when a task needs them, every
-  fact anchored to the code it describes;
+  fact naming the code it describes, with a check that warns when a change removes it;
 - a **Graphify** code map it can query;
 - **OpenSpec** (its default workflow) to agree on the plan before code, with a fresh-eyes review of every
   plan and tasks written test-first;
@@ -64,7 +64,7 @@ internal/           working notes for the maintainer (briefing, strategy, valida
 
 ## Status
 
-Kit 2.4.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 22 on Linux (Node 18 or newer is required); written for Windows, macOS and Linux.
+Kit 2.5.0. Tested with OpenSpec 1.16, Graphify 0.9.100 and Node 22 on Linux (Node 18 or newer is required); written for Windows, macOS and Linux.
 Agent hooks are preview features in VS Code; the git hook, the pull request check and the skills work without
 them, and `context-tools.cjs doctor` shows whether they run. The MCP server is a preview.
 Last updated November 2026. MIT licence.

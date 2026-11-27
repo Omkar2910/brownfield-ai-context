@@ -22,8 +22,9 @@ Goal: fix a gap in the context once, for everyone, without bloating it.
    - a multi-step procedure → suggest a new skill instead of a rule
    - only about the current task → do not add it to permanent context; say so
    - true for every repo in the organisation → do not add it here; draft it for the org context repo
-4. **Write one line.** `<rule>. <reason in a few words>. [anchor: <path or glob>]`. Concrete names from the
-   code; no generic advice.
+4. **Write one line.** `<rule>. <reason in a few words>.` Name the code it is about in backticks
+   (`OrderService.remove`, `orders.deleted_at`), so agents find it by those names and the check warns when
+   the code drops them; add `[anchor: <path>]` only when there is no name to point at. No generic advice.
 5. **Check the budget.** Run `node .ai-kit/context-tools.cjs status`. If `AGENTS.md` is over ~100 lines,
    propose a line to move to a scoped file or `docs/context/` in exchange.
 

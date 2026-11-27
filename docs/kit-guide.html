@@ -107,7 +107,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
       <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="architecture.html">Architecture →</a> <a class="other" href="roadmap.html">Roadmap →</a>
     </header>
     
-<p>Kit 2.4 · for developers and tech leads · plain language</p>
+<p>Kit 2.5 · for developers and tech leads · plain language</p>
 <p>This guide covers everything you need to use the kit: setting it up, the skills, and running a story from
 start to finish in GitHub Copilot, Claude Code or OpenAI Codex. It assumes you have the kit's folder on
 your machine (the folder that contains this guide and <code>install.mjs</code>). Below, <code>&lt;kit&gt;</code> means that folder.</p>
@@ -119,7 +119,8 @@ with three things:</p>
 <ol>
 <li><strong>Knowledge the agent reads.</strong> A short <code>AGENTS.md</code> in each repo, rule files for certain kinds of
    files, and in-depth pages (<code>docs/context/</code>) the agent opens only when a task needs them. Every fact
-   points at the code it describes (an <em>anchor</em>), so the kit can tell when it goes out of date.</li>
+   names the code it describes in backticks, so the agent finds it by searching for that code and the kit
+   warns when a change removes it.</li>
 <li><strong>Skills for each job.</strong> Saved step-by-step instructions you start with a slash command:
    create context, start a story, finish a story, learn from a mistake.</li>
 <li><strong>Checks.</strong> The kit warns when knowledge no longer matches the code: in the agent's chat, when you
@@ -428,7 +429,7 @@ few words: <code>48213-add-report-export</code>.</p>
 <tr>
 <td>1. Start</td>
 <td><code>/story-start 48213</code></td>
-<td>The agent reads the work item (or asks you to paste it), finds the repos and files it touches, pulls the context lines anchored to those files (in a workspace also the product flow pages), sizes it, and proposes the branch name from your naming convention</td>
+<td>The agent reads the work item (or asks you to paste it), finds the repos and files it touches, pulls the context lines that anchor or name those files (in a workspace also the product flow pages), sizes it, and proposes the branch name from your naming convention</td>
 <td>Answer at most one question; say yes or no to creating the branch</td>
 </tr>
 <tr>
@@ -549,13 +550,23 @@ scenarios in its house format, run it after step 2 and keep its output next to t
 </tr>
 <tr>
 <td>When you commit</td>
-<td>The commit is stopped if a context line points at a file that no longer exists</td>
-<td>Fix that line, or run <code>/context-update</code></td>
+<td>A warning for each context line that names code the commit removes (<code>OrderService.remove</code>, an event, a column), on this repo's pages and in a workspace the product pages; the commit is stopped only if a line anchors a file that no longer exists</td>
+<td>Fix the line in the same commit, or in the home repo for a product page</td>
 </tr>
 <tr>
 <td>On every pull request</td>
-<td>The pull request check lists lines whose code changed</td>
+<td>The same, for the whole branch</td>
 <td>Fix them in the same pull request</td>
+</tr>
+<tr>
+<td>A migration changes another team's schema</td>
+<td>The commit check says which repo owns that schema (from <code>catalog.json</code>), or that the schema is shared and its pages are in the home repo</td>
+<td>Agree it with that team; for a shared schema, export it again into the home repo</td>
+</tr>
+<tr>
+<td>Any time</td>
+<td><code>node .ai-kit/context-tools.cjs names</code> lists every name the pages mention that the code does not have</td>
+<td>Fix the page, or mark a name that lives elsewhere: <code>&lt;!-- names: ignore OrderVoided --&gt;</code></td>
 </tr>
 <tr>
 <td>You change an entity, repository, query or migration</td>
@@ -680,8 +691,12 @@ or your pull request template. Add <code>--dry-run</code> first to see what it w
 </thead>
 <tbody>
 <tr>
-<td>Anchor</td>
-<td><code>[anchor: path]</code> at the end of a context line: the code that line describes</td>
+<td>Names</td>
+<td>The code a context line is about, in backticks (<code>OrderService.cancel</code>, <code>orders.status</code>); the checks warn when a change removes one</td>
+</tr>
+<tr>
+<td>Anchor (optional)</td>
+<td><code>[anchor: path]</code> at the end of a context line: the file it describes, for a line with no name to point at</td>
 </tr>
 <tr>
 <td>Context</td>

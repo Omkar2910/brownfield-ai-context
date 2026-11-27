@@ -505,6 +505,9 @@ if (memberOf) {
     cat.repos.push(entry);
     if (!dry) fs.writeFileSync(catPath, JSON.stringify(cat, null, 2) + '\n');
     created.push(`${homeName}/catalog.json: ${name} as "${entry.type}" (fill in description, owner, areas and what it calls)`);
+    // Keep the generated system map in step with the catalogue (pages link to it).
+    const hubJs = path.join(memberOf, 'scripts', 'hub.mjs');
+    if (!dry && fs.existsSync(hubJs)) { try { execFileSync('node', [hubJs, 'map'], { cwd: memberOf, stdio: 'ignore' }); created.push(`${homeName}/context/system-map.md refreshed`); } catch { /* map is optional here */ } }
   } else skipped.push(`${homeName}/catalog.json entry`);
   const wsPath = path.join(memberOf, 'product.code-workspace');
   const ws = readJson(wsPath) || { folders: [{ name: homeName + ' (home)', path: '.' }], settings: {} };

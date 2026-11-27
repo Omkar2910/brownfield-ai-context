@@ -254,18 +254,82 @@ node ai-context-kit/kit/install.mjs reports-mfe    --workspace product-context
    where a repo owns tables). Each team reviews its own.</li>
 <li><strong>The product picture, last:</strong> <code>/product-context</code> in the home repo. It fills <code>catalog.json</code> (who calls
    whom), writes <code>context/architecture.md</code>, <code>context/glossary.md</code>, one <code>context/flows/&lt;flow&gt;.md</code> per important
-   flow across repos, and <code>context/platform/</code>. Every fact is anchored into a repo as
-   <code>[anchor: report-service:src/main/java/**/ReportController.java]</code>. It comes out better once each repo has
-   its own context, because it links to those pages instead of guessing.</li>
-<li><strong>Check and review:</strong> <code>node scripts/hub.mjs check</code> confirms every anchor resolves in the repos; owners
+   flow across repos, and <code>context/platform/</code>. Every fact names the code it is about in backticks (the event,
+   endpoint, class, table and column), so each repo's own checks warn when a change removes something a
+   product page relies on. It comes out better once each repo has its own context, because it links to those
+   pages instead of guessing. If there is a database, it starts with <code>context-tools schemas</code> (below).</li>
+<li><strong>Check and review:</strong> <code>node scripts/hub.mjs check</code> confirms every name exists in some repo and every
+   anchor resolves; owners
    review their pages and run <code>node .ai-kit/context-tools.cjs review &lt;page&gt; --by &lt;name&gt;</code> in their own terminal.</li>
 <li><strong>A repo added later:</strong> run setup again (it adds the repo), <code>/context-create</code> in it, then
    <code>/product-context update</code>.</li>
 </ol>
 <p><strong>How stories use the product pages.</strong> <code>pages-for &lt;file&gt;</code> (which <code>/story-start</code> and <code>/story-finish</code> run)
-lists the home repo's lines anchored to the files a story touches, next to the repo's own pages. So an agent
-changing <code>OrderService.java</code> is pointed at the cancellation flow page that says which event billing listens
-for, without anyone having to remember it.</p>
+lists the home repo's lines that anchor or name the files a story touches, next to the repo's own pages. So
+an agent changing <code>OrderService.java</code> is pointed at the cancellation flow page that says which event billing
+listens for, without anyone having to remember it. Agents also find these pages by searching for the names
+they change; in a test, that worked as well.</p>
+<p><strong>How a service's change is checked against the product pages.</strong> The home repo is checked out next to each
+repo in its commit check and pull request check, so both also read the product pages:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>A change in orders-service</th>
+<th>Warns, in orders-service's commit and pull request</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Renames the event <code>OrderCreated</code></td>
+<td><code>context/flows/placing.md:2</code> names <code>OrderCreated</code></td>
+</tr>
+<tr>
+<td>Drops <code>orders.status</code>, which billing reads (new migration and schema export)</td>
+<td><code>context/data/across-services.md:2</code> names <code>orders.status</code></td>
+</tr>
+<tr>
+<td>Deletes a file a product page anchors</td>
+<td>That page and line</td>
+</tr>
+<tr>
+<td>A billing migration alters a table in the <code>orders</code> schema</td>
+<td><code>catalog.json</code> says the <code>orders</code> schema belongs to orders-service</td>
+</tr>
+</tbody>
+</table></div>
+<p>Before raising the pull requests of a story across several repos, <code>node scripts/hub.mjs check</code> runs the same
+name checks over every cloned repo at once.</p>
+<h3 id="database-schemas-one-home-per-schema">Database schemas: one home per schema</h3>
+<p>Each schema's export (<code>schema.sql</code>) and table pages live once, with whoever changes that schema, because they
+must change in the same pull request as its migrations:</p>
+<div class="tablebox"><table>
+<thead>
+<tr>
+<th>Who changes the schema</th>
+<th>Where its export and table pages go</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One service (most schemas)</td>
+<td>That service: <code>docs/context/data/</code> (a service with two schemas: one folder per schema)</td>
+</tr>
+<tr>
+<td>A separate migrations repo</td>
+<td>That repo</td>
+</tr>
+<tr>
+<td>Several services, no owner</td>
+<td>The home repo: <code>context/data/&lt;schema&gt;/</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>node .ai-kit/context-tools.cjs schemas</code> (in the home repo) proposes this from the code: migrations show who
+creates, alters or fills each table; entities and SQL show who reads. A person confirms or corrects it, and
+<code>schemas --write</code> records it in <code>catalog.json</code> (<code>"schemas"</code>, with <code>"confirmed": true</code> once confirmed).
+<code>/context-create deep data</code> and <code>/product-context</code> both start from it. The home repo keeps
+<code>context/data/across-services.md</code> for what crosses services only: IDs that point into another service's data,
+and which columns another service reads. Nothing is copied up from the services.</p>
 <h3 id="keeping-the-kit-the-same-everywhere">Keeping the kit the same everywhere</h3>
 <p>The tools live once in the home repo, so an upgrade is one command there
 (<code>node ai-context-kit/kit/install.mjs product-context --upgrade</code>, or ask the agent "upgrade the kit").
@@ -508,8 +572,12 @@ team; catalog and initiatives â†’ product tech leads; <code>contracts/</code> â†
 <td><code>node scripts/hub.mjs contracts [--sync]</code></td>
 </tr>
 <tr>
-<td>Product anchors still true in the repos?</td>
+<td>Product pages still true in the repos (names and anchors)?</td>
 <td><code>node scripts/hub.mjs check</code></td>
+</tr>
+<tr>
+<td>Who changes and who reads each database schema</td>
+<td><code>node .ai-kit/context-tools.cjs schemas [--write]</code></td>
 </tr>
 </tbody>
 </table></div>

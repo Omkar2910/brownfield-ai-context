@@ -21,14 +21,16 @@ Goal: change only the context lines whose facts changed. Never rewrite context f
    from the user.
 4. **Find what is out of date.** Run `node .ai-kit/context-tools.cjs check --base origin/<main-branch>`
    (ask for the branch if unsure; `main`, `master` and `develop` are common). ERROR: an anchor points at a
-   file that no longer exists. WARN: anchored code changed but the context file did not.
+   file that no longer exists. WARN: a page names code (in backticks) that this branch removed, or anchored
+   code changed but the context file did not. `node .ai-kit/context-tools.cjs names` lists every name the
+   code no longer has, on this repo's pages and, in a product workspace, the home repo's.
    With `<page>` given (`/context-update data`), also list lines in that page whose anchored code changed
    since its `verified` date (`git log --since=<date> -- <anchored paths>`).
 5. **Read the story, if there is one.** If the user names an OpenSpec change, read its `proposal.md` and
    `design.md` ("Context impact" table first).
-6. **Decide each finding.** Open the anchored code and either update the line (the fact changed), move the
-   anchor (the code moved, the fact is the same), delete the line (no longer true or needed), or leave it
-   (still true; say so). Add a new line only if it passes the `context-create` skill's
+6. **Decide each finding.** Open the code and either update the line (the fact changed), rename the name or
+   move the anchor (the code moved, the fact is the same), delete the line (no longer true or needed), or
+   leave it (still true; say so). A finding on a home-repo page goes into a pull request in the home repo. Add a new line only if it passes the `context-create` skill's
    `references/prune-checklist.md`.
 7. **Review state.** A reviewed page whose lines you rewrote goes back to `status: draft`, and its owner
    runs `node .ai-kit/context-tools.cjs review <page> --by <name>` in their own terminal after checking it.

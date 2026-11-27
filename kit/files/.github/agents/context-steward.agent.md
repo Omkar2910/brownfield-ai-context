@@ -31,7 +31,8 @@ The user names one. If they don't, ask which.
 ## Rules
 1. Only edit: AGENTS.md, CLAUDE.md, rule files (except organisation rules in an `org/` folder),
    docs/context/**, CHANGELOG.md, and the `context:` / `rules:` blocks of openspec/config.yaml.
-2. Every fact you add carries `[anchor: <path>]`. Never write a command you did not see in a build or
+2. Every fact you add names the code it is about in backticks (class, method, event, table and column), or
+   carries `[anchor: <path>]` when there is no name. Never write a command you did not see in a build or
    pipeline file.
 3. AGENTS.md stays around 100 lines and never above 150.
 4. Prefer deleting to adding.

@@ -252,7 +252,16 @@ function cmdCheck() {
     });
   }
   if (skipped.size) console.log(`(not checked, repos not cloned: ${[...skipped].join(', ')})`);
-  console.log(`Hub check: ${anchors} cross-repo anchors, ${errors} error(s), ${warnings} warning(s)`);
+  // Names the pages mention in backticks (events, classes, tables and columns), looked up in every cloned repo.
+  let missingNames = 0;
+  if (hubTool) {
+    try {
+      const j = JSON.parse(execFileSync('node', [hubTool, 'names', '--json', '--repo', hub], { encoding: 'utf8' }));
+      for (const m of j.missing) { console.log(`WARN  ${m.page}  names \`${m.name}\`, which no cloned repo has (fix the page, or mark it: <!-- names: ignore ${m.name} -->)`); missingNames++; }
+      warnings += missingNames;
+    } catch { console.log('(names not checked: the context tool failed to run)'); }
+  }
+  console.log(`Hub check: ${anchors} cross-repo anchors, ${missingNames} name(s) no repo has, ${errors} error(s), ${warnings} warning(s)`);
   if (errors) process.exitCode = 1;
 }
 function cmdReadiness() {

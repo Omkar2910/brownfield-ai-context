@@ -106,7 +106,7 @@ img{max-width:100%;height:auto;display:block;margin:16px 0;border-radius:8px}
       <a class="other" href="index.html">Setup and story workflow →</a> <a class="other" href="context.html">Creating, using and maintaining context →</a> <a class="other" href="toolbox.html">Workflow and toolbox →</a> <a class="other" href="multi-repo.html">Many repos →</a> <a class="other" href="org-level.html">Organisation level →</a> <a class="other" href="roadmap.html">Roadmap →</a> <a class="other" href="kit-guide.html">Kit user guide →</a>
     </header>
     
-<p>Kit 2.4.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
+<p>Kit 2.5.0 · November 2026. For engineering leaders, architects and anyone evaluating the kit. How to set it up is
 in <a href="index.html">GUIDE.md</a>; how to roll it out across an organisation is in <a href="org-level.html">ORG-LEVEL.md</a>.</p>
 <h2 id="summary">Summary</h2>
 <p>The AI Context Kit (MIT licence) is a set of plain files installed into each repo that gives AI coding
@@ -127,8 +127,9 @@ it is long or machine-written (see "Research" and "Limits" below).</p>
    when the task needs it.</li>
 <li><strong>Generate what code can tell you; write only what it can't.</strong> Tables of columns, endpoints and
    dependencies come from code. People write rules, traps and the "why".</li>
-<li><strong>Every fact is traceable.</strong> Each statement about code carries an anchor pointing at the file it
-   describes, so the kit can tell when it may have gone wrong.</li>
+<li><strong>Every fact names its code.</strong> Each statement about code names it in backticks (the class and method,
+   the event, the table and column), so agents find it by searching for those names and the checks warn
+   when a change removes a name a page still mentions.</li>
 <li><strong>People approve; machines check.</strong> A developer approves the plan and the pull request. Hooks and checks
    catch out-of-date knowledge automatically.</li>
 <li><strong>The knowledge belongs to no tool.</strong> Everything that matters is Markdown in the repo, readable by any
@@ -323,7 +324,7 @@ the result whether or not the agent hooks run.</p>
 <td>Context tool</td>
 <td><code>.ai-kit/context-tools.cjs</code> (one file, no dependencies)</td>
 <td>Called by every check below</td>
-<td>Reads anchors and page metadata; <code>check</code>, <code>status</code>, <code>doctor</code>, <code>readiness</code>, <code>pages-for</code> (in a workspace also the product pages anchored to a file), <code>migrate</code>, <code>schema-import</code>, <code>review</code>, <code>usage</code>, <code>conventions</code>, <code>ci</code>, <code>mcp</code> and four hook commands; logs each hook run and each context page an agent opens in <code>.git/ai-kit/</code></td>
+<td>Reads page names, anchors and page metadata; <code>check</code>, <code>names</code>, <code>schemas</code>, <code>status</code>, <code>doctor</code>, <code>readiness</code>, <code>pages-for</code> (pages that anchor or name a file; in a workspace also the product pages), <code>migrate</code>, <code>schema-import</code>, <code>review</code>, <code>usage</code>, <code>conventions</code>, <code>ci</code>, <code>mcp</code> and four hook commands; logs each hook run and each context page an agent opens in <code>.git/ai-kit/</code></td>
 </tr>
 <tr>
 <td>Agent hooks</td>
@@ -335,7 +336,7 @@ the result whether or not the agent hooks run.</p>
 <td>Git hooks</td>
 <td><code>.githooks/pre-commit</code>, <code>post-commit</code>, <code>post-merge</code>, <code>post-checkout</code></td>
 <td>Commit, merge, branch switch</td>
-<td>Refuse commits with broken anchors; warn about the rest (including table pages out of date with the schema file or the code); rebuild the code map in the background</td>
+<td>Refuse commits with broken anchors; warn when the commit removes a name a page mentions (this repo's pages and, in a workspace, the home repo's), when a migration changes a schema another repo owns or several share, and about table pages out of date with the schema file or the code; rebuild the code map in the background</td>
 </tr>
 <tr>
 <td>PR template</td>
@@ -468,18 +469,36 @@ much the team documents.</p>
 </tr>
 </tbody>
 </table></div>
-<p><strong>Anchors.</strong> Any statement that depends on code ends with an anchor, for example
-<code>- Exports are capped at 50,000 rows [anchor: src/main/java/**/ReportExportService.java]</code>. An anchor can be
-a file, a folder, a glob or several of these. In the product hub, anchors name the repo:
-<code>[anchor: report-service:src/.../ReportController.java]</code>. The checks use anchors three ways:</p>
+<p><strong>Names.</strong> Any statement that depends on code names that code in backticks, for example
+<code>-</code>ReportExportService.export<code>caps exports at 50,000 rows</code> or <code>- billing listens for</code>OrderVoided<code>`.
+Names are what agents search for (Claude Code and Copilot find code and pages with text search), and what
+the checks look up in the code with</code>git grep<code>, and in the schema exports for</code>table.column`:</p>
 <ul>
-<li><strong>Broken:</strong> the anchored file no longer exists, so the line is certainly wrong. Commits are refused.</li>
-<li><strong>Stale:</strong> the anchored file changed but the line didn't, so the line may be wrong. Flagged for a look.
-  The check knows only which file changed, not what changed in it: a rename flags the line as much as a
-  change of logic, and logic that moves to a file nothing points at is not flagged at all. Someone (the agent
-  that made the edit, or the reviewer) still judges whether the line is true.</li>
-<li><strong>Provenance:</strong> the share of statements with anchors is part of the readiness score.</li>
+<li><strong>Missing:</strong> <code>context-tools names</code> (and <code>check</code>) lists names the code does not have: a typo, a page about
+  code that never existed, or code removed earlier. In a workspace it looks in every cloned repo.</li>
+<li><strong>Removed:</strong> at commit and in a pull request, a name this change removes from the code, on this repo's
+  pages and on the home repo's pages (a flow, data shared between services). The warning names the line.</li>
+<li><strong>Not checked:</strong> what a name means. A column that keeps its name but changes meaning, or logic that moves
+  without renaming anything, is not flagged; the agent that reads the page first, or the reviewer, catches it.</li>
+<li><strong>Ignored on purpose:</strong> <code>&lt;!-- names: ignore OrderVoided --&gt;</code> on a page, for a name that lives in a service
+  outside the workspace, or is planned.</li>
+<li><strong>Provenance:</strong> the share of statements that name their code (or anchor it) is part of the readiness score.</li>
 </ul>
+<p><strong>Anchors (optional).</strong> <code>[anchor: &lt;path or glob&gt;]</code> at the end of a line points it at a file, for a fact with
+no name to point at (a folder convention, a config file). In the home repo they name the repo:
+<code>[anchor: report-service:src/.../ReportController.java]</code>. A broken anchor (the file is gone) refuses the
+commit; a changed anchored file warns. In a test on a 31-page product (14 runs, Claude Code), pages with and
+without anchors gave the same results: the agent found the pages by searching for the names it was about to
+change before it edited, so the kit no longer asks for anchors on every line.</p>
+<p><strong>Database schemas and where their pages live.</strong> One schema export and one set of table pages per schema,
+kept by whoever changes that schema, next to its migrations: one service (the usual case; a service with two
+schemas keeps two exports, one folder each), a migrations repo, or, for a schema several services change, the
+home repo. <code>context-tools schemas</code> works this out from the migrations (who creates, alters or fills the
+tables) and the entities and SQL (who reads them); a person confirms it and <code>schemas --write</code> records it in
+<code>catalog.json</code>. A migration that changes a schema another repo owns, or a shared one, warns. The home repo's
+<code>context/data/across-services.md</code> holds only what crosses services: IDs that point into another service's
+data, and which columns another service reads; a service that drops such a column is warned in its own pull
+request. Nothing is ever read from a database; the checks read the exported files.</p>
 <p><strong>Page metadata.</strong> Each in-depth page starts with frontmatter the tools read, following the Open Knowledge
 Format (OKF v0.3): <code>type</code>, <code>status</code> (draft, stable, deprecated), <code>verified</code> (a list of review events) and
 <code>generated</code> for machine-written pages, plus the kit's own <code>dimension</code> and <code>owner</code>. A page starts as <code>draft</code>;
@@ -562,7 +581,7 @@ traceable but count as unreviewed.</p>
 <td>Provenance</td>
 <td>5%</td>
 <td>All pages</td>
-<td>Measured: share of statements anchored</td>
+<td>Measured: share of statements that name their code or anchor it</td>
 </tr>
 <tr>
 <td>Freshness</td>
@@ -646,7 +665,7 @@ Tiny fixes skip the folder: failing test, fix, finish. Without OpenSpec, <code>/
 <li><strong>Each repo owns its knowledge.</strong> Its rules and pages are reviewed in its own PRs, because they change with
   its code. A repo can also be set up on its own, with its own copy of the kit, when a team works on it alone.</li>
 <li><strong>What goes where.</strong> If one team can change it in one pull request, it lives in that repo: how the repo is
-  built, its traps, its business rules, its tables, the API it offers and the calls it makes. If changing it
+  built, its traps, its business rules, the tables of the schemas it changes, the API it offers and the calls it makes. If changing it
   needs two repos to agree, it lives in the home repo: who calls whom (<code>catalog.json</code>), end-to-end flows as
   5–10 steps with one line per step and a link to the repo page for the detail, field mapping across repos,
   the events and endpoints one repo relies on from another, platform rules, the glossary. Product pages link
@@ -751,13 +770,13 @@ miss. Each later net exists because the earlier ones can be skipped.</p>
 <tr>
 <td>4. Commit check</td>
 <td>Each commit</td>
-<td>Broken anchors: commit refused. Stale lines, table pages out of date with the schema file or the code, a migration without a new schema export: warnings</td>
+<td>Broken anchors: commit refused. Names the commit removes that a page (or a product page) mentions, a migration on a schema another repo owns, table pages out of date with the schema file or the code, a migration without a new schema export, stale anchored lines: warnings</td>
 <td>Developer</td>
 </tr>
 <tr>
 <td>5. Story finish</td>
 <td>End of story</td>
-<td>Pages anchored to changed files updated or still true; stale anchors since main; PR lists context changes</td>
+<td>Pages that anchor or name changed files updated or still true; names removed since main; PR lists context changes</td>
 <td>Agent + reviewer</td>
 </tr>
 <tr>
@@ -770,7 +789,7 @@ miss. Each later net exists because the earlier ones can be skipped.</p>
 </table></div>
 <p>Behind these, a steward run and <code>hub.mjs check</code> catch drift that slipped through, and <code>/context-learn</code> turns
 every agent correction into a rule. The nets are only as good as their signal: they work per file, so
-false alarms are common and some real changes are never flagged (see "Anchors" above). Apart from missing
+a change of meaning without a change of name is never flagged (see "Names" above). Apart from missing
 files they warn rather than block, so updating still depends on people acting on them.</p>
 <p><strong>Readiness score.</strong> <code>context-tools.cjs readiness</code> turns the knowledge model into a 0–100 score on the 12
 dimensions. Each dimension is rated 0–5, but the tool caps every rating at what the evidence supports, so the
@@ -1063,6 +1082,16 @@ none of its text (credited in <a href="../THIRD_PARTY_NOTICES.md">THIRD_PARTY_NO
 <td><a href="https://arxiv.org/html/2602.20478">Codified Context (arXiv 2602.20478)</a></td>
 </tr>
 <tr>
+<td>Most of 3,000+ GitHub projects had docs naming code that no longer existed; checking that named code still exists finds it</td>
+<td>The names check: pages name their code, a change that removes a name warns</td>
+<td><a href="https://arxiv.org/abs/2212.01479v1">Outdated code references</a></td>
+</tr>
+<tr>
+<td>Code agents find code with text search; with the right names, grep matched search by meaning, and the model mattered more than the search tool</td>
+<td>No search index; pages name code so any search finds them; anchors optional</td>
+<td><a href="https://arxiv.org/abs/2611.20455v1">Embeddings vs. grep</a>, <a href="https://code.visualstudio.com/docs/copilot/reference/workspace-context">VS Code workspace context</a></td>
+</tr>
+<tr>
 <td>Real teams grow context files in small additions over time</td>
 <td>Area pages added as stories need them; updates in the same PR</td>
 <td><a href="https://arxiv.org/html/2511.12884v1">Agent READMEs (arXiv 2511.12884)</a></td>
@@ -1157,11 +1186,19 @@ evidence-capped readiness score.</p>
   to catch that, and the story log shows how often it happens.</li>
 <li><strong>Incoming callers across repos</strong> are visible only through the product hub's catalogue, which is
   hand-written today; a generator for it is a planned improvement.</li>
-<li><strong>Staleness is per file, per day.</strong> A change to an anchored file flags every line anchored to it; a change
-  on the same day as a review is not counted.</li>
+<li><strong>The names check sees names, not meaning.</strong> It warns when a name a page mentions disappears; a rule that
+  becomes false while every name stays is caught only by whoever reads the page. It has not yet been run on a
+  real codebase's pages, so its false-alarm rate is unknown; the pilot counts it.</li>
+<li><strong>Cross-service checks rely on the product pages.</strong> A service's pull request sees only its own repo and
+  the home repo, so it warns about what another service relies on only if a product page says so.</li>
+<li><strong>Anchored lines are flagged per file, per day,</strong> when anchors are used: a change to an anchored file flags
+  every line anchored to it.</li>
 <li><strong>The readiness score measures context, not outcomes.</strong> Read it with the always-loaded size and the story log.</li>
-<li><strong>Product pages reach a story through anchors.</strong> <code>pages-for</code> lists the home repo's pages anchored to the
-  files a story touches; a flow page anchored to nothing in the repo is found only through <code>AGENTS.md</code>.</li>
+<li><strong>Product pages reach a story through names and anchors.</strong> <code>pages-for</code> lists the home repo's pages that
+  anchor or name the files a story touches; a flow page that names none of them is found through the agent's
+  own search or <code>AGENTS.md</code>.</li>
+<li><strong>Schemas several services change</strong> get table pages in the home repo without the link to each service's
+  entity classes (the import reads one repo's code).</li>
 <li><strong>Page reads are recorded only where hooks run</strong> (Copilot, Claude Code; not Codex), through the file-read
   tool or printed in the shell (<code>cat</code>, <code>head</code>, <code>tail</code>, <code>sed</code>); a page found with <code>grep</code> is not counted.
   Recording starts with this version, so <code>usage</code> needs a few weeks of work before "never read" means much.</li>

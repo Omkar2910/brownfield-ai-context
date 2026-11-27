@@ -1,6 +1,6 @@
 # AI Context Kit: user guide
 
-Kit 2.4 · for developers and tech leads · plain language
+Kit 2.5 · for developers and tech leads · plain language
 
 This guide covers everything you need to use the kit: setting it up, the skills, and running a story from
 start to finish in GitHub Copilot, Claude Code or OpenAI Codex. It assumes you have the kit's folder on
@@ -16,7 +16,8 @@ with three things:
 
 1. **Knowledge the agent reads.** A short `AGENTS.md` in each repo, rule files for certain kinds of
    files, and in-depth pages (`docs/context/`) the agent opens only when a task needs them. Every fact
-   points at the code it describes (an *anchor*), so the kit can tell when it goes out of date.
+   names the code it describes in backticks, so the agent finds it by searching for that code and the kit
+   warns when a change removes it.
 2. **Skills for each job.** Saved step-by-step instructions you start with a slash command:
    create context, start a story, finish a story, learn from a mistake.
 3. **Checks.** The kit warns when knowledge no longer matches the code: in the agent's chat, when you
@@ -236,7 +237,7 @@ few words: `48213-add-report-export`.
 
 | Step | You type | What happens | You do |
 | --- | --- | --- | --- |
-| 1. Start | `/story-start 48213` | The agent reads the work item (or asks you to paste it), finds the repos and files it touches, pulls the context lines anchored to those files (in a workspace also the product flow pages), sizes it, and proposes the branch name from your naming convention | Answer at most one question; say yes or no to creating the branch |
+| 1. Start | `/story-start 48213` | The agent reads the work item (or asks you to paste it), finds the repos and files it touches, pulls the context lines that anchor or name those files (in a workspace also the product flow pages), sizes it, and proposes the branch name from your naming convention | Answer at most one question; say yes or no to creating the branch |
 | 2. Plan | `/opsx-propose 48213-add-report-export` (say which repo; services before UIs) | OpenSpec writes the proposal, the specs (scenarios), a design if the change needs one, and the tasks. Without OpenSpec, the agent writes one `plan.md` | Read it |
 | 3. Fresh-eyes review | Run the `design-reviewer` agent on the change | A table of gaps: scenarios without a test, files that don't exist, rules broken, context to update | Decide what to fix |
 | 4. **Approve** | — | — | **Approve the plan, or ask for changes. Nothing is coded before this.** |
@@ -279,8 +280,10 @@ scenarios in its house format, run it after step 2 and keep its output next to t
 | When | What catches it | What you do |
 | --- | --- | --- |
 | While the agent works | The hooks tell the agent which context line describes the file it just edited, and ask it once at the end to check those lines | Nothing, unless it asks |
-| When you commit | The commit is stopped if a context line points at a file that no longer exists | Fix that line, or run `/context-update` |
-| On every pull request | The pull request check lists lines whose code changed | Fix them in the same pull request |
+| When you commit | A warning for each context line that names code the commit removes (`OrderService.remove`, an event, a column), on this repo's pages and in a workspace the product pages; the commit is stopped only if a line anchors a file that no longer exists | Fix the line in the same commit, or in the home repo for a product page |
+| On every pull request | The same, for the whole branch | Fix them in the same pull request |
+| A migration changes another team's schema | The commit check says which repo owns that schema (from `catalog.json`), or that the schema is shared and its pages are in the home repo | Agree it with that team; for a shared schema, export it again into the home repo |
+| Any time | `node .ai-kit/context-tools.cjs names` lists every name the pages mention that the code does not have | Fix the page, or mark a name that lives elsewhere: `<!-- names: ignore OrderVoided -->` |
 | You change an entity, repository, query or migration | The hooks ask the agent to run `schema-import`; the commit check and the pull request check say which table pages are out of date | Nothing, or run `node .ai-kit/context-tools.cjs schema-import docs/context/data/schema.sql` yourself |
 | After a database migration | The commit check says the migration changed but the schema file did not | Once the migration has run on your local or development database, export the DDL again over `docs/context/data/schema.sql` and run `schema-import` (only the generated part of each table page changes) |
 | You have checked a page against the code | — | In your own terminal: `node .ai-kit/context-tools.cjs review <page or folder> --by <your name>` (sets it reviewed; an agent cannot run it) |
@@ -366,7 +369,8 @@ or your pull request template. Add `--dry-run` first to see what it would do.
 
 | Word | Meaning |
 | --- | --- |
-| Anchor | `[anchor: path]` at the end of a context line: the code that line describes |
+| Names | The code a context line is about, in backticks (`OrderService.cancel`, `orders.status`); the checks warn when a change removes one |
+| Anchor (optional) | `[anchor: path]` at the end of a context line: the file it describes, for a line with no name to point at |
 | Context | What the agent reads about your code: `AGENTS.md`, rule files, `docs/context/` |
 | Home repo | In a product workspace, the one repo that holds the kit's tools and the product context |
 | Change folder | `openspec/changes/<id>/`: a story's plan in one repo |

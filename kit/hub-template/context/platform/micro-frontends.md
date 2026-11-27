@@ -25,7 +25,7 @@ verified: []
 
 ## Communication between micro-frontends
 - Remotes talk to each other only through the shared event bus or the URL, never through global variables.
-- Event names and payloads are a contract: list them in `context/platform/events.md` (create it when the
+- Event names and payloads are a contract: list them in `context/platform/events.md` <!-- names: ignore context/platform/events.md --> (create it when the
   first event is added).
 
 ## Authentication and calls to the backend

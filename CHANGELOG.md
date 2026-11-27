@@ -1,5 +1,41 @@
 # Changelog
 
+## 2.5.0 (November 2026)
+
+Pages name their code; the checks follow the names, across services and their data.
+
+**Why.** In 14 runs on a 31-page test product (Claude Code), pages with and without anchors gave the same
+results: the agent found the pages by searching for the names it was about to change, before it edited.
+Research on outdated documentation detects it the same way: by checking that the code a page names still
+exists. And nothing checked what one service relies on from another.
+
+**Added**
+- **Names check.** Pages name the code they describe in backticks (`OrderService.remove`, `OrderVoided`,
+  `deleted_at`, `orders.status`, a file path). `context-tools names` lists names the code does not have, looking
+  in every cloned repo of a workspace and in the schema exports for `table.column`. At commit and in the pull
+  request check, a warning for each line that names code the change removes. `<!-- names: ignore X -->` on a
+  page for a name that lives outside the workspace or is planned; `--no-names` skips it.
+- **Product pages checked from each service.** A service's commit and pull request check also read the home
+  repo's pages: an event the service renames, a column of shared data it drops, or a file a product page
+  anchors warns in that service's own pull request.
+- **Schema ownership.** `context-tools schemas` works out, per database schema, which repo's migrations change
+  it and which repos only read it (entities, SQL), and where its export and table pages belong: the owning
+  service, a migrations repo, or (several services, no owner) the home repo. `--write` records it in
+  `catalog.json` for a person to confirm. A migration that changes a schema another repo owns, or a shared
+  one, warns. `/context-create deep data` and `/product-context` start from it.
+- **Data across services**: a product page template (`references/data-across-services.md`) for IDs that point
+  into another service's data and the columns other services read; the names check keeps it true.
+- A service with several schemas keeps one export per schema; a migration warns only about its own export.
+- `hub.mjs check` also lists names no cloned repo has; joining a workspace refreshes the system map.
+
+**Changed**
+- Anchors are optional: for a line with no name to point at. Existing anchors are checked as before.
+- Readiness counts a statement as traceable when it names its code or anchors it.
+- `pages-for` also lists pages that name a file's class or path ("names it").
+- Skills, templates and docs ask for code names instead of anchors on every line; `ARCHITECTURE.md`,
+  `MULTI-REPO.md` (schemas, product pages checked from services) and the management briefing updated.
+- The home repo's starter platform pages mark their example names, so a new workspace starts without warnings.
+
 ## 2.4.0 (November 2026)
 
 Context that is used, and pull requests that say what they are.

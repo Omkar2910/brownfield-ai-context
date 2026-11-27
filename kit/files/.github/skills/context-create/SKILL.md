@@ -48,9 +48,14 @@ so most of the quick job is deciding what to leave out. Show the user the result
 - The lines `repo-types.md` requires for this kind of repo. Link to the product hub instead of copying it.
 Show a diff before changing any file that already exists.
 
-## 4. Prune and anchor
+## 4. Prune and name the code
 Go through every line with `prune-checklist.md`; delete lines that fail and report the line counts before
-and after. After each fact that depends on code, add `[anchor: <path or glob>]`.
+and after. Each fact that depends on code names that code in backticks: the class and method, the event,
+the table and column, the endpoint, the file (`OrderService.remove`, `OrderVoided`, `orders.status`). That is
+how agents find the line (they search for those names) and how the check finds it when the code changes
+(`node .ai-kit/context-tools.cjs names` lists names the code does not have). Add `[anchor: <path or glob>]`
+only for a fact that has no name to point at (a folder convention, a config file). A name that is
+deliberately not in this repo (another team's event) goes in `<!-- names: ignore <name> -->` on the page.
 
 ## 5. Connect OpenSpec (if `openspec/config.yaml` exists)
 In a product workspace, also write `CLAUDE.md` (`@AGENTS.md`) if the home repo is set up for Claude Code.

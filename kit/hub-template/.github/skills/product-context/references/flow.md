@@ -11,11 +11,12 @@ Who uses it: <role> · Repos involved, in order: <reports-mfe → report-service
 Behaviour specs: <repo>/openspec/specs/<capability>/ for each repo
 
 ## Steps
-<Numbered, one line each, crossing repos. Each step anchored with repo:path.>
-1. User clicks Export on the report grid. [anchor: <ui-repo>:<path>]
-2. The UI calls `<METHOD /path>` with <fields>. [anchor: <ui-repo>:<path>]
-3. The service checks <permission> and <rules>. [anchor: <service-repo>:<path>]
-4. Data read from <tables / columns>. [anchor: <service-repo>:<path>]
+<Numbered, one line each, crossing repos. Each step names the code in backticks: component, endpoint, class,
+event, table and column. The checks warn when a repo's change removes one of them.>
+1. <ui-repo>: the user clicks Export in `ReportGridComponent`.
+2. <ui-repo> calls `<METHOD /path>` with <fields> through `ReportApiService.export`.
+3. <service-repo>: `ReportExportService.export` checks <permission> and <rules>.
+4. <service-repo> reads `<table>.<column>`, then publishes `<EventName>`; <other-repo> listens for it.
 
 ## Field mapping
 | Screen field | API field | Column | Notes |

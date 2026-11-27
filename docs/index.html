@@ -535,7 +535,7 @@ root folder. Keep the root <code>AGENTS.md</code> short (shared rules and the ma
 API, dependencies, security, testing, operations, decisions) and a readiness score:</p>
 <ol>
 <li><strong>Type <code>/context-create deep &lt;page&gt;</code>, one page at a time, starting where agents get things wrong.</strong> It
-   writes in <code>docs/context/</code>, every fact anchored, unproven claims under "Unverified". Check each page as it
+   writes in <code>docs/context/</code>, every fact naming its code, unproven claims under "Unverified". Check each page as it
    appears. Write a page when a story needed the knowledge or the agent made a mistake, not all of them up
    front: a page nothing points to is never read (<code>node .ai-kit/context-tools.cjs usage</code> shows which pages
    agents actually open).</li>
@@ -938,8 +938,12 @@ is a safe sandbox (made-up services, no company code) if you need to demo withou
 <td>Graphify's local graph of classes, calls and dependencies (<code>graphify-out/</code>)</td>
 </tr>
 <tr>
+<td><strong>Names</strong></td>
+<td>The code a context line is about, written in backticks (<code>OrderService.cancel</code>, <code>orders.status</code>); the checks warn when a change removes one</td>
+</tr>
+<tr>
 <td><strong>Anchor</strong></td>
-<td><code>[anchor: path]</code> at the end of a context line, saying which code the line describes, so changes can be detected</td>
+<td>Optional <code>[anchor: path]</code> at the end of a context line, for a line with no name to point at</td>
 </tr>
 <tr>
 <td><strong>OpenSpec change</strong></td>

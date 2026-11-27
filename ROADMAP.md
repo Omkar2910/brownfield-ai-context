@@ -21,7 +21,7 @@ The kit is built in four layers. Only the thinnest one is tied to a tool.
 
 | Layer | What it is | Tied to a tool? |
 | --- | --- | --- |
-| **1. Knowledge** | `AGENTS.md`, `docs/context/` pages with anchors, OpenSpec specs and change folders, table pages. Plain Markdown with frontmatter in the shape of the Open Knowledge Format | No. `AGENTS.md` and MCP are both stewarded by the Linux Foundation's Agentic AI Foundation and read by every major agent |
+| **1. Knowledge** | `AGENTS.md`, `docs/context/` pages that name their code, OpenSpec specs and change folders, table pages. Plain Markdown with frontmatter in the shape of the Open Knowledge Format | No. `AGENTS.md` and MCP are both stewarded by the Linux Foundation's Agentic AI Foundation and read by every major agent |
 | **2. Checks** | `context-tools.cjs`: check, readiness, pages-for, migrate, schema-import, doctor | No. Runs from a terminal, a git hook, CI or an MCP call |
 | **3. Workflow** | Skills (`story-start`, `story-finish`, `context-*`), OpenSpec's default workflow, the design reviewer | Lightly. `SKILL.md` is a shared format; the installer places it where each tool looks |
 | **4. Adapters** | Hook files, agent files, MCP registrations per tool | Yes, and deliberately small: `--tool` adds or removes them |
@@ -32,7 +32,7 @@ Supporting a new agent means adding an adapter, never rewriting knowledge.
 
 | Need | Level 2 (today) | Level 3 (the kit already supports) | Level 4 (planned) |
 | --- | --- | --- | --- |
-| Knowledge an agent can trust | Reviewed, anchored pages; readiness score | Same pages, readable by any agent; OKF-shaped metadata so catalogue and knowledge tools can read them | Agents propose context updates in every change; independent review events recorded per page |
+| Knowledge an agent can trust | Reviewed pages that name their code, checked when it changes; readiness score | Same pages, readable by any agent; OKF-shaped metadata so catalogue and knowledge tools can read them | Agents propose context updates in every change; independent review events recorded per page |
 | Checks | Agent hooks in the editor, git hook | **Pull request check (`ci`)** runs whoever wrote the change, including a cloud agent | Policy as code: which change types may merge with which evidence |
 | Asking "what do I need to know about this file?" | After-edit hook | **MCP server (`mcp`)** and `pages-for` for agents with no editor | Context service shared across repos in a product |
 | Plan before code | OpenSpec change (proposal, specs, tasks), reviewed by a person | **Fresh-eyes design review** by an agent with no memory of the planning chat; the approved change folder is the handoff to any agent | Several reviewers with different roles; findings tracked to closure |

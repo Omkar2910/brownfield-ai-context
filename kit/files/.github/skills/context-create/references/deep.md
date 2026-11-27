@@ -35,6 +35,14 @@ testing, operations, decisions. With `deep <page>`, do only that page.
 - Domain and screens: services named after business concepts, validation and calculation code, enums and
   status lifecycles, `openspec/specs/`, routes and components, how form fields map to API fields and columns.
 - Data: follow `data-sources.md`. Overview page from `pages/data.md`. In this order:
+  0. **Which schemas this repo owns.** Run `node .ai-kit/context-tools.cjs schemas` (in a product workspace,
+     the home repo's copy with `--repo .`): per schema, which repo's migrations change it and which repos
+     only read it. Show it and ask the user to confirm. Pages and an export only for the schemas this repo
+     changes, one folder each when there are several (`docs/context/data/<schema>/schema.sql`, imported with
+     `--out docs/context/data/<schema>`). A schema another repo changes: no copy here; name the tables this
+     repo reads in its data overview and link to the owner's pages. A schema several repos change: its
+     export and pages go once in the home repo (the `product-context` skill). In a workspace, record the
+     result with `schemas --write` in the home repo.
   1. Find the schema file. Look for `docs/context/data/schema.sql` or `schema.json` first, then for other
      `.sql` files with `CREATE TABLE` outside the migrations folder. If you find none, ask the user once:
      "Do you have a schema export (a DDL .sql dump or a tbls schema.json)? If yes, tell me where it is, or

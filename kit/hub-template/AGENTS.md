@@ -31,10 +31,12 @@ agents, hooks and context tool live here once, for every repo in the workspace.
 - `node scripts/hub.mjs workspace <area|repo>` — VS Code workspace for a story
 - `node scripts/hub.mjs status` — which repos are cloned and their context health
 - `node scripts/hub.mjs contracts` — which hub contract copies are out of date
-- `node scripts/hub.mjs check` — every `[anchor: repo:path]` here still resolves; lines whose code changed since review
+- `node scripts/hub.mjs check` — every name these pages mention still exists in some repo, every `[anchor: repo:path]` resolves; lines whose code changed since review
+- `node .ai-kit/context-tools.cjs schemas` — which repo changes and which reads each database schema
 - `node scripts/hub.mjs readiness` — readiness score of this hub's context
 - `node scripts/hub.mjs claude` — start Claude Code here with every cloned repo added
 
 ## Creating the product-level context
-Run the `product-context` skill with the hub and the repos open in one window. Anchor every fact into a repo
-as `[anchor: <repo-name>:<path>]`. Pages start as drafts; owners review them, set `status: stable` and add a `verified` entry.
+Run the `product-context` skill with the hub and the repos open in one window. Name the code each fact is
+about in backticks (event, endpoint, class, table and column); add `[anchor: <repo-name>:<path>]` only when
+there is no name. Pages start as drafts; owners review them, set `status: stable` and add a `verified` entry.

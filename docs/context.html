@@ -178,10 +178,10 @@ finds things.</p>
 <td>"…: it is a business date with no time zone; conversion shifts it by a day for US users."</td>
 </tr>
 <tr>
-<td><strong>Anchored</strong></td>
-<td>Does it name the code it describes?</td>
-<td>(no link to code)</td>
-<td><code>… [anchor: src/main/java/**/ReportFilterSpec.java]</code></td>
+<td><strong>Names its code</strong></td>
+<td>Does it name the code it describes, in backticks?</td>
+<td>"Filters are built in the query layer."</td>
+<td>"Filters are built only in <code>ReportFilterSpec</code>."</td>
 </tr>
 <tr>
 <td><strong>In the right place</strong></td>
@@ -276,9 +276,11 @@ into the chat so it uses them.</p>
 <h3 id="step-4-prune-20-min">Step 4 — Prune (20 min)</h3>
 <p>Go line by line with the six properties from Section 2. Expect to delete a third or more of the draft.
 That is normal and the most valuable part of the work.</p>
-<h3 id="step-5-anchor-10-min">Step 5 — Anchor (10 min)</h3>
-<p>Add <code>[anchor: &lt;path or glob&gt;]</code> after each line that depends on specific code. This is what lets the
-tools notice later when the code changes and the line may be wrong.</p>
+<h3 id="step-5-name-the-code-10-min">Step 5 — Name the code (10 min)</h3>
+<p>Make sure each line that depends on specific code names it in backticks: the class and method, the event,
+the table and column (<code>ReportFilterSpec</code>, <code>OrderVoided</code>, <code>orders.status</code>). Agents find the line by searching
+for those names, and the check warns when a change removes one (<code>node .ai-kit/context-tools.cjs names</code>
+lists any the code does not have). Add <code>[anchor: &lt;path or glob&gt;]</code> only to a line with no name to point at.</p>
 <h3 id="step-6-try-it-on-real-tasks-20-min">Step 6 — Try it on real tasks (20 min)</h3>
 <p>Pick two small tasks you did recently. Start a fresh chat for each and ask the agent to do it again.
 Watch: did it follow the rules? Did it open the right files? Did it ask fewer questions? If a rule
@@ -392,7 +394,7 @@ with four layers, from fully automatic to occasional.</p>
 </tr>
 <tr>
 <td>The agent made a mistake a rule would have prevented</td>
-<td><code>/context-learn &lt;what happened&gt;</code>: it adds a short rule in the right place, with a reason and anchor</td>
+<td><code>/context-learn &lt;what happened&gt;</code>: it adds a short rule in the right place, with a reason, naming the code</td>
 </tr>
 <tr>
 <td>A reviewer writes the same comment twice</td>
@@ -470,7 +472,7 @@ with four layers, from fully automatic to occasional.</p>
 <p>Every update, whoever or whatever triggers it, follows the same four steps:</p>
 <ol>
 <li><strong>Detect</strong> — a hook, the check, a reviewer, or a person notices.</li>
-<li><strong>Decide</strong> — for each line: update it, move its anchor, delete it, or confirm it is still true.</li>
+<li><strong>Decide</strong> — for each line: update it, rename the code it names, delete it, or confirm it is still true.</li>
 <li><strong>Change in the same PR</strong> as the code that caused it.</li>
 <li><strong>Review</strong> — a person approves. Agents propose context changes; they never merge them.</li>
 </ol>
@@ -532,7 +534,7 @@ greenfield project's constitution. That is compatible with the research above, a
 <li><strong>It only counts once a person has checked it.</strong> AI drafts make two kinds of mistake most often:
    leaving things out, and confident but wrong explanations of "why". Every page starts as a draft with
    its unproven claims listed under "Unverified"; its owner reviews it against the code.</li>
-<li><strong>It is kept current by the same machinery as everything else</strong>: anchors on every claim, the checks,
+<li><strong>It is kept current by the same machinery as everything else</strong>: the code each claim names, the checks,
    and each story's plan review listing the pages it makes out of date.</li>
 </ol>
 <p><strong>The pages</strong> (<code>/context-create deep</code> creates them in <code>docs/context/</code>, one per dimension):</p>
@@ -702,9 +704,9 @@ references no entity maps. The kit combines them:</p>
 hundred empty ones.</p>
 <p><strong>How a story keeps it current.</strong> A story that changes the database, an API and a screen lists those pages
 in its design's "Context impact" table (<code>data.md</code>, <code>api.md</code>, <code>screens.md</code>). The agent updates them in the
-same PR; <code>/story-finish</code> checks every listed page was updated and that no anchored page was missed. Even if
-both are skipped, the anchors flag the lines whose code changed, and the readiness score drops until they
-are fixed.</p>
+same PR; <code>/story-finish</code> checks every listed page was updated and that no page naming the changed files was
+missed. Even if both are skipped, the commit and pull request checks warn about every line that names code
+the change removed, on this repo's pages and on the home repo's.</p>
 <p><strong>Area pages</strong> (<code>docs/context/areas/&lt;area&gt;.md</code>) are for one complex area in more depth than a dimension
 page holds: a flow across UI, API, service and database, or a format such as an Excel export. Write one
 when a real story needed a lot of tracing to understand the area; <code>/story-finish</code> offers it at the end of
@@ -715,9 +717,10 @@ security 10% each; testing, operations, decisions, provenance and freshness 5% e
 rated 0–5 (missing, fragmented, partial, usable, strong, verified):</p>
 <ul>
 <li>The tool caps each rating at what the evidence supports: no page → 0, a draft → at most 2, generated,
-  unanchored, stale or reviewed over 180 days ago → at most 3, reviewed → at most 4, independently reviewed → 5.</li>
-<li>Provenance (the share of statements with an anchor) and freshness (broken anchors, code changed since
-  review, age of reviews) are measured, not rated.</li>
+  statements without code names, stale or reviewed over 180 days ago → at most 3, reviewed → at most 4,
+  independently reviewed → 5.</li>
+<li>Provenance (the share of statements that name their code, or anchor it) and freshness (broken anchors,
+  code changed since review, age of reviews) are measured, not rated.</li>
 <li><code>/context-assess</code> rates each dimension within its cap, with evidence, in <code>docs/context/readiness.md</code>.</li>
 <li>Weights and band names can be changed in <code>.ai-kit/readiness.json</code>.</li>
 </ul>
@@ -728,8 +731,8 @@ score with a bloated <code>AGENTS.md</code> is a warning sign) and next to the s
   expensive in the largest study so far (ETH Zurich, 138 repositories).
 - Models get worse as their input grows, even on easy tasks ("context rot", Chroma Research).
 - The project with the strongest results from deep docs (the "Codified Context" case study) kept them on
-  demand and still found stale docs were its main failure. That is why every page is anchored and scored
-  for freshness.</p>
+  demand and still found stale docs were its main failure. That is why every page names its code, is checked
+  when that code changes, and is scored for freshness.</p>
 <hr />
 <h2 id="8-several-repos-ui-backend">8. Several repos (UI + backend)</h2>
 <ul>
@@ -819,7 +822,7 @@ not required; without it, skip the OpenSpec steps and everything above still wor
 - [ ] Build the Graphify code map
 - [ ] <code>/context-create</code>, answer the five questions
 - [ ] Prune with the six properties; <code>AGENTS.md</code> about 100 lines
-- [ ] Anchors on code-dependent lines
+- [ ] Code-dependent lines name their code in backticks; <code>context-tools.cjs names</code> finds them all
 - [ ] Try two past tasks in a fresh chat
 - [ ] <code>context-tools.cjs check</code> clean; PR reviewed by the tech lead</p>
 <p><strong>Every pull request</strong>

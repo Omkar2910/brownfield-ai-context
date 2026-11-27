@@ -269,4 +269,59 @@ PY
 git -C "$U" add -A; git -C "$U" commit -qm kit --no-verify; node "$KIT/kit/install.mjs" "$U" --upgrade >/dev/null 2>&1
 grep -q 'NotebookEdit|Read' "$U/.claude/settings.json" && grep -q 'team-hook' "$U/.claude/settings.json" && ok "upgrade refreshes kit hooks, keeps the team's own" || bad "upgrade refreshes kit hooks, keeps the team's own"
 
+echo "16. Names check, product pages from services, schema ownership, data across services"
+N="$T/names"; mkdir -p "$N"
+for r in orders billing; do mkrepo "$N/$r"; mkdir -p "$N/$r/src/main/resources/db/migration"; done
+cat > "$N/orders/src/main/java/com/ex/OrderService.java" <<'EOF'
+class OrderService { void place() { publish("OrderCreated"); } void remove(Long id) { } }
+EOF
+printf 'CREATE TABLE orders.orders (id bigint, status int);\nCREATE TABLE payments.payment (id bigint, order_id bigint);\nALTER TABLE audit.audit_log ADD COLUMN order_id bigint;\n' > "$N/orders/src/main/resources/db/migration/V1__init.sql"
+printf 'CREATE TABLE billing.invoices (id bigint, order_id bigint);\nALTER TABLE audit.audit_log ADD COLUMN invoice_id bigint;\n' > "$N/billing/src/main/resources/db/migration/V1__init.sql"
+printf 'package com.ex;\n@Entity\n@Table(schema = "orders", name = "orders")\npublic class OrderView { @Id Long id; Integer status; }\n' > "$N/billing/src/main/java/com/ex/OrderView.java"
+mkdir -p "$N/orders/docs/context/data/orders" "$N/orders/docs/context/data/payments"
+printf 'CREATE TABLE orders.orders (id bigint NOT NULL, status integer NOT NULL);\n' > "$N/orders/docs/context/data/orders/schema.sql"
+printf 'CREATE TABLE payments.payment (id bigint NOT NULL, order_id bigint NOT NULL);\n' > "$N/orders/docs/context/data/payments/schema.sql"
+printf '# Traps\n1. `OrderService.remove` hard-deletes; never use it for customers.\n2. `NoSuchThing` is planned. <!-- names: ignore NoSuchThing -->\n' > "$N/orders/docs/context/known-traps.md"
+for r in orders billing; do git -C "$N/$r" add -A; git -C "$N/$r" commit -qm code --no-verify; done
+node "$KIT/kit/setup.mjs" apply --root "$N" --setup workspace --tools claude --product-context yes --yes >/dev/null 2>&1
+NT="$N/product-context/.ai-kit/context-tools.cjs"
+(cd "$N/orders" && node "$NT" schema-import docs/context/data/orders/schema.sql --out docs/context/data/orders >/dev/null && node "$NT" schema-import docs/context/data/payments/schema.sql --out docs/context/data/payments >/dev/null)
+git -C "$N/orders" add -A; git -C "$N/orders" commit -qm "kit and exports" --no-verify
+mkdir -p "$N/product-context/context/flows" "$N/product-context/context/data"
+printf '# Placing an order\n1. orders publishes `OrderCreated`; billing listens for it.\n' > "$N/product-context/context/flows/placing.md"
+printf '# Data across services\n- `orders.status` is read by billing through `OrderView`.\n- `billing.invoices.order_id` stores `orders.id`.\n' > "$N/product-context/context/data/across-services.md"
+git -C "$N/product-context" add -A; git -C "$N/product-context" commit -qm pages --no-verify
+out=$(node "$NT" names --repo "$N/orders"); has "$out" "0 not found in the code" "names: every page name found (ignore comment, other repos, table and column in a migration)"
+out=$(cd "$N/orders" && node "$NT" check --repo .); echo "$out" | grep -q "names \`" && bad "plain check: no name warnings when all names exist" || ok "plain check: no name warnings when all names exist"
+sed -i 's/ void remove(Long id) { }//' "$N/orders/src/main/java/com/ex/OrderService.java"; git -C "$N/orders" add -A
+out=$(cd "$N/orders" && node "$NT" check --staged --repo .); has "$out" "known-traps.md:2  names \`OrderService.remove\`, which this change removes" "commit: a page names a method the change removes"
+git -C "$N/orders" reset -q --hard
+sed -i 's/OrderCreated/OrderPlaced/' "$N/orders/src/main/java/com/ex/OrderService.java"; git -C "$N/orders" add -A
+out=$(cd "$N/orders" && node "$NT" check --staged --repo .); has "$out" "product-context:context/flows/placing.md:2  names \`OrderCreated\`, which this change removes" "commit: a product page names an event the service renames"
+git -C "$N/orders" commit -qm rename --no-verify
+out=$(cd "$N/orders" && node "$NT" check --base HEAD~1 --repo .); has "$out" "placing.md:2  names \`OrderCreated\`" "pull request check: the same, against the target branch"
+printf '# Notes\n- `GhostService` does the work.\n' > "$N/orders/docs/context/notes.md"; git -C "$N/orders" add -A
+out=$(cd "$N/orders" && node "$NT" check --staged --repo .); has "$out" "notes.md:2  names \`GhostService\`, which the code does not have" "commit: a new page naming code that does not exist"
+git -C "$N/orders" reset -q --hard
+printf 'ALTER TABLE orders.orders DROP COLUMN status;\n' > "$N/orders/src/main/resources/db/migration/V2__drop.sql"
+sed -i 's/, status integer NOT NULL//' "$N/orders/docs/context/data/orders/schema.sql"; git -C "$N/orders" add -A
+out=$(cd "$N/orders" && node "$NT" check --staged --repo .); has "$out" "across-services.md:2  names \`orders.status\`, which this change removes" "data across services: dropping a column another service reads"
+echo "$out" | grep -q "but docs/context/data/payments/schema.sql did not" && bad "two schemas in one service: a migration warns only for its own export" || ok "two schemas in one service: a migration warns only for its own export"
+git -C "$N/orders" reset -q --hard
+out=$(node "$NT" schemas --repo "$N/product-context")
+has "$out" "orders: owned by orders" "schemas: owner from the migrations"
+has "$out" "read by: billing" "schemas: a reader from its entities"
+has "$out" "payments: owned by orders" "schemas: a second schema of the same service"
+has "$out" "audit: changed by billing, orders: shared" "schemas: a schema several services change"
+node "$NT" schemas --write --repo "$N/product-context" >/dev/null; grep -q '"schema": "orders"' "$N/product-context/catalog.json" && ok "schemas --write records them in catalog.json" || bad "schemas --write records them in catalog.json"
+printf 'ALTER TABLE orders.orders ADD COLUMN invoiced boolean;\nALTER TABLE audit.audit_log ADD COLUMN note text;\n' > "$N/billing/src/main/resources/db/migration/V2__x.sql"; git -C "$N/billing" add -A
+out=$(cd "$N/billing" && node "$NT" check --staged --repo .)
+has "$out" 'catalog.json says schema "orders" belongs to orders' "a migration changing another service's schema warns"
+has "$out" "a schema several repos change" "a migration changing a shared schema points to the home repo"
+git -C "$N/billing" reset -q --hard
+out=$(node "$NT" pages-for src/main/java/com/ex/OrderService.java --repo "$N/orders"); has "$out" "(names it)" "pages-for lists pages that name the file's class"
+out=$(node "$NT" readiness --repo "$N/orders"); has "$out" "name the code they describe" "readiness counts named statements as traceable"
+printf '# Old\n- `RetiredThing` used to run nightly.\n' > "$N/product-context/context/old.md"
+out=$(cd "$N/product-context" && node scripts/hub.mjs check || true); has "$out" "names \`RetiredThing\`, which no cloned repo has" "hub check lists names no repo has"
+
 echo ""; echo "Passed: $pass, failed: $fail"; [ "$fail" -eq 0 ]
