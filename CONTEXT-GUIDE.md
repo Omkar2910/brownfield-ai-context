@@ -168,7 +168,7 @@ with four layers, from fully automatic to occasional.
 | The agent made a mistake a rule would have prevented | `/context-learn <what happened>`: it adds a short rule in the right place, with a reason, naming the code |
 | A reviewer writes the same comment twice | Same: it becomes a rule |
 | An incident or production bug | Add a trap to `docs/context/known-traps.md` with the reason |
-| A framework or library upgrade | Re-check the lines anchored to config and build files |
+| A framework or library upgrade | Re-check the lines that name config and build files; `context-tools names` lists names that disappeared |
 | A new joiner had to ask a person something | That answer is a missing rule |
 
 ### Layer 3 — On a schedule (minutes per sprint, an hour per quarter)
@@ -241,13 +241,13 @@ greenfield project's constitution. That is compatible with the research above, a
 
 | Page | Dimension | Generated from code, or written |
 | --- | --- | --- |
-| `architecture.md` | Architecture | Written, anchored; most-connected parts from the code map |
+| `architecture.md` | Architecture | Written, naming its code; most-connected parts from the code map |
 | `domain.md` (+ `screens.md` in UI repos) | Business/domain | Glossary and rules written; the behaviour record is `openspec/specs/`, updated by every archived story |
 | `data.md` + `data/tables/*.md` | Data | Overview written; one page per table, its structure generated from a schema file, its meaning written |
 | `api.md` | API/integration | Endpoints generated from OpenAPI or controllers; conventions and odd behaviour written |
 | `dependencies.md` | Dependencies | Libraries from the build file; consumers from the product hub |
-| `security.md` | Security | Written, anchored to security config and permission checks |
-| `testing.md`, `operations.md` | Testing, Runtime/operations | Written, anchored to test folders, config and pipelines |
+| `security.md` | Security | Written, naming the security config and permission checks |
+| `testing.md`, `operations.md` | Testing, Runtime/operations | Written, naming test folders, config and pipelines |
 | `decisions/*.md` | Decision history | One page per real decision, plus each story's design decisions in the OpenSpec archive |
 
 Each page starts with a short frontmatter block the tools read:
@@ -270,7 +270,7 @@ editing the YAML; it refuses to run without a terminal, so an agent cannot sign 
 `dimension` and `owner` as the kit's own keys, so tools that read OKF can read these pages. Pages written with kit 1.x used a one-line header instead; `context-tools.cjs migrate`
 converts them without an agent.
 
-**Where each dimension comes from, and where it lives.** The kit keeps the reviewed, anchored version in
+**Where each dimension comes from, and where it lives.** The kit keeps the reviewed version, naming its code, in
 the repo, next to the code it describes, because that is the copy every agent and every pull request can
 see. Catalogues and code maps are sources and companions, not replacements:
 

@@ -139,14 +139,24 @@ node .ai-kit/context-tools.cjs ci --base origin/main      # the pull request che
 node .ai-kit/context-tools.cjs mcp                        # MCP server on stdio (preview)
 ```
 
-**Anchors.** End a context line with `[anchor: <path>]` when it depends on code. `<path>` can be a file, a
+**Names.** A context line that depends on code names it in backticks: `OrderService.remove` (class and
+member), `OrderVoided` (a class, event or field), `deleted_at`, `orders.status` or `billing.invoices.order_id`
+(table and column, looked up in the imported schema exports first), `src/main/.../Order.java` or
+`Order.java` (a file). Commands, text with spaces and ALL-CAPS values are not names. `names` lists those the
+code does not have (in a workspace: in any cloned repo); at commit (`--staged`) and with `--base`, the check
+warns about names the change removes, on this repo's pages and the home repo's. Mark a name that lives
+elsewhere on purpose with `<!-- names: ignore OrderVoided -->`; `--no-names` skips the check.
+
+**Anchors (optional).** End a context line with `[anchor: <path>]` when it has no name to point at. `<path>` can be a file, a
 folder (`src/main/resources/db/migration/`), a glob (`src/**/security/*.java`) or several of these separated
 by commas. Backticks, `#L12` or `:12` suffixes and Windows backslashes are accepted. Paths outside the repo
 (`../product-context/…`) are allowed but not checked; `repo-name:path` anchors are checked by the hub.
 
 - **ERROR**: a `[anchor: …]` points at a file that no longer exists. A `--base` that does not exist is
   exit 2, not a silent pass.
-- **WARN**: anchored code changed but the context file did not; pages still in the 1.x format; `AGENTS.md`
+- **WARN**: a page names code the change removes (or, in a plain `check`, code that does not exist); a
+  product page anchors a file this repo no longer has; a migration changes a schema `catalog.json` gives to
+  another repo, or one several repos share; anchored code changed but the context file did not; pages still in the 1.x format; `AGENTS.md`
   over 150 lines; always-on context over ~2,000 tokens (`CONTEXT_MAX_AGENTS_LINES`,
   `CONTEXT_ALWAYS_ON_TOKENS` change the limits).
 
@@ -173,7 +183,7 @@ If OKF later defines a field differently, `migrate` will convert the pages.
 
 **Readiness.** Reads each page's metadata, its anchors and whether its anchored code changed since review,
 plus ratings from `/context-assess` in `docs/context/readiness.md`. Each rating is capped by the evidence
-(draft ≤ 2; generated, unanchored, stale or old review ≤ 3; reviewed ≤ 4; independently reviewed = 5);
+(draft ≤ 2; generated, naming no code and unanchored, stale or old review ≤ 3; reviewed ≤ 4; independently reviewed = 5);
 provenance and freshness are measured. Weights and bands: `.ai-kit/readiness.json`
 (`{"dimensions":[{"id","label","weight"}…],"bands":[{"min","name"}…],"reviewMaxAgeDays":180}`).
 

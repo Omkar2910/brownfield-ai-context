@@ -69,7 +69,7 @@ script.
 | Component | When used | What it does |
 | --- | --- | --- |
 | `/context-create` | Once per repo | Drafts `AGENTS.md`, rule files, architecture and traps from five questions and the code |
-| `/context-create deep` | One page at a time, when a story or a mistake shows the knowledge is needed | Writes in-depth pages and table pages, anchored, with Unverified lists |
+| `/context-create deep` | One page at a time, when a story or a mistake shows the knowledge is needed | Writes in-depth pages and table pages that name their code, with Unverified lists |
 | `/context-assess` | After review, then each sprint or quarter | Rates each dimension 0–5 within evidence caps; the tool computes the score |
 | `/story-start` | Start of each story | Reads the story, searches every repo in the window, groups repos, sizes the story, creates one change per repo |
 | `/story-finish` | End of each story | Tests per scenario, impact, context check, area page offer, PR description |
@@ -173,9 +173,9 @@ traceable but count as unreviewed.
 | Data | 10% | `data.md`, `data/tables/` | Table structure generated from a schema file; meaning written |
 | API/integration | 10% | `api.md` | Endpoints generated from OpenAPI or controllers |
 | Dependencies | 10% | `dependencies.md`, hub catalogue | Generated from build files and the catalogue |
-| Security | 10% | `security.md` | Written, anchored to security config |
+| Security | 10% | `security.md` | Written, naming the security config and checks |
 | Testing | 5% | `testing.md` | Written |
-| Runtime/operations | 5% | `operations.md` | Written, anchored to config and pipelines |
+| Runtime/operations | 5% | `operations.md` | Written, naming config and pipelines |
 | Decision history | 5% | `decisions/`, archived designs | Written per decision |
 | Provenance | 5% | All pages | Measured: share of statements that name their code or anchor it |
 | Freshness | 5% | All pages | Measured: broken anchors, code changed since review, review age |
@@ -283,7 +283,7 @@ score cannot be raised by writing more:
 | --- | --- |
 | No page | 0 |
 | Draft, or broken anchors in the page | 2 |
-| Generated and not reviewed by a person, no anchors, code changed since review, or reviewed over 180 days ago | 3 |
+| Generated and not reviewed by a person, names no code and has no anchors, code changed since review, or reviewed over 180 days ago | 3 |
 | Reviewed by its owner | 4 |
 | Also reviewed by a second person | 5 |
 
@@ -376,7 +376,7 @@ none of its text (credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
 | No measurable change in correctness with no guide, an always-on guide or pages read on demand, on 17 tasks with Claude Code and Codex; most failures came from implementation skill | Context is support, not the quality lever: the plan review and test-first tasks carry the quality | [Two-agent ablation (Jul 2026)](https://www.alphaxiv.org/abs/2607.27250) |
 | Context files of 100–150 lines did best; the worst did worse than none (AuggieBench). A short "where to look" index in `AGENTS.md` passed every task; skills were not triggered in 56% of cases (Vercel) | `AGENTS.md` about 100 lines with a "where to look" index; the workflow calls skills by name | [mcp.directory summary](https://mcp.directory/blog/claude-md-vs-agents-md-vs-skills-2026) |
 | Models get worse as input grows, even on easy tasks | Size budgets and the always-loaded size in every report | [Chroma Research: context rot](https://research.trychroma.com/context-rot) |
-| Deep agent docs worked in a 108,000-line codebase, kept on demand; stale docs were the main failure | On-demand pages, anchors, freshness checks | [Codified Context (arXiv 2602.20478)](https://arxiv.org/html/2602.20478) |
+| Deep agent docs worked in a 108,000-line codebase, kept on demand; stale docs were the main failure | On-demand pages, name checks, freshness checks | [Codified Context (arXiv 2602.20478)](https://arxiv.org/html/2602.20478) |
 | Most of 3,000+ GitHub projects had docs naming code that no longer existed; checking that named code still exists finds it | The names check: pages name their code, a change that removes a name warns | [Outdated code references](https://arxiv.org/abs/2212.01479v1) |
 | Code agents find code with text search; with the right names, grep matched search by meaning, and the model mattered more than the search tool | No search index; pages name code so any search finds them; anchors optional | [Embeddings vs. grep](https://arxiv.org/abs/2611.20455v1), [VS Code workspace context](https://code.visualstudio.com/docs/copilot/reference/workspace-context) |
 | Real teams grow context files in small additions over time | Area pages added as stories need them; updates in the same PR | [Agent READMEs (arXiv 2511.12884)](https://arxiv.org/html/2511.12884v1) |
@@ -384,13 +384,13 @@ none of its text (credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
 | Agents rarely follow links from one doc to another | Hooks point the agent at the page for the file it is editing | [How coding agents read documentation (arXiv 2608.20195)](https://arxiv.org/pdf/2608.20195) |
 | Most common errors in AI-written docs: omissions and confident wrong "why" | Unverified sections; draft pages capped in the score | [Agent-generated documentation quality](https://codex.danielvaughan.com/2026/06/07/agent-generated-documentation-quality-trust-codex-cli-verification-patterns/) |
 | Using tests as the target improved repository-level code generation by about 9.5 points | Test-first tasks; every scenario needs a test | [TENET (arXiv 2509.24148)](https://arxiv.org/abs/2509.24148v2) |
-| Teams at scale generate cross-repo maps from code instead of keeping them by hand | Generated system map; hub anchors checked against the repos | [Cross-repo context for agents](https://dev.to/danielwe/ai-coding-agents-need-cross-repo-context-the-teams-running-them-at-scale-are-already-building-it-ek0) |
+| Teams at scale generate cross-repo maps from code instead of keeping them by hand | Generated system map; names on product pages checked against the repos | [Cross-repo context for agents](https://dev.to/danielwe/ai-coding-agents-need-cross-repo-context-the-teams-running-them-at-scale-are-already-building-it-ek0) |
 
 ### Similar work, and how the kit differs
 
 | Work | Overlap | Difference |
 | --- | --- | --- |
-| [Swimm](https://docs.swimm.io/new-to-swimm/benefits-of-code-coupled-documentation) | Docs tied to code and flagged when code changes (same idea as anchors) | Commercial, built for people; the kit's anchors are a simple open version aimed at agents |
+| [Swimm](https://docs.swimm.io/new-to-swimm/benefits-of-code-coupled-documentation) | Docs tied to code and flagged when code changes (the idea behind anchors and the names check) | Commercial, built for people; the kit's anchors are a simple open version aimed at agents |
 | [Copilot Memory](https://docs.github.com/en/copilot/concepts/agents/copilot-memory) | Repository facts checked against code citations | Built into GitHub (needs GitHub-hosted repos); learned facts rather than a team-reviewed set |
 | [ContextDocs](https://littlebearapps.com/builds/contextdocs/) | Generates context files and blocks commits when they are stale | Claude Code only; no story workflow, multi-repo support or code anchors |
 | [ai-context-kit plugin](https://www.claudepluginhub.com/plugins/msiccdev-ai-context-kit) | Skills for writing and keeping AGENTS.md files consistent | No hooks or commit checks |
@@ -398,7 +398,7 @@ none of its text (credited in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).
 | [Meta-repo pattern](https://seylox.github.io/2026/03/05/blog-agents-meta-repo-pattern.html), Backstage software catalogue | A central place describing many repos | The product hub follows the same idea, with anchors checked against the repos |
 
 What is specific to this kit is the combination, aimed at brownfield Java and Angular systems and usable from
-Copilot, Claude Code and Codex: small reviewed knowledge with anchors, one tool checking it in chat, at commit and before a PR, the
+Copilot, Claude Code and Codex: small reviewed knowledge that names its code, one tool checking it in chat, at commit and before a PR, the
 story workflow with a fresh-eyes plan review and test-first tasks, a product workspace, organisation layers, and an
 evidence-capped readiness score.
 

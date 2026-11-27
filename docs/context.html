@@ -406,7 +406,7 @@ with four layers, from fully automatic to occasional.</p>
 </tr>
 <tr>
 <td>A framework or library upgrade</td>
-<td>Re-check the lines anchored to config and build files</td>
+<td>Re-check the lines that name config and build files; <code>context-tools names</code> lists names that disappeared</td>
 </tr>
 <tr>
 <td>A new joiner had to ask a person something</td>
@@ -550,7 +550,7 @@ greenfield project's constitution. That is compatible with the research above, a
 <tr>
 <td><code>architecture.md</code></td>
 <td>Architecture</td>
-<td>Written, anchored; most-connected parts from the code map</td>
+<td>Written, naming its code; most-connected parts from the code map</td>
 </tr>
 <tr>
 <td><code>domain.md</code> (+ <code>screens.md</code> in UI repos)</td>
@@ -575,12 +575,12 @@ greenfield project's constitution. That is compatible with the research above, a
 <tr>
 <td><code>security.md</code></td>
 <td>Security</td>
-<td>Written, anchored to security config and permission checks</td>
+<td>Written, naming the security config and permission checks</td>
 </tr>
 <tr>
 <td><code>testing.md</code>, <code>operations.md</code></td>
 <td>Testing, Runtime/operations</td>
-<td>Written, anchored to test folders, config and pipelines</td>
+<td>Written, naming test folders, config and pipelines</td>
 </tr>
 <tr>
 <td><code>decisions/*.md</code></td>
@@ -605,7 +605,7 @@ add their own line (an independent review). The reviewer runs
 editing the YAML; it refuses to run without a terminal, so an agent cannot sign off its own pages. These fields follow the Open Knowledge Format (OKF v0.3), with
 <code>dimension</code> and <code>owner</code> as the kit's own keys, so tools that read OKF can read these pages. Pages written with kit 1.x used a one-line header instead; <code>context-tools.cjs migrate</code>
 converts them without an agent.</p>
-<p><strong>Where each dimension comes from, and where it lives.</strong> The kit keeps the reviewed, anchored version in
+<p><strong>Where each dimension comes from, and where it lives.</strong> The kit keeps the reviewed version, naming its code, in
 the repo, next to the code it describes, because that is the copy every agent and every pull request can
 see. Catalogues and code maps are sources and companions, not replacements:</p>
 <div class="tablebox"><table>

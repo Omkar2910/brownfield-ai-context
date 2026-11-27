@@ -1082,8 +1082,9 @@ function computeReadiness(repo) {
     let cap = 2;
     if (h.reviewed) cap = age > cfg.reviewMaxAgeDays ? 3 : (h.independent ? 5 : 4);
     else if (h.generated && h.status !== 'draft') cap = 3; // generated from code or schema: traceable, not reviewed
-    const anyAnchor = anchors.length || /\[anchor:/.test(text); // repo:path anchors (hub pages) count as traceable
-    if (!anyAnchor) cap = Math.min(cap, 3);
+    // Traceable: the page names its code in backticks, or anchors it (repo:path anchors on hub pages count).
+    const traceable = anchors.length || /\[anchor:/.test(text) || pageNames(text).length > 0;
+    if (!traceable) cap = Math.min(cap, 3);
     if (stale) cap = Math.min(cap, 3);
     if (broken) cap = Math.min(cap, 2);
     pages.push({ file: f, ...h, age, anchors: anchors.length, broken, stale, cap });
@@ -1103,7 +1104,8 @@ function computeReadiness(repo) {
     if (d.id === 'code-understanding') {
       const agents = a.agentsMd;
       cap = !agents ? 0 : (ruleFiles || g) ? 3 : 2;
-      if (agents && ruleFiles && g && !g.stale && a.ctx.anchors.some(x => x.file === 'AGENTS.md')) cap = 4;
+      const agentsNamesCode = (() => { try { return pageNames(fs.readFileSync(path.join(repo, 'AGENTS.md'), 'utf8')).length > 0; } catch { return false; } })();
+      if (agents && ruleFiles && g && !g.stale && (agentsNamesCode || a.ctx.anchors.some(x => x.file === 'AGENTS.md'))) cap = 4;
       if (agents && agents.lines > MAX_AGENTS_LINES) cap = Math.min(cap, 3);
       if (cap === 4 && ratings[d.id] && ratings[d.id].independent) cap = 5;
       evidence = [agents ? `AGENTS.md ${agents.lines} lines` : 'no AGENTS.md', `${ruleFiles} rule file(s)`, g ? (g.stale ? 'code map stale' : 'code map current') : 'no code map'];
